@@ -1,6 +1,6 @@
-# VaultSync for Obsidian
+# VaultConnect for Obsidian
 
-Real-time synchronization plugin for Obsidian that keeps your notes synchronized across all your devices through the VaultSync platform.
+Real-time synchronization plugin for Obsidian that keeps your notes synchronized across all your devices through the VaultConnect platform.
 
 ## Features
 
@@ -28,14 +28,14 @@ Real-time synchronization plugin for Obsidian that keeps your notes synchronized
 ### From Obsidian Community Plugins
 
 1. Open **Settings** → **Community Plugins**
-2. Click **Browse** and search for "VaultSync"
+2. Click **Browse** and search for "VaultConnect"
 3. Click **Install**
 4. Enable the plugin
 
 ### Manual Installation
 
-1. Download the latest release from [GitHub Releases](https://github.com/BenJaminBMorin/obsidian-vaultsync/releases)
-2. Extract the files to your vault's plugins folder: `<vault>/.obsidian/plugins/vaultsync/`
+1. Download the latest release from [GitHub Releases](https://github.com/BenJaminBMorin/obsidian-vaultconnect/releases)
+2. Extract the files to your vault's plugins folder: `<vault>/.obsidian/plugins/vaultconnect/`
 3. Reload Obsidian
 4. Enable the plugin in Settings → Community Plugins
 
@@ -43,12 +43,12 @@ Real-time synchronization plugin for Obsidian that keeps your notes synchronized
 
 ### 1. Create an Account
 
-Visit [vaultsync.io](https://vaultsync.io) to create a free account or use your self-hosted instance.
+Visit [vaultconnect.io](https://vaultconnect.io) to create a free account or use your self-hosted instance.
 
 ### 2. Connect Your Vault
 
-1. Open **Settings** → **VaultSync**
-2. Enter your **API URL** (e.g., `https://api.vaultsync.io` or your self-hosted URL)
+1. Open **Settings** → **VaultConnect**
+2. Enter your **API URL** (e.g., `https://api.vaultconnect.io` or your self-hosted URL)
 3. Click **Login** and authenticate
 4. Select or create a vault to sync with
 
@@ -90,7 +90,7 @@ Access these commands via Command Palette (Ctrl/Cmd + P):
 
 Control which folders sync to save bandwidth and storage:
 
-1. Open Settings → VaultSync → **Configure Selective Sync**
+1. Open Settings → VaultConnect → **Configure Selective Sync**
 2. Use the tree view to select folders
 3. Click **Save** to apply changes
 4. Synced folders show a ✓, excluded folders show an ✗
@@ -104,13 +104,13 @@ When conflicts occur:
    - Keep local version
    - Accept remote version
    - Merge changes (manual)
-3. VaultSync creates backup files for safety
+3. VaultConnect creates backup files for safety
 
 ### Version History
 
 View and restore previous versions:
 
-1. Right-click a file → **File Menu** → **VaultSync: Version History**
+1. Right-click a file → **File Menu** → **VaultConnect: Version History**
 2. Browse available versions with timestamps
 3. Click **Restore** to revert to a previous version
 
@@ -120,7 +120,7 @@ View and restore previous versions:
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| API URL | VaultSync server address | - |
+| API URL | VaultConnect server address | - |
 | Auto-Sync | Sync automatically | Enabled |
 | Sync Interval | Polling interval for changes | 30 seconds |
 | Show Notifications | Display sync notifications | Enabled |
@@ -196,9 +196,9 @@ Configure which folders to sync:
 - **Data Ownership** - You own your data
 
 ### Self-Hosting
-VaultSync supports self-hosting for complete control:
+VaultConnect supports self-hosting for complete control:
 
-1. Deploy VaultSync server (see [docs](https://docs.vaultsync.io))
+1. Deploy VaultConnect server (see [docs](https://docs.vaultconnect.io))
 2. Point plugin to your server URL
 3. Manage your own data and backups
 
@@ -238,12 +238,12 @@ VaultSync supports self-hosting for complete control:
 - [API Reference](API_REFERENCE.md)
 
 ### Community
-- [Discord Server](https://discord.gg/vaultsync)
-- [GitHub Discussions](https://github.com/BenJaminBMorin/obsidian-vaultsync/discussions)
-- [Twitter](https://twitter.com/vaultsync)
+- [Discord Server](https://discord.gg/vaultconnect)
+- [GitHub Discussions](https://github.com/BenJaminBMorin/obsidian-vaultconnect/discussions)
+- [Twitter](https://twitter.com/vaultconnect)
 
 ### Issues
-Report bugs or request features on [GitHub Issues](https://github.com/BenJaminBMorin/obsidian-vaultsync/issues)
+Report bugs or request features on [GitHub Issues](https://github.com/BenJaminBMorin/obsidian-vaultconnect/issues)
 
 ## Development
 
@@ -251,8 +251,8 @@ Report bugs or request features on [GitHub Issues](https://github.com/BenJaminBM
 
 ```bash
 # Clone the repository
-git clone https://github.com/BenJaminBMorin/obsidian-vaultsync.git
-cd obsidian-vaultsync
+git clone https://github.com/BenJaminBMorin/obsidian-vaultconnect.git
+cd obsidian-vaultconnect
 
 # Install dependencies
 npm install
@@ -288,15 +288,15 @@ MIT License - see [LICENSE](LICENSE) for details.
 ## Acknowledgments
 
 - Built with [Obsidian API](https://github.com/obsidianmd/obsidian-api)
-- Sync powered by [VaultSync Platform](https://vaultsync.io)
+- Sync powered by [VaultConnect Platform](https://vaultconnect.io)
 - Conflict resolution using [Yjs](https://github.com/yjs/yjs)
 
 ## Links
 
-- **Homepage**: [vaultsync.io](https://vaultsync.io)
-- **Documentation**: [docs.vaultsync.io](https://docs.vaultsync.io)
-- **GitHub**: [github.com/BenJaminBMorin/obsidian-vaultsync](https://github.com/BenJaminBMorin/obsidian-vaultsync)
-- **Support**: [support@vaultsync.io](mailto:support@vaultsync.io)
+- **Homepage**: [vaultconnect.io](https://vaultconnect.io)
+- **Documentation**: [docs.vaultconnect.io](https://docs.vaultconnect.io)
+- **GitHub**: [github.com/BenJaminBMorin/obsidian-vaultconnect](https://github.com/BenJaminBMorin/obsidian-vaultconnect)
+- **Support**: [support@vaultconnect.io](mailto:support@vaultconnect.io)
 
 ---
 

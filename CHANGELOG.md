@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to VaultSync will be documented in this file.
+All notable changes to VaultConnect will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -106,7 +106,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History
 
 ### [1.0.0] - 2024-10-26
-Initial public release of VaultSync for Obsidian.
+Initial public release of VaultConnect for Obsidian.
 
 ---
 
@@ -122,7 +122,7 @@ Each release includes:
 
 ## Versioning
 
-VaultSync follows [Semantic Versioning](https://semver.org/):
+VaultConnect follows [Semantic Versioning](https://semver.org/):
 
 - **MAJOR** version (1.x.x): Incompatible API changes
 - **MINOR** version (x.1.x): New features, backward compatible
@@ -144,4 +144,4 @@ For questions or issues:
 
 ---
 
-**Note**: This changelog is maintained by the VaultSync development team. All notable changes are documented here for transparency and user awareness.
+**Note**: This changelog is maintained by the VaultConnect development team. All notable changes are documented here for transparency and user awareness.
