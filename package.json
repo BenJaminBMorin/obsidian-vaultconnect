@@ -1,7 +1,7 @@
 {
-  "name": "@vaultsync/obsidian-plugin",
-  "version": "1.0.0",
-  "description": "VaultSync plugin for Obsidian - Real-time sync for your knowledge base",
+  "name": "@vaultconnect/obsidian-plugin",
+  "version": "1.0.1",
+  "description": "VaultConnect plugin - Real-time sync for your knowledge base",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",
@@ -15,9 +15,9 @@
     "obsidian",
     "plugin",
     "sync",
-    "vaultsync"
+    "vaultconnect"
   ],
-  "author": "VaultSync",
+  "author": "VaultConnect",
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^29.5.11",
