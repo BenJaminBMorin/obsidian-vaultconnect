@@ -1,5 +1,6 @@
 import { App, Modal, Notice, Setting } from 'obsidian';
 import { AuthService } from '../services/AuthService';
+import { logger } from '../utils/logger';
 
 /**
  * Device Authorization Modal
@@ -34,7 +35,7 @@ export class DeviceAuthModal extends Modal {
     contentEl.empty();
     contentEl.addClass('vaultsync-device-auth-modal');
 
-    contentEl.createEl('h2', { text: 'Authorize VaultSync' });
+    contentEl.createEl('h2', { text: 'Authorize VaultConnect' });
 
     contentEl.createEl('p', {
       text: 'To connect your Obsidian vault, authorize this device from your browser.',
@@ -43,12 +44,9 @@ export class DeviceAuthModal extends Modal {
 
     // Status container
     this.statusEl = contentEl.createDiv({ cls: 'device-auth-status' });
-    this.statusEl.innerHTML = `
-      <div class="device-auth-loading">
-        <div class="spinner"></div>
-        <p>Requesting authorization code...</p>
-      </div>
-    `;
+    const loadingDiv = this.statusEl.createDiv({ cls: 'device-auth-loading' });
+    loadingDiv.createDiv({ cls: 'spinner' });
+    loadingDiv.createEl('p', { text: 'Requesting authorization code...' });
 
     // Start the authorization flow
     this.startAuthFlow();
@@ -72,11 +70,11 @@ export class DeviceAuthModal extends Modal {
       );
 
       // Success! Token received
-      new Notice('Successfully authorized! 🎉');
+      new Notice('Successfully authorized!');
       this.close();
       this.onSuccess();
     } catch (error) {
-      console.error('Authorization failed:', error);
+      logger.error('Authorization failed:', error);
       this.showError(error.message || 'Authorization failed');
     } finally {
       this.isAuthorizing = false;
@@ -160,11 +158,9 @@ export class DeviceAuthModal extends Modal {
 
     // Waiting message
     const waitingDiv = this.statusEl.createDiv({ cls: 'device-auth-waiting' });
-    waitingDiv.innerHTML = `
-      <div class="spinner"></div>
-      <p>Waiting for authorization...</p>
-      <p class="waiting-subtitle">This window will close automatically once you authorize</p>
-    `;
+    waitingDiv.createDiv({ cls: 'spinner' });
+    waitingDiv.createEl('p', { text: 'Waiting for authorization...' });
+    waitingDiv.createEl('p', { text: 'This window will close automatically once you authorize', cls: 'waiting-subtitle' });
   }
 
   private showError(message: string) {

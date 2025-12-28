@@ -1,4 +1,4 @@
-import { Plugin } from 'obsidian';
+import { Plugin, requestUrl } from 'obsidian';
 import { EventBus, EVENTS } from '../core/EventBus';
 import { parseErrorMessage } from '../utils/helpers';
 
@@ -243,7 +243,8 @@ export class AuthService {
    * Request device code for OAuth-style flow
    */
   async requestDeviceCode(apiBaseUrl: string): Promise<DeviceCodeResponse> {
-    const response = await fetch(`${apiBaseUrl}/auth/device/code`, {
+    const response = await requestUrl({
+      url: `${apiBaseUrl}/auth/device/code`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -252,21 +253,23 @@ export class AuthService {
         client_id: 'obsidian-plugin',
         scope: 'vault:read vault:write file:read file:write',
       }),
+      throw: false
     });
 
-    if (!response.ok) {
-      const error = await response.json();
+    if (response.status >= 400) {
+      const error = response.json;
       throw new Error(error.error?.message || 'Failed to request device code');
     }
 
-    return await response.json();
+    return response.json;
   }
 
   /**
    * Poll for token (used during device authorization flow)
    */
   async pollForToken(apiBaseUrl: string, deviceCode: string): Promise<TokenResponse | null> {
-    const response = await fetch(`${apiBaseUrl}/auth/device/token`, {
+    const response = await requestUrl({
+      url: `${apiBaseUrl}/auth/device/token`,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -274,10 +277,11 @@ export class AuthService {
       body: JSON.stringify({
         device_code: deviceCode,
       }),
+      throw: false
     });
 
-    if (!response.ok) {
-      const error = await response.json();
+    if (response.status >= 400) {
+      const error = response.json;
 
       // These are expected errors during polling
       if (error.error === 'authorization_pending') {
@@ -295,7 +299,7 @@ export class AuthService {
       throw new Error(error.error_description || 'Failed to get token');
     }
 
-    return await response.json();
+    return response.json;
   }
 
   /**

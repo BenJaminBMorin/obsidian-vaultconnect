@@ -417,28 +417,13 @@ export class FileSyncService {
       // Get the vault's base path and construct full file path
       const adapter = this.vault.adapter;
       // @ts-ignore - basePath exists on FileSystemAdapter
-      const basePath = adapter.basePath || '';
-      const fullPath = `${basePath}/${file.path}`;
-      
-      // Convert ISO timestamps to Date objects
-      const createdDate = new Date(createdAt);
-      const updatedDate = new Date(updatedAt);
-      
-      // Use Node.js fs module to set timestamps
-      // @ts-ignore - fs is available in Obsidian's Node.js environment
-      const fs = require('fs');
-      
-      // Set both atime (access time) and mtime (modification time)
-      // We set atime to updatedDate as well since we just accessed it
-      fs.utimesSync(fullPath, updatedDate, updatedDate);
-      
-      console.log(`[Timestamp Preservation] Set timestamps for ${file.path}:`, {
-        created: createdDate.toISOString(),
-        modified: updatedDate.toISOString()
-      });
+      // Note: Obsidian's API doesn't provide a way to set file timestamps.
+      // The file's mtime will be updated when we write to it.
+      // Timestamp preservation is handled at the metadata level instead.
+      logger.debug(`[Timestamp Preservation] Skipped for ${file.path} - using Obsidian's file modification time`);
     } catch (error) {
       // Log but don't fail the sync if timestamp preservation fails
-      console.warn(`[Timestamp Preservation] Failed to preserve timestamps for ${file.path}:`, error);
+      logger.warn(`[Timestamp Preservation] Failed to preserve timestamps for ${file.path}:`, error);
     }
   }
 
