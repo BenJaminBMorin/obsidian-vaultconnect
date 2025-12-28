@@ -683,5 +683,75 @@ select:focus-visible {
   margin-top: 5px;
 }
 
+/* VaultConnect Auth Modal */
+.vaultconnect-auth-modal {
+  padding: 16px 0;
+}
+
+.vaultconnect-auth-instruction {
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.vaultconnect-auth-code {
+  text-align: center;
+  font-size: 32px;
+  font-family: var(--font-monospace);
+  font-weight: bold;
+  letter-spacing: 4px;
+  padding: 20px;
+  background: var(--background-secondary);
+  border: 2px solid var(--interactive-accent);
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.vaultconnect-auth-steps {
+  margin: 15px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.vaultconnect-auth-buttons {
+  text-align: center;
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.vaultconnect-auth-waiting {
+  text-align: center;
+  margin-top: 20px;
+  color: var(--text-muted);
+}
+
+/* VaultConnect Vault Selector */
+.vaultconnect-vault-selector {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.vaultconnect-vault-dropdown {
+  flex: 1;
+  min-width: 200px;
+}
+
+.vaultconnect-refresh-btn {
+  flex-shrink: 0;
+}
+
+.vaultconnect-loading {
+  display: none;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.vaultconnect-loading.is-visible {
+  display: inline;
+}
+
 /* Import Initial Sync Styles */
 @import './src/styles/initial-sync.css';

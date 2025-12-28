@@ -17,6 +17,22 @@ import { InitialSyncState } from './src/types/initial-sync.types';
 import { logger, LogLevel, LOG_LEVEL_NAMES, LOG_LEVEL_DESCRIPTIONS } from './src/utils/logger';
 import { VaultService } from './src/services/VaultService';
 import { AuthService } from './src/services/AuthService';
+import { requestUrl, RequestUrlParam } from 'obsidian';
+
+// Event data types
+interface SyncEventData {
+	file_path: string;
+	operation: 'create' | 'modify' | 'delete' | 'rename';
+	device_id?: string;
+	old_path?: string;
+	hash?: string;
+}
+
+interface ConflictEventData {
+	file_path: string;
+	local_hash: string;
+	remote_hash: string;
+}
 
 interface VaultSyncSettings {
 	apiUrl: string;
@@ -119,7 +135,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Generate device ID if not exists
 		if (!this.settings.deviceId) {
-			this.settings.deviceId = `obsidian-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+			this.settings.deviceId = `obsidian-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 			await this.saveSettings();
 		}
 
@@ -156,7 +172,7 @@ export default class VaultSyncPlugin extends Plugin {
 			await this.connect();
 		}
 
-		console.log('VaultSync plugin loaded');
+		logger.info('VaultConnect plugin loaded');
 	}
 
 	/**
@@ -260,7 +276,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Initialize initial sync service
 		this.initialSyncService = new InitialSyncService(
-			this.app.vault,
+			this.app,
 			this.apiClient,
 			this.fileSyncService, // Use the dedicated FileSyncService instance
 			this.storage,
@@ -273,7 +289,7 @@ export default class VaultSyncPlugin extends Plugin {
 		// Setup upload progress handlers
 		this.setupUploadProgressHandlers();
 
-		console.log('Services initialized');
+		logger.debug('Services initialized');
 	}
 
 	/**
@@ -284,7 +300,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Handle upload started
 		this.eventBus.on(EVENTS.UPLOAD_STARTED, (data: { uploadId: string; filePath: string }) => {
-			console.log(`[Upload] Started: ${data.filePath}`);
+			logger.debug(`[Upload] Started: ${data.filePath}`);
 		});
 
 		// Handle upload progress
@@ -294,21 +310,21 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Handle upload completed
 		this.eventBus.on(EVENTS.UPLOAD_COMPLETED, (data: { uploadId: string; filePath: string; size: number }) => {
-			console.log(`[Upload] Completed: ${data.filePath}`);
+			logger.debug(`[Upload] Completed: ${data.filePath}`);
 			this.clearUploadProgress();
 			new Notice(`Upload completed: ${data.filePath}`);
 		});
 
 		// Handle upload failed
 		this.eventBus.on(EVENTS.UPLOAD_FAILED, (data: { uploadId: string; filePath: string; error: string }) => {
-			console.error(`[Upload] Failed: ${data.filePath}`, data.error);
+			logger.error(`[Upload] Failed: ${data.filePath}`, data.error);
 			this.clearUploadProgress();
 			new Notice(`Upload failed: ${data.filePath}\n${data.error}`, 10000);
 		});
 
 		// Handle upload cancelled
 		this.eventBus.on(EVENTS.UPLOAD_CANCELLED, (data: { uploadId: string }) => {
-			console.log(`[Upload] Cancelled: ${data.uploadId}`);
+			logger.debug(`[Upload] Cancelled: ${data.uploadId}`);
 			this.clearUploadProgress();
 			new Notice('Upload cancelled');
 		});
@@ -393,122 +409,74 @@ export default class VaultSyncPlugin extends Plugin {
 	private registerCommands(): void {
 		// Connect command
 		this.addCommand({
-			id: 'vaultsync-connect',
+			id: 'vaultconnect-connect',
 			name: 'Connect',
 			icon: 'plug-zap',
-			hotkeys: [
-				{
-					modifiers: ['Mod', 'Shift'],
-					key: 'c'
-				}
-			],
 			callback: () => this.connect()
 		});
 
 		// Disconnect command
 		this.addCommand({
-			id: 'vaultsync-disconnect',
+			id: 'vaultconnect-disconnect',
 			name: 'Disconnect',
 			icon: 'plug-zap-off',
-			hotkeys: [
-				{
-					modifiers: ['Mod', 'Shift'],
-					key: 'd'
-				}
-			],
 			callback: () => this.disconnect()
 		});
 
-		// Pull All command
+		// Pull all command
 		this.addCommand({
-			id: 'vaultsync-pull-all',
-			name: 'Pull All',
+			id: 'vaultconnect-pull-all',
+			name: 'Pull all',
 			icon: 'download',
-			hotkeys: [
-				{
-					modifiers: ['Mod', 'Shift'],
-					key: 'p'
-				}
-			],
 			callback: () => this.performPullAll()
 		});
 
-		// Push All command
+		// Push all command
 		this.addCommand({
-			id: 'vaultsync-push-all',
-			name: 'Push All',
+			id: 'vaultconnect-push-all',
+			name: 'Push all',
 			icon: 'upload',
-			hotkeys: [
-				{
-					modifiers: ['Mod', 'Shift'],
-					key: 'u'
-				}
-			],
 			callback: () => this.performPushAll()
 		});
 
-		// Force Sync command
+		// Force sync command
 		this.addCommand({
-			id: 'vaultsync-force-sync',
-			name: 'Force Sync',
+			id: 'vaultconnect-force-sync',
+			name: 'Force sync',
 			icon: 'zap',
-			hotkeys: [
-				{
-					modifiers: ['Mod', 'Shift'],
-					key: 'f'
-				}
-			],
 			callback: () => this.performForceSync()
 		});
 
-		// View Conflicts command
+		// View conflicts command
 		this.addCommand({
-			id: 'vaultsync-view-conflicts',
-			name: 'View Conflicts',
+			id: 'vaultconnect-view-conflicts',
+			name: 'View conflicts',
 			icon: 'alert-triangle',
-			hotkeys: [
-				{
-					modifiers: ['Mod', 'Shift'],
-					key: 'k'
-				}
-			],
 			callback: () => this.viewConflicts()
 		});
 
-		// View Sync Log command
+		// View sync log command
 		this.addCommand({
-			id: 'vaultsync-view-sync-log',
-			name: 'View Sync Log',
+			id: 'vaultconnect-view-sync-log',
+			name: 'View sync log',
 			icon: 'file-text',
-			hotkeys: [
-				{
-					modifiers: ['Mod', 'Shift'],
-					key: 'l'
-				}
-			],
 			callback: () => this.viewSyncLog()
 		});
 
-		// Smart Sync command (for backward compatibility)
+		// Smart sync command
 		this.addCommand({
-			id: 'vaultsync-smart-sync',
-			name: 'Smart Sync',
+			id: 'vaultconnect-smart-sync',
+			name: 'Smart sync',
 			icon: 'refresh-cw',
-			hotkeys: [
-				{
-					modifiers: ['Mod', 'Shift'],
-					key: 's'
-				}
-			],
 			callback: () => this.performSmartSync()
 		});
 
-		console.log('Commands registered with keyboard shortcuts');
+		logger.debug('Commands registered');
 	}
 
 	onunload() {
 		this.disconnect();
-		console.log('VaultSync plugin unloaded');
+		logger.info('VaultConnect plugin unloaded');
 	}
 
 	async loadSettings() {
@@ -649,7 +617,7 @@ export default class VaultSyncPlugin extends Plugin {
 			this.isSyncing = false;
 			this.updateStatusBar('connected');
 		} catch (error) {
-			console.error('Error syncing file:', error);
+			logger.error('Error syncing file:', error);
 			new Notice(`Failed to sync ${file.path}: ${error.message}`);
 			this.isSyncing = false;
 			this.updateStatusBar('error');
@@ -667,7 +635,7 @@ export default class VaultSyncPlugin extends Plugin {
 				});
 			}
 		} catch (error) {
-			console.error('Error syncing file rename:', error);
+			logger.error('Error syncing file rename:', error);
 			new Notice(`Failed to sync rename: ${error.message}`);
 		}
 	}
@@ -686,18 +654,18 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async showInitialSyncWizard(): Promise<void> {
 		if (!this.initialSyncService || !this.settings.vaultId || !this.eventBus) {
-			console.error('[VaultSync] Cannot show initial sync wizard: service or vault ID not available');
+			logger.error('[VaultConnect] Cannot show initial sync wizard: service or vault ID not available');
 			throw new Error('Initial sync service not available');
 		}
 
 		try {
-			console.log('[VaultSync] Starting file analysis for initial sync...');
+			logger.debug('[VaultConnect] Starting file analysis for initial sync...');
 			new Notice('Analyzing files for first-time setup...');
 
 			// Analyze files
 			const analysis = await this.initialSyncService.analyzeFiles(this.settings.vaultId);
 
-			console.log('[VaultSync] File analysis complete:', {
+			logger.debug('[VaultConnect] File analysis complete:', {
 				localOnly: analysis.localFiles.length,
 				remoteOnly: analysis.remoteFiles.length,
 				both: analysis.commonFiles.length,
@@ -720,11 +688,11 @@ export default class VaultSyncPlugin extends Plugin {
 						vaultName: this.settings.vaultId.substring(0, 8) + '...', // Show truncated ID
 						analysis,
 						onComplete: async (option) => {
-							console.log('[VaultSync] Initial sync completed with option:', option);
+							logger.debug('[VaultConnect] Initial sync completed with option:', option);
 							resolve();
 						},
 						onCancel: () => {
-							console.log('[VaultSync] Initial sync cancelled by user');
+							logger.debug('[VaultConnect] Initial sync cancelled by user');
 							reject(new Error('Initial sync cancelled by user'));
 						}
 					},
@@ -735,7 +703,7 @@ export default class VaultSyncPlugin extends Plugin {
 				modal.open();
 			});
 		} catch (error) {
-			console.error('[VaultSync] Error during initial sync wizard:', error);
+			logger.error('[VaultConnect] Error during initial sync wizard:', error);
 			new Notice(`Initial sync setup failed: ${error.message}`);
 			throw error;
 		}
@@ -758,7 +726,7 @@ export default class VaultSyncPlugin extends Plugin {
 		}
 
 		try {
-			console.log('[VaultSync] Connecting with vault ID:', this.settings.vaultId);
+			logger.debug('[VaultConnect] Connecting with vault ID:', this.settings.vaultId);
 			this.updateStatusBar('connecting');
 
 			// Get vault information for cross-tenant detection
@@ -770,15 +738,15 @@ export default class VaultSyncPlugin extends Plugin {
 					await this.vaultService.selectVault(this.settings.vaultId);
 					isCrossTenant = this.vaultService.isCrossTenantVault();
 					permission = this.vaultService.getCurrentVaultPermission() || 'admin';
-					console.log('[VaultSync] Vault info:', { isCrossTenant, permission });
+					logger.debug('[VaultConnect] Vault info:', { isCrossTenant, permission });
 				} catch (error) {
-					console.warn('[VaultSync] Failed to get vault info:', error);
+					logger.warn('[VaultConnect] Failed to get vault info:', error);
 				}
 			}
 
 			// Initialize fileSyncService early so it can be used by initial sync wizard
 			if (this.fileSyncService) {
-				console.log('[VaultSync] Pre-initializing FileSyncService for initial sync');
+				logger.debug('[VaultConnect] Pre-initializing FileSyncService for initial sync');
 				await this.fileSyncService.initialize(this.settings.vaultId, isCrossTenant, permission);
 			}
 
@@ -788,15 +756,15 @@ export default class VaultSyncPlugin extends Plugin {
 				const isFirstTime = await this.initialSyncService.isFirstTimeConnection(this.settings.vaultId);
 				
 				if (isFirstTime) {
-					console.log('[VaultSync] First-time connection detected, showing initial sync wizard');
+					logger.debug('[VaultConnect] First-time connection detected, showing initial sync wizard');
 					try {
 						// Show initial sync wizard and wait for completion
 						await this.showInitialSyncWizard();
 						completedInitialSync = true;
-						console.log('[VaultSync] Initial sync wizard completed successfully');
+						logger.debug('[VaultConnect] Initial sync wizard completed successfully');
 					} catch (error) {
 						// User cancelled or error occurred
-						console.log('[VaultSync] Initial sync wizard was cancelled or failed:', error.message);
+						logger.debug('[VaultConnect] Initial sync wizard was cancelled or failed:', error.message);
 						this.updateStatusBar('disconnected');
 						return; // Don't proceed with connection
 					}
@@ -805,11 +773,11 @@ export default class VaultSyncPlugin extends Plugin {
 
 			// Initialize remaining services with vault
 			if (this.syncService && this.conflictService) {
-				console.log('[VaultSync] Initializing remaining services with vault ID:', this.settings.vaultId);
+				logger.debug('[VaultConnect] Initializing remaining services with vault ID:', this.settings.vaultId);
 				await this.syncService.initialize(this.settings.vaultId, isCrossTenant, permission);
 				await this.conflictService.initialize(this.settings.vaultId, isCrossTenant, permission);
 				await this.syncService.start();
-				console.log('[VaultSync] Services initialized successfully');
+				logger.debug('[VaultConnect] Services initialized successfully');
 			}
 
 			this.socket = io(this.settings.wsUrl, {
@@ -824,7 +792,7 @@ export default class VaultSyncPlugin extends Plugin {
 			});
 
 			this.socket.on('connect', async () => {
-				console.log('Connected to VaultSync');
+				logger.debug('Connected to VaultConnect');
 				this.isConnected = true;
 				this.updateStatusBar('connected');
 				
@@ -845,44 +813,44 @@ export default class VaultSyncPlugin extends Plugin {
 
 				// Trigger reconnection sync check
 				if (this.syncService && !completedInitialSync) {
-					console.log('[VaultSync] Triggering reconnection sync check...');
+					logger.debug('[VaultConnect] Triggering reconnection sync check...');
 					await this.syncService.handleReconnection();
 				}
 			});
 
 			this.socket.on('disconnect', () => {
-				console.log('Disconnected from VaultSync');
+				logger.debug('Disconnected from VaultConnect');
 				this.isConnected = false;
 				this.updateStatusBar('disconnected');
 			});
 
-			this.socket.on('subscribed', (data: any) => {
-				console.log('Subscribed to vault:', data);
+			this.socket.on('subscribed', (data: { vault_id: string }) => {
+				logger.debug('Subscribed to vault:', data);
 				new Notice('Subscribed to vault sync');
 			});
 
-			this.socket.on('sync_event', async (data: any) => {
-				console.log('Received sync event:', data);
+			this.socket.on('sync_event', async (data: SyncEventData) => {
+				logger.debug('Received sync event:', data);
 				await this.handleRemoteChange(data);
 			});
 
-			this.socket.on('conflict', (data: any) => {
-				console.log('Conflict detected:', data);
+			this.socket.on('conflict', (data: ConflictEventData) => {
+				logger.debug('Conflict detected:', data);
 				this.handleConflict(data);
 			});
 
 			this.socket.on('connect_error', (error: Error) => {
-				console.error('Connection error:', error);
+				logger.error('Connection error:', error);
 				this.updateStatusBar('error');
 				new Notice(`Connection error: ${error.message}`);
 			});
 
-			this.socket.on('heartbeat', (data: any) => {
-				console.log('Heartbeat:', data.timestamp);
+			this.socket.on('heartbeat', (data: { timestamp: number }) => {
+				logger.debug('Heartbeat:', data.timestamp);
 			});
 
 		} catch (error) {
-			console.error('Failed to connect:', error);
+			logger.error('Failed to connect:', error);
 			new Notice(`Failed to connect: ${error.message}`);
 			this.updateStatusBar('error');
 		}
@@ -972,23 +940,23 @@ export default class VaultSyncPlugin extends Plugin {
 		}
 	}
 
-	async handleRemoteChange(data: any) {
+	async handleRemoteChange(data: SyncEventData) {
 		try {
 			const { file_path, operation, device_id, old_path } = data;
 
 			// Skip if change is from this device
 			if (device_id === this.settings.deviceId) {
-				console.log(`[VaultSync] Skipping sync event from own device: ${file_path}`);
+				logger.debug(`[VaultConnect] Skipping sync event from own device: ${file_path}`);
 				return;
 			}
 
-			console.log(`[VaultSync] Processing remote change for: ${file_path}, operation: ${operation}`);
+			logger.debug(`[VaultConnect] Processing remote change for: ${file_path}, operation: ${operation}`);
 
 			// Handle delete operation
 			if (operation === 'delete') {
 				const file = this.app.vault.getAbstractFileByPath(file_path);
 				if (file instanceof TFile) {
-					await this.app.vault.delete(file);
+					await this.app.fileManager.trashFile(file);
 
 					// Batch notifications for multiple deletes
 					this.batchNotification('delete', file_path);
@@ -998,7 +966,7 @@ export default class VaultSyncPlugin extends Plugin {
 						this.fileSyncService.clearSyncState(file_path);
 					}
 				} else {
-					console.log(`[VaultSync] File already deleted locally: ${file_path}`);
+					logger.debug(`[VaultConnect] File already deleted locally: ${file_path}`);
 				}
 				return;
 			}
@@ -1007,7 +975,7 @@ export default class VaultSyncPlugin extends Plugin {
 			if (operation === 'rename' && old_path) {
 				const oldFile = this.app.vault.getAbstractFileByPath(old_path);
 				if (oldFile instanceof TFile) {
-					console.log(`[VaultSync] Renaming file: ${old_path} -> ${file_path}`);
+					logger.debug(`[VaultConnect] Renaming file: ${old_path} -> ${file_path}`);
 					await this.app.vault.rename(oldFile, file_path);
 
 					// Batch notification for rename
@@ -1019,7 +987,7 @@ export default class VaultSyncPlugin extends Plugin {
 					}
 				} else {
 					// Old file doesn't exist locally, treat as create
-					console.log(`[VaultSync] Old file not found, treating rename as create: ${file_path}`);
+					logger.debug(`[VaultConnect] Old file not found, treating rename as create: ${file_path}`);
 					if (this.fileSyncService) {
 						const result = await this.fileSyncService.downloadFile(file_path);
 						if (result.success) {
@@ -1044,13 +1012,13 @@ export default class VaultSyncPlugin extends Plugin {
 
 					// If hashes match, skip download - file is already up to date
 					if (localHash === remoteHash) {
-						console.log(`[VaultSync] Skipping download for ${file_path} - hash matches (${remoteHash.substring(0, 8)})`);
+						logger.debug(`[VaultConnect] Skipping download for ${file_path} - hash matches (${remoteHash.substring(0, 8)})`);
 						// Update stored hash to prevent unnecessary uploads
 						this.fileSyncService.updateFileHash(file_path, remoteHash);
 						return;
 					}
 
-					console.log(`[VaultSync] Hash mismatch for ${file_path}: local=${localHash.substring(0, 8)}, remote=${remoteHash.substring(0, 8)}`);
+					logger.debug(`[VaultConnect] Hash mismatch for ${file_path}: local=${localHash.substring(0, 8)}, remote=${remoteHash.substring(0, 8)}`);
 				}
 
 				// Safe to download - either file doesn't exist locally, hash differs, or no local changes
@@ -1058,25 +1026,25 @@ export default class VaultSyncPlugin extends Plugin {
 				// uploadFile() will prevent unnecessary re-uploads after download
 				const result = await this.fileSyncService.downloadFile(file_path);
 				if (result.success) {
-					console.log(`[VaultSync] Successfully synced remote change: ${file_path}`);
+					logger.debug(`[VaultConnect] Successfully synced remote change: ${file_path}`);
 
 					// Batch notification for create/update
 					const action = operation === 'create' ? 'create' : 'update';
 					this.batchNotification(action, file_path);
 				} else {
-					console.error(`[VaultSync] Failed to sync remote change: ${file_path}`, result.error);
+					logger.error(`[VaultConnect] Failed to sync remote change: ${file_path}`, result.error);
 					new Notice(`Failed to sync remote change: ${result.error}`);
 				}
 			} else {
-				console.error(`[VaultSync] FileSyncService not available to handle remote change`);
+				logger.error(`[VaultConnect] FileSyncService not available to handle remote change`);
 			}
 		} catch (error) {
-			console.error('Error handling remote change:', error);
+			logger.error('Error handling remote change:', error);
 			new Notice(`Error syncing remote change: ${error.message}`);
 		}
 	}
 
-	handleConflict(data: any) {
+	handleConflict(data: ConflictEventData) {
 		const { file_path, local_hash, remote_hash } = data;
 		new Notice(`Conflict detected in ${file_path}. Please resolve manually.`, 10000);
 		// TODO: Implement conflict resolution UI
@@ -1084,7 +1052,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 	async forceSyncAll() {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultSync');
+			new Notice('Not connected to VaultConnect');
 			return;
 		}
 
@@ -1107,7 +1075,7 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async performSmartSync(): Promise<void> {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultSync');
+			new Notice('Not connected to VaultConnect');
 			return;
 		}
 
@@ -1134,7 +1102,7 @@ export default class VaultSyncPlugin extends Plugin {
 				}
 			}
 		} catch (error) {
-			console.error('Smart Sync error:', error);
+			logger.error('Smart Sync error:', error);
 			new Notice(`Smart Sync failed: ${error.message}`);
 		}
 	}
@@ -1144,7 +1112,7 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async performPullAll(): Promise<void> {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultSync');
+			new Notice('Not connected to VaultConnect');
 			return;
 		}
 
@@ -1175,7 +1143,7 @@ export default class VaultSyncPlugin extends Plugin {
 				);
 			}
 		} catch (error) {
-			console.error('Pull All error:', error);
+			logger.error('Pull All error:', error);
 			new Notice(`Pull All failed: ${error.message}`);
 		}
 	}
@@ -1185,7 +1153,7 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async performPushAll(): Promise<void> {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultSync');
+			new Notice('Not connected to VaultConnect');
 			return;
 		}
 
@@ -1216,7 +1184,7 @@ export default class VaultSyncPlugin extends Plugin {
 				);
 			}
 		} catch (error) {
-			console.error('Push All error:', error);
+			logger.error('Push All error:', error);
 			new Notice(`Push All failed: ${error.message}`);
 		}
 	}
@@ -1226,7 +1194,7 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async performForceSync(): Promise<void> {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultSync');
+			new Notice('Not connected to VaultConnect');
 			return;
 		}
 
@@ -1261,7 +1229,7 @@ export default class VaultSyncPlugin extends Plugin {
 				}
 			}
 		} catch (error) {
-			console.error('Force Sync error:', error);
+			logger.error('Force Sync error:', error);
 			new Notice(`Force Sync failed: ${error.message}`);
 		}
 	}
@@ -1288,7 +1256,7 @@ export default class VaultSyncPlugin extends Plugin {
 			this.conflictService,
 			() => {
 				// Refresh callback
-				console.log('Conflicts resolved');
+				logger.debug('Conflicts resolved');
 			}
 		);
 		modal.open();
@@ -1535,7 +1503,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 									// Clear all initial sync states
 									await this.plugin.initialSyncService['storage'].set('initialSyncStates', {});
 								} catch (e) {
-									console.warn('Could not clear initial sync states:', e);
+									logger.warn('Could not clear initial sync states:', e);
 								}
 							}
 
@@ -1547,7 +1515,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 									await adapter.remove(syncStateFile);
 								}
 							} catch (e) {
-								console.warn('Could not clear sync state file:', e);
+								logger.warn('Could not clear sync state file:', e);
 							}
 
 							await this.plugin.saveSettings();
@@ -1592,7 +1560,8 @@ class VaultSyncSettingTab extends PluginSettingTab {
 								const loadingNotice = new Notice('Requesting authorization code...', 0);
 
 								// Start device auth flow
-								const deviceCodeResp = await fetch(`${this.plugin.settings.apiBaseURL}/auth/device/code`, {
+								const deviceCodeResp = await requestUrl({
+									url: `${this.plugin.settings.apiBaseURL}/auth/device/code`,
 									method: 'POST',
 									headers: { 'Content-Type': 'application/json' },
 									body: JSON.stringify({
@@ -1601,40 +1570,41 @@ class VaultSyncSettingTab extends PluginSettingTab {
 									})
 								});
 
-								if (!deviceCodeResp.ok) {
+								if (deviceCodeResp.status !== 200) {
 									throw new Error('Failed to request device code');
 								}
 
-								const deviceData = await deviceCodeResp.json();
+								const deviceData = deviceCodeResp.json;
 								loadingNotice.hide();
 
 								// Show user code
 								const modal = new Modal(this.app);
-								modal.titleEl.setText('Authorize VaultSync');
-								const codeEl = modal.contentEl.createDiv();
-								codeEl.innerHTML = `
-									<p style="margin-bottom: 15px;">Enter this code in your browser:</p>
-									<div style="text-align: center; font-size: 32px; font-family: monospace; font-weight: bold; letter-spacing: 4px; padding: 20px; background: var(--background-secondary); border: 2px solid var(--interactive-accent); border-radius: 8px; margin: 20px 0;">
-										${deviceData.user_code}
-									</div>
-									<p style="margin: 15px 0; font-size: 13px; color: var(--text-muted);">
-										1. A browser window should open automatically<br/>
-										2. If not, click the button below<br/>
-										3. Enter the code and select token duration<br/>
-										4. Click "Authorize"
-									</p>
-								`;
+								modal.titleEl.setText('Authorize VaultConnect');
+								const codeEl = modal.contentEl.createDiv({ cls: 'vaultconnect-auth-modal' });
 
-								const btnContainer = codeEl.createDiv({ attr: { style: 'text-align: center; margin-top: 20px;' } });
-								const openBtn = btnContainer.createEl('button', { text: 'Open Browser', cls: 'mod-cta' });
-								openBtn.style.marginRight = '10px';
+								const instructionEl = codeEl.createEl('p', { text: 'Enter this code in your browser:', cls: 'vaultconnect-auth-instruction' });
+
+								const codeDisplay = codeEl.createDiv({ cls: 'vaultconnect-auth-code' });
+								codeDisplay.setText(deviceData.user_code);
+
+								const stepsEl = codeEl.createEl('p', { cls: 'vaultconnect-auth-steps' });
+								stepsEl.createSpan({ text: '1. A browser window should open automatically' });
+								stepsEl.createEl('br');
+								stepsEl.createSpan({ text: '2. If not, click the button below' });
+								stepsEl.createEl('br');
+								stepsEl.createSpan({ text: '3. Enter the code and select token duration' });
+								stepsEl.createEl('br');
+								stepsEl.createSpan({ text: '4. Click "Authorize"' });
+
+								const btnContainer = codeEl.createDiv({ cls: 'vaultconnect-auth-buttons' });
+								const openBtn = btnContainer.createEl('button', { text: 'Open browser', cls: 'mod-cta' });
 								openBtn.onclick = () => window.open(deviceData.verification_uri_complete, '_blank');
 
 								const cancelBtn = btnContainer.createEl('button', { text: 'Cancel' });
 								cancelBtn.onclick = () => modal.close();
 
-								const waitingEl = codeEl.createDiv({ attr: { style: 'text-align: center; margin-top: 20px; color: var(--text-muted);' } });
-								waitingEl.innerHTML = '<p>Waiting for authorization...</p>';
+								const waitingEl = codeEl.createDiv({ cls: 'vaultconnect-auth-waiting' });
+								waitingEl.createEl('p', { text: 'Waiting for authorization...' });
 
 								// Open browser automatically
 								window.open(deviceData.verification_uri_complete, '_blank');
@@ -1653,23 +1623,25 @@ class VaultSyncSettingTab extends PluginSettingTab {
 									}
 
 									try {
-										const tokenResp = await fetch(`${this.plugin.settings.apiBaseURL}/auth/device/token`, {
+										const tokenResp = await requestUrl({
+											url: `${this.plugin.settings.apiBaseURL}/auth/device/token`,
 											method: 'POST',
 											headers: { 'Content-Type': 'application/json' },
-											body: JSON.stringify({ device_code: deviceData.device_code })
+											body: JSON.stringify({ device_code: deviceData.device_code }),
+											throw: false
 										});
 
-										if (tokenResp.ok) {
-											const tokenData = await tokenResp.json();
+										if (tokenResp.status === 200) {
+											const tokenData = tokenResp.json;
 											this.plugin.settings.apiKey = tokenData.access_token;
 											const expiresDate = new Date(Date.now() + tokenData.expires_in * 1000);
 											this.plugin.settings.apiKeyExpires = expiresDate;
 											await this.plugin.saveSettings();
 											modal.close();
-											new Notice('Successfully authorized! 🎉');
+											new Notice('Successfully authorized!');
 											this.display();
 										} else {
-											const error = await tokenResp.json();
+											const error = tokenResp.json;
 											if (error.error !== 'authorization_pending') {
 												throw new Error(error.error_description || 'Authorization failed');
 											}
@@ -1785,55 +1757,6 @@ class VaultSyncSettingTab extends PluginSettingTab {
 					});
 			});
 
-		// Keyboard Shortcuts
-		containerEl.createEl('h3', { text: 'Keyboard Shortcuts' });
-
-		const shortcutsDesc = containerEl.createDiv({ cls: 'vaultsync-shortcuts-info' });
-		shortcutsDesc.style.marginBottom = '16px';
-		shortcutsDesc.style.padding = '12px';
-		shortcutsDesc.style.backgroundColor = 'var(--background-secondary)';
-		shortcutsDesc.style.borderRadius = '4px';
-
-		const shortcutsList = [
-			{ name: 'Connect', shortcut: 'Ctrl/Cmd + Shift + C' },
-			{ name: 'Disconnect', shortcut: 'Ctrl/Cmd + Shift + D' },
-			{ name: 'Smart Sync', shortcut: 'Ctrl/Cmd + Shift + S' },
-			{ name: 'Pull All', shortcut: 'Ctrl/Cmd + Shift + P' },
-			{ name: 'Push All', shortcut: 'Ctrl/Cmd + Shift + U' },
-			{ name: 'Force Sync', shortcut: 'Ctrl/Cmd + Shift + F' },
-			{ name: 'View Conflicts', shortcut: 'Ctrl/Cmd + Shift + K' },
-			{ name: 'View Sync Log', shortcut: 'Ctrl/Cmd + Shift + L' }
-		];
-
-		shortcutsDesc.createEl('p', {
-			text: 'Default keyboard shortcuts (customizable in Obsidian settings):',
-			attr: { style: 'margin-bottom: 8px; font-weight: 500;' }
-		});
-
-		const table = shortcutsDesc.createEl('table', {
-			attr: { style: 'width: 100%; border-collapse: collapse;' }
-		});
-
-		shortcutsList.forEach(item => {
-			const row = table.createEl('tr');
-			const nameCell = row.createEl('td', {
-				text: item.name,
-				attr: { style: 'padding: 4px 8px;' }
-			});
-			const shortcutCell = row.createEl('td', {
-				text: item.shortcut,
-				attr: {
-					style: 'padding: 4px 8px; text-align: right; font-family: monospace; color: var(--text-accent);'
-				}
-			});
-		});
-
-		const customizeNote = shortcutsDesc.createEl('p', {
-			text: 'To customize shortcuts, go to Settings → Hotkeys and search for "VaultSync"',
-			attr: {
-				style: 'margin-top: 12px; font-size: 0.9em; color: var(--text-muted); font-style: italic;'
-			}
-		});
 	}
 
 	/**
@@ -1845,26 +1768,16 @@ class VaultSyncSettingTab extends PluginSettingTab {
 			.setDesc('Select the vault to sync with');
 
 		// Create container for dropdown and button
-		const controlsContainer = vaultSetting.controlEl.createDiv({ cls: 'vault-selector-controls' });
-		controlsContainer.style.display = 'flex';
-		controlsContainer.style.gap = '8px';
-		controlsContainer.style.alignItems = 'center';
-		controlsContainer.style.width = '100%';
+		const controlsContainer = vaultSetting.controlEl.createDiv({ cls: 'vaultconnect-vault-selector' });
 
 		// Dropdown
-		const dropdown = controlsContainer.createEl('select', { cls: 'dropdown' });
-		dropdown.style.flex = '1';
-		dropdown.style.minWidth = '200px';
+		const dropdown = controlsContainer.createEl('select', { cls: 'dropdown vaultconnect-vault-dropdown' });
 
 		// Refresh button
-		const refreshButton = controlsContainer.createEl('button', { text: '↻ Refresh', cls: 'mod-cta' });
-		refreshButton.style.flexShrink = '0';
+		const refreshButton = controlsContainer.createEl('button', { text: 'Refresh', cls: 'mod-cta vaultconnect-refresh-btn' });
 
 		// Loading indicator
-		const loadingEl = controlsContainer.createEl('span', { text: 'Loading...', cls: 'vault-loading' });
-		loadingEl.style.display = 'none';
-		loadingEl.style.fontSize = '0.9em';
-		loadingEl.style.color = 'var(--text-muted)';
+		const loadingEl = controlsContainer.createEl('span', { text: 'Loading...', cls: 'vaultconnect-loading' });
 
 		// Load vaults function
 		const loadVaults = async () => {
@@ -1877,7 +1790,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 			}
 
 			try {
-				loadingEl.style.display = 'inline';
+				loadingEl.addClass('is-visible');
 				refreshButton.disabled = true;
 				dropdown.disabled = true;
 
@@ -1909,12 +1822,12 @@ class VaultSyncSettingTab extends PluginSettingTab {
 
 				dropdown.disabled = false;
 			} catch (error) {
-				console.error('Failed to load vaults:', error);
+				logger.error('Failed to load vaults:', error);
 				dropdown.empty();
 				dropdown.createEl('option', { text: 'Error loading vaults', value: '' });
 				new Notice(`Failed to load vaults: ${error.message}`);
 			} finally {
-				loadingEl.style.display = 'none';
+				loadingEl.removeClass('is-visible');
 				refreshButton.disabled = false;
 			}
 		};
@@ -1923,10 +1836,10 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		dropdown.addEventListener('change', async () => {
 			const selectedVaultId = dropdown.value;
 			if (selectedVaultId) {
-				console.log('[VaultSync] Vault selected:', selectedVaultId);
+				logger.debug('[VaultConnect] Vault selected:', selectedVaultId);
 				this.plugin.settings.vaultId = selectedVaultId;
 				await this.plugin.saveSettings();
-				console.log('[VaultSync] Settings saved. Current vaultId:', this.plugin.settings.vaultId);
+				logger.debug('[VaultConnect] Settings saved. Current vaultId:', this.plugin.settings.vaultId);
 				new Notice(`Vault selected: ${selectedVaultId.substring(0, 8)}...\nDisconnect and reconnect to sync with this vault.`);
 			}
 		});

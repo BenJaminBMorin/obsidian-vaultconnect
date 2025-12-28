@@ -21,16 +21,9 @@ export class NetworkReconnectionStrategy implements ErrorRecoveryStrategy {
     // Wait a bit before checking connectivity
     await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Check if we can reach the internet
-    try {
-      const response = await fetch('https://www.google.com/favicon.ico', {
-        method: 'HEAD',
-        mode: 'no-cors'
-      });
-      return true;
-    } catch {
-      return false;
-    }
+    // Check if we can reach the internet using navigator.onLine
+    // This is more reliable across platforms (desktop, mobile, web)
+    return navigator.onLine;
   }
 }
 

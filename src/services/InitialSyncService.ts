@@ -1,8 +1,9 @@
-import { Vault, TFile } from 'obsidian';
+import { App, Vault, TFile } from 'obsidian';
 import { APIClient } from '../api/APIClient';
 import { FileSyncService } from './FileSyncService';
 import { StorageManager } from '../core/StorageManager';
 import { EventBus } from '../core/EventBus';
+import { logger } from '../utils/logger';
 import {
   InitialSyncState,
   InitialSyncOption,
@@ -21,11 +22,12 @@ interface InitialSyncSettings {
 
 /**
  * Service for handling initial sync setup when connecting to a vault for the first time.
- * 
+ *
  * This service detects first-time connections, analyzes file differences between local
  * and remote vaults, and executes the user's chosen sync strategy.
  */
 export class InitialSyncService {
+  private app: App;
   private vault: Vault;
   private apiClient: APIClient;
   private fileSync: FileSyncService;
@@ -40,21 +42,22 @@ export class InitialSyncService {
   private cancelRequested: boolean = false;
 
   constructor(
-    vault: Vault,
+    app: App,
     apiClient: APIClient,
     fileSync: FileSyncService,
     storage: StorageManager,
     eventBus: EventBus,
     settings: InitialSyncSettings
   ) {
-    this.vault = vault;
+    this.app = app;
+    this.vault = app.vault;
     this.apiClient = apiClient;
     this.fileSync = fileSync;
     this.storage = storage;
     this.eventBus = eventBus;
     this.settings = settings;
 
-    console.log('[InitialSync] Service initialized with settings:', {
+    logger.debug('[InitialSync] Service initialized with settings:', {
       excludedFolders: settings.excludedFolders
     });
   }
@@ -66,13 +69,13 @@ export class InitialSyncService {
    * @returns true if no sync state exists for this vault
    */
   async isFirstTimeConnection(vaultId: string): Promise<boolean> {
-    console.log('[InitialSync] Checking first-time connection for vault:', vaultId);
+    logger.debug('[InitialSync] Checking first-time connection for vault:', vaultId);
 
     try {
       const syncState = await this.getSyncState(vaultId);
       const isFirstTime = !syncState || !syncState.completed;
 
-      console.log('[InitialSync] First-time detection result:', {
+      logger.debug('[InitialSync] First-time detection result:', {
         vaultId,
         isFirstTime,
         existingState: syncState ? {
@@ -84,7 +87,7 @@ export class InitialSyncService {
       
       return isFirstTime;
     } catch (error) {
-      console.error('[InitialSync] Error checking first-time connection:', {
+      logger.error('[InitialSync] Error checking first-time connection:', {
         vaultId,
         error: error.message,
         stack: error.stack
@@ -99,7 +102,7 @@ export class InitialSyncService {
       } as InitialSyncErrorInfo);
       
       // If we can't determine, assume it's first time to be safe
-      console.log('[InitialSync] Defaulting to first-time connection due to error');
+      logger.debug('[InitialSync] Defaulting to first-time connection due to error');
       return true;
     }
   }
@@ -111,13 +114,13 @@ export class InitialSyncService {
    * @returns The sync state or null if not found
    */
   async getSyncState(vaultId: string): Promise<InitialSyncState | null> {
-    console.log('[InitialSync] Retrieving sync state for vault:', vaultId);
+    logger.debug('[InitialSync] Retrieving sync state for vault:', vaultId);
     
     try {
       const states = await this.storage.get<Record<string, InitialSyncState>>('initialSyncStates');
       
       if (!states || !states[vaultId]) {
-        console.log('[InitialSync] No sync state found for vault:', vaultId);
+        logger.debug('[InitialSync] No sync state found for vault:', vaultId);
         return null;
       }
 
@@ -128,7 +131,7 @@ export class InitialSyncService {
         state.completedAt = new Date(state.completedAt);
       }
 
-      console.log('[InitialSync] Retrieved sync state:', {
+      logger.debug('[InitialSync] Retrieved sync state:', {
         vaultId,
         completed: state.completed,
         completedAt: state.completedAt,
@@ -138,7 +141,7 @@ export class InitialSyncService {
 
       return state;
     } catch (error) {
-      console.error('[InitialSync] Error getting sync state:', {
+      logger.error('[InitialSync] Error getting sync state:', {
         vaultId,
         error: error.message,
         stack: error.stack
@@ -168,7 +171,7 @@ export class InitialSyncService {
     option: InitialSyncOption,
     fileCounts: FileAnalysis
   ): Promise<void> {
-    console.log('[InitialSync] Marking sync complete:', {
+    logger.debug('[InitialSync] Marking sync complete:', {
       vaultId,
       option,
       fileCounts: {
@@ -203,14 +206,14 @@ export class InitialSyncService {
       // Save to storage
       await this.storage.set('initialSyncStates', states);
 
-      console.log('[InitialSync] Sync state saved successfully:', {
+      logger.debug('[InitialSync] Sync state saved successfully:', {
         vaultId,
         completedAt: newState.completedAt,
         option: newState.chosenOption,
         fileCounts: newState.fileCounts
       });
     } catch (error) {
-      console.error('[InitialSync] Error marking sync complete:', {
+      logger.error('[InitialSync] Error marking sync complete:', {
         vaultId,
         option,
         error: error.message,
@@ -235,14 +238,14 @@ export class InitialSyncService {
    * @param vaultId - The VaultSync vault ID
    */
   async resetSyncState(vaultId: string): Promise<void> {
-    console.log('[InitialSync] Resetting sync state for vault:', vaultId);
+    logger.debug('[InitialSync] Resetting sync state for vault:', vaultId);
 
     try {
       const states = await this.storage.get<Record<string, InitialSyncState>>('initialSyncStates') || {};
       
       // Log existing state before reset
       if (states[vaultId]) {
-        console.log('[InitialSync] Existing state before reset:', {
+        logger.debug('[InitialSync] Existing state before reset:', {
           vaultId,
           completed: states[vaultId].completed,
           completedAt: states[vaultId].completedAt,
@@ -250,7 +253,7 @@ export class InitialSyncService {
           fileCounts: states[vaultId].fileCounts
         });
       } else {
-        console.log('[InitialSync] No existing state found for vault:', vaultId);
+        logger.debug('[InitialSync] No existing state found for vault:', vaultId);
       }
       
       // Remove the state for this vault
@@ -259,9 +262,9 @@ export class InitialSyncService {
       // Save updated states
       await this.storage.set('initialSyncStates', states);
 
-      console.log('[InitialSync] Sync state reset successfully for vault:', vaultId);
+      logger.debug('[InitialSync] Sync state reset successfully for vault:', vaultId);
     } catch (error) {
-      console.error('[InitialSync] Error resetting sync state:', {
+      logger.error('[InitialSync] Error resetting sync state:', {
         vaultId,
         error: error.message,
         stack: error.stack
@@ -286,7 +289,7 @@ export class InitialSyncService {
    * @private
    */
   private async scanLocalFiles(): Promise<string[]> {
-    console.log('[InitialSync] Scanning local files...');
+    logger.debug('[InitialSync] Scanning local files...');
 
     try {
       const files = this.vault.getFiles(); // Changed from getMarkdownFiles() to getFiles()
@@ -311,7 +314,7 @@ export class InitialSyncService {
         }
       }
 
-      console.log('[InitialSync] Local file scan complete:', {
+      logger.debug('[InitialSync] Local file scan complete:', {
         totalFiles: files.length,
         includedFiles: filePaths.length,
         excludedFiles: excludedPaths.length,
@@ -320,15 +323,15 @@ export class InitialSyncService {
       
       // Log sample paths for debugging
       if (filePaths.length > 0) {
-        console.log('[InitialSync] Sample included files:', filePaths.slice(0, 5));
+        logger.debug('[InitialSync] Sample included files:', filePaths.slice(0, 5));
       }
       if (excludedPaths.length > 0) {
-        console.log('[InitialSync] Sample excluded files:', excludedPaths.slice(0, 5));
+        logger.debug('[InitialSync] Sample excluded files:', excludedPaths.slice(0, 5));
       }
       
       return filePaths;
     } catch (error) {
-      console.error('[InitialSync] Error scanning local files:', {
+      logger.error('[InitialSync] Error scanning local files:', {
         error: error.message,
         stack: error.stack
       });
@@ -353,7 +356,7 @@ export class InitialSyncService {
    * @private
    */
   private async fetchRemoteFiles(vaultId: string): Promise<string[]> {
-    console.log('[InitialSync] Fetching remote files for vault:', vaultId);
+    logger.debug('[InitialSync] Fetching remote files for vault:', vaultId);
 
     try {
       const filePaths = await this.retryWithBackoff(
@@ -365,19 +368,19 @@ export class InitialSyncService {
         3
       );
 
-      console.log('[InitialSync] Remote file fetch complete:', {
+      logger.debug('[InitialSync] Remote file fetch complete:', {
         vaultId,
         fileCount: filePaths.length
       });
       
       // Log sample paths for debugging
       if (filePaths.length > 0) {
-        console.log('[InitialSync] Sample remote files:', filePaths.slice(0, 5));
+        logger.debug('[InitialSync] Sample remote files:', filePaths.slice(0, 5));
       }
       
       return filePaths;
     } catch (error) {
-      console.error('[InitialSync] Error fetching remote files:', {
+      logger.error('[InitialSync] Error fetching remote files:', {
         vaultId,
         error: error.message,
         stack: error.stack
@@ -406,7 +409,7 @@ export class InitialSyncService {
    * @returns FileAnalysis object with categorized files and counts
    */
   async analyzeFiles(vaultId: string): Promise<FileAnalysis> {
-    console.log('[InitialSync] Starting file analysis for vault:', vaultId);
+    logger.debug('[InitialSync] Starting file analysis for vault:', vaultId);
 
     // Set analyzing state
     this.isAnalyzing = true;
@@ -431,7 +434,7 @@ export class InitialSyncService {
       });
 
       // Fetch local and remote files in parallel
-      console.log('[InitialSync] Fetching local and remote files in parallel...');
+      logger.debug('[InitialSync] Fetching local and remote files in parallel...');
       const analysisPromise = Promise.all([
         this.scanLocalFiles(),
         this.fetchRemoteFiles(vaultId)
@@ -445,11 +448,11 @@ export class InitialSyncService {
 
       // Check if cancelled
       if (this.cancelRequested) {
-        console.log('[InitialSync] File analysis cancelled by user');
+        logger.debug('[InitialSync] File analysis cancelled by user');
         throw new Error('File analysis cancelled by user');
       }
 
-      console.log('[InitialSync] Comparing file lists...');
+      logger.debug('[InitialSync] Comparing file lists...');
       
       // Convert to sets for efficient comparison
       const localSet = new Set(localPaths);
@@ -501,7 +504,7 @@ export class InitialSyncService {
         totalRemote: remotePaths.length
       };
 
-      console.log('[InitialSync] File analysis complete:', {
+      logger.debug('[InitialSync] File analysis complete:', {
         vaultId,
         localOnly: localFiles.length,
         remoteOnly: remoteFiles.length,
@@ -513,21 +516,21 @@ export class InitialSyncService {
 
       // Log sample paths for debugging
       if (localFiles.length > 0) {
-        console.log('[InitialSync] Sample local-only files:', localFiles.slice(0, 5));
+        logger.debug('[InitialSync] Sample local-only files:', localFiles.slice(0, 5));
       }
       if (remoteFiles.length > 0) {
-        console.log('[InitialSync] Sample remote-only files:', remoteFiles.slice(0, 5));
+        logger.debug('[InitialSync] Sample remote-only files:', remoteFiles.slice(0, 5));
       }
       if (commonFiles.length > 0) {
-        console.log('[InitialSync] Sample common files:', commonFiles.slice(0, 5));
+        logger.debug('[InitialSync] Sample common files:', commonFiles.slice(0, 5));
       }
       if (excludedFiles.length > 0) {
-        console.log('[InitialSync] Sample excluded files:', excludedFiles.slice(0, 5));
+        logger.debug('[InitialSync] Sample excluded files:', excludedFiles.slice(0, 5));
       }
 
       return analysis;
     } catch (error) {
-      console.error('[InitialSync] Error during file analysis:', {
+      logger.error('[InitialSync] Error during file analysis:', {
         vaultId,
         error: error.message,
         stack: error.stack
@@ -579,7 +582,7 @@ export class InitialSyncService {
     downloaded: number;
     errors: string[];
   }> {
-    console.log('[InitialSync] Starting Start Fresh operation:', {
+    logger.debug('[InitialSync] Starting Start Fresh operation:', {
       vaultId,
       filesToDelete: analysis.localFiles.length + analysis.commonFiles.length,
       filesToDownload: analysis.remoteFiles.length + analysis.commonFiles.length
@@ -601,11 +604,11 @@ export class InitialSyncService {
       let completed = 0;
 
       // Phase 1: Delete all local files (except excluded)
-      console.log('[InitialSync] Phase 1: Deleting', filesToDelete.length, 'local files...');
+      logger.debug('[InitialSync] Phase 1: Deleting', filesToDelete.length, 'local files...');
 
       for (const filePath of filesToDelete) {
         if (this.cancelRequested) {
-          console.log('[InitialSync] Start Fresh cancelled by user during deletion phase');
+          logger.debug('[InitialSync] Start Fresh cancelled by user during deletion phase');
           throw new Error('Operation cancelled by user');
         }
 
@@ -622,36 +625,36 @@ export class InitialSyncService {
           // Get file
           const file = this.vault.getAbstractFileByPath(filePath);
           
-          if (file) {
-            await this.vault.delete(file);
+          if (file && file instanceof TFile) {
+            await this.app.fileManager.trashFile(file);
             deleted++;
-            console.log('[InitialSync] Deleted:', filePath);
+            logger.debug('[InitialSync] Deleted:', filePath);
           }
 
           completed++;
         } catch (error) {
           const errorMsg = `Failed to delete ${filePath}: ${error.message}`;
-          console.error('[InitialSync]', errorMsg);
+          logger.error('[InitialSync]', errorMsg);
           errors.push(errorMsg);
           completed++;
           // Continue with other files
         }
       }
 
-      console.log('[InitialSync] Phase 1 complete:', {
+      logger.debug('[InitialSync] Phase 1 complete:', {
         deleted,
         errors: errors.length
       });
 
       // Phase 2: Download all remote files (in parallel batches)
-      console.log('[InitialSync] Phase 2: Downloading', filesToDownload.length, 'remote files...');
+      logger.debug('[InitialSync] Phase 2: Downloading', filesToDownload.length, 'remote files...');
 
       const BATCH_SIZE = 5; // Process 5 files at a time
       const downloadBatches = this.createBatches(filesToDownload, BATCH_SIZE);
 
       for (const batch of downloadBatches) {
         if (this.cancelRequested) {
-          console.log('[InitialSync] Start Fresh cancelled by user during download phase');
+          logger.debug('[InitialSync] Start Fresh cancelled by user during download phase');
           throw new Error('Operation cancelled by user');
         }
 
@@ -680,11 +683,11 @@ export class InitialSyncService {
               3
             );
 
-            console.log('[InitialSync] Downloaded:', filePath);
+            logger.debug('[InitialSync] Downloaded:', filePath);
             return { success: true, filePath };
           } catch (error) {
             const errorMsg = `Failed to download ${filePath}: ${error.message}`;
-            console.error('[InitialSync]', errorMsg);
+            logger.error('[InitialSync]', errorMsg);
             return { success: false, filePath, error: errorMsg };
           }
         });
@@ -704,7 +707,7 @@ export class InitialSyncService {
       }
 
       const summary = { deleted, downloaded, errors };
-      console.log('[InitialSync] Start Fresh complete:', {
+      logger.debug('[InitialSync] Start Fresh complete:', {
         vaultId,
         deleted,
         downloaded,
@@ -714,7 +717,7 @@ export class InitialSyncService {
 
       return summary;
     } catch (error) {
-      console.error('[InitialSync] Start Fresh operation failed:', {
+      logger.error('[InitialSync] Start Fresh operation failed:', {
         vaultId,
         deleted,
         downloaded,
@@ -768,7 +771,7 @@ export class InitialSyncService {
     uploaded: number;
     errors: string[];
   }> {
-    console.log('[InitialSync] Starting Upload Local operation:', {
+    logger.debug('[InitialSync] Starting Upload Local operation:', {
       vaultId,
       filesToUpload: analysis.localFiles.length + analysis.commonFiles.length
     });
@@ -786,14 +789,14 @@ export class InitialSyncService {
       const totalOperations = filesToUpload.length;
       let completed = 0;
 
-      console.log('[InitialSync] Uploading', filesToUpload.length, 'local files...');
+      logger.debug('[InitialSync] Uploading', filesToUpload.length, 'local files...');
 
       const BATCH_SIZE = 5; // Process 5 files at a time
       const uploadBatches = this.createBatches(filesToUpload, BATCH_SIZE);
 
       for (const batch of uploadBatches) {
         if (this.cancelRequested) {
-          console.log('[InitialSync] Upload Local cancelled by user');
+          logger.debug('[InitialSync] Upload Local cancelled by user');
           throw new Error('Operation cancelled by user');
         }
 
@@ -830,16 +833,16 @@ export class InitialSyncService {
                 3
               );
 
-              console.log('[InitialSync] Uploaded:', filePath);
+              logger.debug('[InitialSync] Uploaded:', filePath);
               return { success: true, filePath };
             } else {
               const errorMsg = `File not found: ${filePath}`;
-              console.error('[InitialSync]', errorMsg);
+              logger.error('[InitialSync]', errorMsg);
               return { success: false, filePath, error: errorMsg };
             }
           } catch (error) {
             const errorMsg = `Failed to upload ${filePath}: ${error.message}`;
-            console.error('[InitialSync]', errorMsg);
+            logger.error('[InitialSync]', errorMsg);
             return { success: false, filePath, error: errorMsg };
           }
         });
@@ -859,12 +862,12 @@ export class InitialSyncService {
       }
 
       // Save sync state once after all uploads (instead of after each file)
-      console.log('[InitialSync] Saving sync state...');
+      logger.debug('[InitialSync] Saving sync state...');
       await this.fileSync.saveSyncState();
-      console.log('[InitialSync] Sync state saved');
+      logger.debug('[InitialSync] Sync state saved');
 
       const summary = { uploaded, errors };
-      console.log('[InitialSync] Upload Local complete:', {
+      logger.debug('[InitialSync] Upload Local complete:', {
         vaultId,
         uploaded,
         errorCount: errors.length,
@@ -873,7 +876,7 @@ export class InitialSyncService {
 
       return summary;
     } catch (error) {
-      console.error('[InitialSync] Upload Local operation failed:', {
+      logger.error('[InitialSync] Upload Local operation failed:', {
         vaultId,
         uploaded,
         errorCount: errors.length,
@@ -928,7 +931,7 @@ export class InitialSyncService {
     conflicts: string[];
     errors: string[];
   }> {
-    console.log('[InitialSync] Starting Smart Merge operation:', {
+    logger.debug('[InitialSync] Starting Smart Merge operation:', {
       vaultId,
       localOnlyFiles: analysis.localFiles.length,
       remoteOnlyFiles: analysis.remoteFiles.length,
@@ -952,14 +955,14 @@ export class InitialSyncService {
       let completed = 0;
 
       // Phase 1: Upload files that only exist locally (in parallel batches)
-      console.log('[InitialSync] Phase 1: Uploading', analysis.localFiles.length, 'local-only files...');
+      logger.debug('[InitialSync] Phase 1: Uploading', analysis.localFiles.length, 'local-only files...');
 
       const BATCH_SIZE = 5; // Process 5 files at a time
       const uploadBatches = this.createBatches(analysis.localFiles, BATCH_SIZE);
 
       for (const batch of uploadBatches) {
         if (this.cancelRequested) {
-          console.log('[InitialSync] Smart Merge cancelled by user during upload phase');
+          logger.debug('[InitialSync] Smart Merge cancelled by user during upload phase');
           throw new Error('Operation cancelled by user');
         }
 
@@ -994,13 +997,13 @@ export class InitialSyncService {
                 3
               );
 
-              console.log('[InitialSync] Uploaded local-only file:', filePath);
+              logger.debug('[InitialSync] Uploaded local-only file:', filePath);
               return { success: true, filePath };
             }
             return { success: false, filePath, error: 'File not found' };
           } catch (error) {
             const errorMsg = `Failed to upload ${filePath}: ${error.message}`;
-            console.error('[InitialSync]', errorMsg);
+            logger.error('[InitialSync]', errorMsg);
             return { success: false, filePath, error: errorMsg };
           }
         });
@@ -1019,24 +1022,24 @@ export class InitialSyncService {
         }
       }
 
-      console.log('[InitialSync] Phase 1 complete:', {
+      logger.debug('[InitialSync] Phase 1 complete:', {
         uploaded,
         errors: errors.length
       });
 
       // Save sync state once after all uploads (instead of after each file)
-      console.log('[InitialSync] Saving sync state after Phase 1...');
+      logger.debug('[InitialSync] Saving sync state after Phase 1...');
       await this.fileSync.saveSyncState();
-      console.log('[InitialSync] Sync state saved');
+      logger.debug('[InitialSync] Sync state saved');
 
       // Phase 2: Download files that only exist remotely (in parallel batches)
-      console.log('[InitialSync] Phase 2: Downloading', analysis.remoteFiles.length, 'remote-only files...');
+      logger.debug('[InitialSync] Phase 2: Downloading', analysis.remoteFiles.length, 'remote-only files...');
 
       const downloadBatches = this.createBatches(analysis.remoteFiles, BATCH_SIZE);
 
       for (const batch of downloadBatches) {
         if (this.cancelRequested) {
-          console.log('[InitialSync] Smart Merge cancelled by user during download phase');
+          logger.debug('[InitialSync] Smart Merge cancelled by user during download phase');
           throw new Error('Operation cancelled by user');
         }
 
@@ -1065,11 +1068,11 @@ export class InitialSyncService {
               3
             );
 
-            console.log('[InitialSync] Downloaded remote-only file:', filePath);
+            logger.debug('[InitialSync] Downloaded remote-only file:', filePath);
             return { success: true, filePath };
           } catch (error) {
             const errorMsg = `Failed to download ${filePath}: ${error.message}`;
-            console.error('[InitialSync]', errorMsg);
+            logger.error('[InitialSync]', errorMsg);
             return { success: false, filePath, error: errorMsg };
           }
         });
@@ -1088,17 +1091,17 @@ export class InitialSyncService {
         }
       }
 
-      console.log('[InitialSync] Phase 2 complete:', {
+      logger.debug('[InitialSync] Phase 2 complete:', {
         downloaded,
         errors: errors.length
       });
 
       // Phase 3: Handle files that exist in both locations
-      console.log('[InitialSync] Phase 3: Processing', analysis.commonFiles.length, 'common files...');
+      logger.debug('[InitialSync] Phase 3: Processing', analysis.commonFiles.length, 'common files...');
 
       for (const filePath of analysis.commonFiles) {
         if (this.cancelRequested) {
-          console.log('[InitialSync] Smart Merge cancelled by user during conflict resolution phase');
+          logger.debug('[InitialSync] Smart Merge cancelled by user during conflict resolution phase');
           throw new Error('Operation cancelled by user');
         }
 
@@ -1116,7 +1119,7 @@ export class InitialSyncService {
           const localFile = this.vault.getAbstractFileByPath(filePath);
           
           if (!(localFile instanceof TFile)) {
-            console.log('[InitialSync] Skipping non-file:', filePath);
+            logger.debug('[InitialSync] Skipping non-file:', filePath);
             completed++;
             continue;
           }
@@ -1129,7 +1132,7 @@ export class InitialSyncService {
           const remoteFile = await this.apiClient.getFileByPath(vaultId, filePath);
           const remoteHash = remoteFile.hash;
 
-          console.log('[InitialSync] Comparing hashes for:', {
+          logger.debug('[InitialSync] Comparing hashes for:', {
             filePath,
             localHash: localHash.substring(0, 8) + '...',
             remoteHash: remoteHash.substring(0, 8) + '...',
@@ -1139,7 +1142,7 @@ export class InitialSyncService {
           // Compare hashes
           if (localHash !== remoteHash) {
             // Content differs - create conflict copy
-            console.log('[InitialSync] Conflict detected for:', {
+            logger.debug('[InitialSync] Conflict detected for:', {
               filePath,
               localSize: localContent.length
             });
@@ -1161,7 +1164,7 @@ export class InitialSyncService {
             // Rename local file to conflict copy
             await this.vault.rename(localFile, conflictPath);
             conflicts.push(filePath);
-            console.log('[InitialSync] Created conflict copy:', {
+            logger.debug('[InitialSync] Created conflict copy:', {
               originalPath: filePath,
               conflictPath
             });
@@ -1180,28 +1183,28 @@ export class InitialSyncService {
             );
             
             downloaded++;
-            console.log('[InitialSync] Downloaded remote version:', filePath);
+            logger.debug('[InitialSync] Downloaded remote version:', filePath);
           } else {
             // Content is the same - no action needed
-            console.log('[InitialSync] Files match, no action needed:', filePath);
+            logger.debug('[InitialSync] Files match, no action needed:', filePath);
           }
 
           completed++;
         } catch (error) {
           const errorMsg = `Failed to process ${filePath}: ${error.message}`;
-          console.error('[InitialSync]', errorMsg);
+          logger.error('[InitialSync]', errorMsg);
           errors.push(errorMsg);
           completed++;
         }
       }
 
-      console.log('[InitialSync] Phase 3 complete:', {
+      logger.debug('[InitialSync] Phase 3 complete:', {
         conflicts: conflicts.length,
         errors: errors.length
       });
 
       const summary = { uploaded, downloaded, conflicts, errors };
-      console.log('[InitialSync] Smart Merge complete:', {
+      logger.debug('[InitialSync] Smart Merge complete:', {
         vaultId,
         uploaded,
         downloaded,
@@ -1212,12 +1215,12 @@ export class InitialSyncService {
 
       // Log conflict details if any
       if (conflicts.length > 0) {
-        console.log('[InitialSync] Conflicts created for files:', conflicts);
+        logger.debug('[InitialSync] Conflicts created for files:', conflicts);
       }
 
       return summary;
     } catch (error) {
-      console.error('[InitialSync] Smart Merge operation failed:', {
+      logger.error('[InitialSync] Smart Merge operation failed:', {
         vaultId,
         uploaded,
         downloaded,
@@ -1377,7 +1380,7 @@ export class InitialSyncService {
    * Request cancellation of current operation
    */
   cancelOperation(): void {
-    console.log('[InitialSync] Cancellation requested:', {
+    logger.debug('[InitialSync] Cancellation requested:', {
       vaultId: this.currentVaultId,
       isAnalyzing: this.isAnalyzing,
       isSyncing: this.isSyncing
@@ -1391,7 +1394,7 @@ export class InitialSyncService {
   isOperationInProgress(): boolean {
     const inProgress = this.isAnalyzing || this.isSyncing;
     if (inProgress) {
-      console.log('[InitialSync] Operation in progress:', {
+      logger.debug('[InitialSync] Operation in progress:', {
         vaultId: this.currentVaultId,
         isAnalyzing: this.isAnalyzing,
         isSyncing: this.isSyncing

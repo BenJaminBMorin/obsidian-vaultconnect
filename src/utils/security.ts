@@ -303,56 +303,5 @@ export class CSPHelper {
   }
 }
 
-/**
- * Secure storage wrapper
- */
-export class SecureStorage {
-  /**
-   * Store data securely
-   */
-  static async store(key: string, value: any, encrypt: boolean = true): Promise<void> {
-    const data = JSON.stringify(value);
-    
-    if (encrypt) {
-      // In a real implementation, use proper encryption
-      // For now, this is a placeholder
-      const encrypted = btoa(data);
-      localStorage.setItem(key, encrypted);
-    } else {
-      localStorage.setItem(key, data);
-    }
-  }
-  
-  /**
-   * Retrieve data securely
-   */
-  static async retrieve(key: string, encrypted: boolean = true): Promise<any> {
-    const stored = localStorage.getItem(key);
-    if (!stored) return null;
-    
-    try {
-      if (encrypted) {
-        const decrypted = atob(stored);
-        return JSON.parse(decrypted);
-      } else {
-        return JSON.parse(stored);
-      }
-    } catch {
-      return null;
-    }
-  }
-  
-  /**
-   * Remove data securely
-   */
-  static async remove(key: string): Promise<void> {
-    localStorage.removeItem(key);
-  }
-  
-  /**
-   * Clear all data
-   */
-  static async clear(): Promise<void> {
-    localStorage.clear();
-  }
-}
+// Note: SecureStorage has been removed as it used localStorage directly.
+// Use StorageManager from core/StorageManager.ts for plugin data persistence.

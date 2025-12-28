@@ -1,3 +1,4 @@
+import { requestUrl, RequestUrlParam, RequestUrlResponse } from 'obsidian';
 import { AuthService } from '../services/AuthService';
 import { VaultInfo, FileInfo, FileContent, ConflictInfo } from '../types';
 import { API_ENDPOINTS } from '../utils/constants';
@@ -64,7 +65,7 @@ export class APIClient {
    */
   private async request<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: { method?: string; body?: string; headers?: Record<string, string> } = {}
   ): Promise<T> {
     const apiKey = await this.authService.getApiKey();
     if (!apiKey) {
@@ -73,30 +74,35 @@ export class APIClient {
 
     const url = `${this.baseURL}${endpoint}`;
     const method = options.method || 'GET';
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
-      ...((options.headers as Record<string, string>) || {})
+      ...(options.headers || {})
     };
 
-    const response = await fetch(url, {
-      ...options,
-      headers
-    });
+    const requestParams: RequestUrlParam = {
+      url,
+      method,
+      headers,
+      body: options.body,
+      throw: false
+    };
+
+    const response = await requestUrl(requestParams);
 
     // Log HTTP request using the logger's http method
     logger.http(method, endpoint, response.status);
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+    if (response.status >= 400) {
+      const errorData = response.json || {};
       throw new Error(
-        errorData.error?.message || 
-        `HTTP ${response.status}: ${response.statusText}`
+        errorData.error?.message ||
+        `HTTP ${response.status}`
       );
     }
 
-    return await response.json();
+    return response.json;
   }
 
   /**
@@ -104,7 +110,7 @@ export class APIClient {
    */
   private async requestWithRetry<T>(
     endpoint: string,
-    options: RequestInit = {},
+    options: { method?: string; body?: string; headers?: Record<string, string> } = {},
     maxRetries: number = 3
   ): Promise<T> {
     return retryWithBackoff(
@@ -371,11 +377,13 @@ export class APIClient {
 
       // Use HEAD request to check existence without downloading content
       // Note: 404 responses are expected and normal when file doesn't exist
-      const response = await fetch(url, {
+      const response = await requestUrl({
+        url,
         method: 'HEAD',
         headers: {
           'Authorization': `Bearer ${apiKey}`
-        }
+        },
+        throw: false
       });
 
       // Return true if file exists (200), false for 404 or any other status
@@ -383,16 +391,14 @@ export class APIClient {
       return response.status === 200;
     } catch (error) {
       // Network errors mean we can't determine existence
-      // Only log actual network errors, not 404s
-      if (!(error instanceof TypeError)) {
-        console.warn('[APIClient] Error checking file existence:', error);
-      }
+      logger.warn('[APIClient] Error checking file existence:', error);
       return false;
     }
   }
 
   /**
    * Upload a file chunk (for chunked uploads)
+   * Uses base64 encoding for binary data to work with requestUrl
    */
   async uploadChunk(
     vaultId: string,
@@ -403,43 +409,46 @@ export class APIClient {
       throw new Error('Not authenticated');
     }
 
-    const formData = new FormData();
-    
-    // Convert ArrayBuffer to Blob
-    const blob = new Blob([request.chunkData]);
-    
-    formData.append('files', blob, request.filename);
-    formData.append('filename', request.filename);
-    formData.append('chunkIndex', request.chunkIndex.toString());
-    formData.append('totalChunks', request.totalChunks.toString());
-    formData.append('path', request.path);
-    if (request.overwrite !== undefined) {
-      formData.append('overwrite', request.overwrite.toString());
+    // Convert ArrayBuffer to base64 for JSON transport
+    const uint8Array = new Uint8Array(request.chunkData);
+    let binary = '';
+    for (let i = 0; i < uint8Array.length; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
     }
-    if (request.compressed !== undefined) {
-      formData.append('compressed', request.compressed.toString());
-    }
-    
+    const chunkBase64 = btoa(binary);
+
     const url = `${this.baseURL}/vaults/${vaultId}/files/upload/chunk`;
-    const response = await fetch(url, {
+
+    const response = await requestUrl({
+      url,
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
-        // Don't set Content-Type - let browser set it with boundary for multipart/form-data
       },
-      body: formData
+      body: JSON.stringify({
+        filename: request.filename,
+        chunkIndex: request.chunkIndex,
+        totalChunks: request.totalChunks,
+        chunkData: chunkBase64,
+        path: request.path,
+        overwrite: request.overwrite,
+        compressed: request.compressed,
+        encoding: 'base64'
+      }),
+      throw: false
     });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+
+    if (response.status >= 400) {
+      const errorData = response.json || {};
       throw new Error(
-        errorData.error?.message || 
-        `Chunk upload failed: HTTP ${response.status}: ${response.statusText}`
+        errorData.error?.message ||
+        `Chunk upload failed: HTTP ${response.status}`
       );
     }
-    
-    const result = await response.json();
-    
+
+    const result = response.json;
+
     // Map response to ChunkUploadResponse
     return {
       message: result.message,
@@ -560,8 +569,12 @@ export class APIClient {
    */
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseURL}/health`);
-      return response.ok;
+      const response = await requestUrl({
+        url: `${this.baseURL}/health`,
+        method: 'GET',
+        throw: false
+      });
+      return response.status >= 200 && response.status < 300;
     } catch (error) {
       return false;
     }

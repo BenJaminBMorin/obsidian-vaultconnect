@@ -1,4 +1,5 @@
 import { EventBus, EVENTS } from '../core/EventBus';
+import { logger } from '../utils/logger';
 
 /**
  * Network status
@@ -126,33 +127,20 @@ export class OfflineDetectionService {
       return;
     }
 
-    // Detailed check: try to reach a reliable endpoint
+    // Use navigator.onLine as the primary indicator
+    // This is more reliable across platforms (desktop, mobile, web)
     this.setNetworkStatus(NetworkStatus.CHECKING);
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
-
-      // Try to fetch a small resource to verify connectivity
-      // Using a HEAD request to minimize data transfer
-      const response = await fetch('https://www.google.com/favicon.ico', {
-        method: 'HEAD',
-        mode: 'no-cors',
-        cache: 'no-cache',
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
+    if (navigator.onLine) {
       // If we got here, we have connectivity
       this.setNetworkStatus(NetworkStatus.ONLINE);
-      
+
       // Exit offline mode if we were in it
       if (this.isOfflineMode) {
         this.exitOfflineMode();
       }
-    } catch (error) {
-      console.log('OfflineDetectionService: Connectivity check failed', error);
+    } else {
+      logger.debug('OfflineDetectionService: Navigator reports offline');
       this.setNetworkStatus(NetworkStatus.OFFLINE);
       this.enterOfflineMode();
     }

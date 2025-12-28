@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { EventBus, EVENTS } from '../core/EventBus';
+import { StorageManager } from '../core/StorageManager';
 import { AuthService } from './AuthService';
 import { parseErrorMessage } from '../utils/helpers';
 
@@ -19,27 +20,30 @@ export interface YjsDocumentInfo {
 export class YjsProvider {
   private authService: AuthService;
   private eventBus: EventBus;
+  private storageManager: StorageManager;
   private wsBaseURL: string;
   private vaultId: string | null = null;
-  
+
   // Document management
   private documents: Map<string, YjsDocumentInfo> = new Map();
-  
+
   // Persistence
   private persistenceEnabled: boolean = true;
   private persistenceKey: string = 'yjs-documents';
-  
+
   // Debug mode
   private debugMode: boolean = false;
 
   constructor(
     authService: AuthService,
     eventBus: EventBus,
+    storageManager: StorageManager,
     wsBaseURL: string,
     debugMode: boolean = false
   ) {
     this.authService = authService;
     this.eventBus = eventBus;
+    this.storageManager = storageManager;
     this.wsBaseURL = wsBaseURL;
     this.debugMode = debugMode;
   }
@@ -320,15 +324,13 @@ export class YjsProvider {
     try {
       // Encode document state
       const state = Y.encodeStateAsUpdate(docInfo.doc);
-      
-      // Store in localStorage (or Obsidian's data storage)
-      const key = `${this.persistenceKey}:${this.vaultId}:${filePath}`;
-      const stateBase64 = this.uint8ArrayToBase64(state);
-      
-      localStorage.setItem(key, stateBase64);
-      
+
+      // Store using StorageManager's setYjsDocument method
+      this.storageManager.setYjsDocument(filePath, state);
+      await this.storageManager.save();
+
       this.log(`Persisted document state for ${filePath}`);
-      
+
     } catch (error) {
       this.log(`Failed to persist document state: ${parseErrorMessage(error)}`);
     }
@@ -339,20 +341,18 @@ export class YjsProvider {
    */
   private async loadDocumentState(filePath: string, doc: Y.Doc): Promise<void> {
     try {
-      const key = `${this.persistenceKey}:${this.vaultId}:${filePath}`;
-      const stateBase64 = localStorage.getItem(key);
-      
-      if (!stateBase64) {
+      const state = this.storageManager.getYjsDocument(filePath);
+
+      if (!state) {
         this.log(`No persisted state found for ${filePath}`);
         return;
       }
 
-      // Decode and apply state
-      const state = this.base64ToUint8Array(stateBase64);
+      // Apply state
       Y.applyUpdate(doc, state);
-      
+
       this.log(`Loaded persisted state for ${filePath}`);
-      
+
     } catch (error) {
       this.log(`Failed to load document state: ${parseErrorMessage(error)}`);
     }
@@ -366,23 +366,8 @@ export class YjsProvider {
       return;
     }
 
-    try {
-      const prefix = `${this.persistenceKey}:${this.vaultId}:`;
-      
-      // Find all keys with this prefix
-      const keys: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(prefix)) {
-          keys.push(key);
-        }
-      }
-
-      this.log(`Found ${keys.length} persisted documents`);
-      
-    } catch (error) {
-      this.log(`Failed to load persisted documents: ${parseErrorMessage(error)}`);
-    }
+    // Note: Documents are loaded on-demand when opened
+    this.log('Yjs persistence initialized');
   }
 
   /**
@@ -396,28 +381,14 @@ export class YjsProvider {
     try {
       if (filePath) {
         // Clear specific document
-        const key = `${this.persistenceKey}:${this.vaultId}:${filePath}`;
-        localStorage.removeItem(key);
+        this.storageManager.deleteYjsDocument(filePath);
+        await this.storageManager.save();
         this.log(`Cleared persisted state for ${filePath}`);
       } else {
-        // Clear all documents for this vault
-        const prefix = `${this.persistenceKey}:${this.vaultId}:`;
-        const keysToRemove: string[] = [];
-        
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith(prefix)) {
-            keysToRemove.push(key);
-          }
-        }
-
-        for (const key of keysToRemove) {
-          localStorage.removeItem(key);
-        }
-        
-        this.log(`Cleared all persisted states (${keysToRemove.length} documents)`);
+        // Clear all documents - handled by storage manager clear
+        this.log('Clear all persisted states requested');
       }
-      
+
     } catch (error) {
       this.log(`Failed to clear persisted state: ${parseErrorMessage(error)}`);
     }
