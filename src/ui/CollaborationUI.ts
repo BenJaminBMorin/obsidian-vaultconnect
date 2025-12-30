@@ -4,6 +4,26 @@ import { AwarenessService, RemoteCursor, RemoteSelection } from '../services/Awa
 import { CollaborationService } from '../services/CollaborationService';
 
 /**
+ * Cursor update event data
+ */
+interface CursorUpdateData {
+  userId: string;
+  userName: string;
+  color: string;
+  position: { line: number; ch: number };
+}
+
+/**
+ * Awareness update event data
+ */
+interface AwarenessUpdateData {
+  filePath: string;
+  userId?: string;
+  cursor?: { line: number; ch: number };
+  selection?: { from: { line: number; ch: number }; to: { line: number; ch: number } };
+}
+
+/**
  * Collaboration UI
  * Displays cursor positions, selections, typing indicators, and collaborator info
  */
@@ -233,7 +253,7 @@ export class CollaborationUI {
    */
   private setupEventListeners(): void {
     // Listen for cursor updates
-    this.eventBus.on(EVENTS.CURSOR_UPDATE, (data: any) => {
+    this.eventBus.on(EVENTS.CURSOR_UPDATE, (data: CursorUpdateData) => {
       const cursor: RemoteCursor = {
         userId: data.userId,
         userName: data.userName,
@@ -251,7 +271,7 @@ export class CollaborationUI {
     });
 
     // Listen for awareness updates
-    this.eventBus.on(EVENTS.YJS_AWARENESS_UPDATED, (data: any) => {
+    this.eventBus.on(EVENTS.YJS_AWARENESS_UPDATED, (data: AwarenessUpdateData) => {
       this.handleAwarenessUpdate(data);
     });
   }
@@ -274,7 +294,7 @@ export class CollaborationUI {
   /**
    * Handle awareness update
    */
-  private handleAwarenessUpdate(data: any): void {
+  private handleAwarenessUpdate(data: AwarenessUpdateData): void {
     if (data.filePath !== this.activeFile) {
       return;
     }

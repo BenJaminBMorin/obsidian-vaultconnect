@@ -10,6 +10,31 @@ import {
 import { EventBus, EVENTS } from '../core/EventBus';
 
 /**
+ * Error event data for handlers
+ */
+interface ErrorData {
+  message?: string;
+  code?: string;
+  path?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Conflict notification data
+ */
+interface ConflictData {
+  path: string;
+  conflictId: string;
+}
+
+/**
+ * Error handler context
+ */
+interface ErrorContext {
+  context?: Record<string, unknown>;
+}
+
+/**
  * Notification options
  */
 export interface NotificationOptions {
@@ -59,22 +84,22 @@ export class ErrorNotificationService {
    */
   private setupEventHandlers(): void {
     // Listen for sync errors
-    this.eventBus.on(EVENTS.SYNC_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.SYNC_ERROR, (error: ErrorData | VaultSyncError) => {
       this.handleError(error, { context: { source: 'sync' } });
     });
 
     // Listen for auth errors
-    this.eventBus.on(EVENTS.AUTH_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.AUTH_ERROR, (error: ErrorData | VaultSyncError) => {
       this.handleError(error, { context: { source: 'auth' } });
     });
 
     // Listen for WebSocket errors
-    this.eventBus.on(EVENTS.WEBSOCKET_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.WEBSOCKET_ERROR, (error: ErrorData | VaultSyncError) => {
       this.handleError(error, { context: { source: 'websocket' } });
     });
 
     // Listen for conflict errors
-    this.eventBus.on(EVENTS.CONFLICT_DETECTED, (data: any) => {
+    this.eventBus.on(EVENTS.CONFLICT_DETECTED, (data: ConflictData) => {
       this.showConflictNotification(data);
     });
   }
@@ -82,7 +107,7 @@ export class ErrorNotificationService {
   /**
    * Handle an error
    */
-  handleError(error: any, context?: { context?: Record<string, any> }): void {
+  handleError(error: ErrorData | VaultSyncError | Error, context?: ErrorContext): void {
     // Classify and log the error
     const vaultSyncError = error instanceof VaultSyncError
       ? error
@@ -109,7 +134,7 @@ export class ErrorNotificationService {
   /**
    * Classify a generic error
    */
-  private classifyError(error: any, context?: Record<string, any>): VaultSyncError {
+  private classifyError(error: ErrorData | Error, context?: Record<string, unknown>): VaultSyncError {
     const { ErrorClassifier } = require('../utils/errors');
     return ErrorClassifier.classify(error, context);
   }
@@ -245,7 +270,7 @@ export class ErrorNotificationService {
   /**
    * Format context details
    */
-  private formatContextDetails(context: Record<string, any>): string {
+  private formatContextDetails(context: Record<string, unknown>): string {
     const details: string[] = [];
 
     if (context.path) {

@@ -201,3 +201,168 @@ export interface LocalStorage {
   vaultCache: VaultInfo | null;
   filesCache: Record<string, FileInfo>; // fileId -> fileInfo
 }
+
+// =============================================================================
+// Event Data Types
+// These types define the data structure for events emitted by the EventBus
+// =============================================================================
+
+/**
+ * Sync event data (for FILE_SYNCED, SYNC_EVENT)
+ */
+export interface SyncEventData {
+  file_path: string;
+  operation: 'create' | 'modify' | 'delete' | 'rename';
+  device_id?: string;
+  old_path?: string;
+  hash?: string;
+}
+
+/**
+ * File update event data (for FILE_UPDATE)
+ */
+export interface FileUpdateEventData {
+  path: string;
+  hash: string;
+  size: number;
+  updated_at: string;
+  device_id?: string;
+}
+
+/**
+ * Conflict event data (for CONFLICT_DETECTED, CONFLICT_RESOLVED)
+ */
+export interface ConflictEventData {
+  path: string;
+  conflictId?: string;
+  local_hash?: string;
+  remote_hash?: string;
+  resolution?: ResolutionStrategy;
+}
+
+/**
+ * Device event data (for DEVICE_CONNECTED, DEVICE_DISCONNECTED)
+ */
+export interface DeviceEventData {
+  device_id: string;
+  device_name?: string;
+  connected_at?: string;
+}
+
+/**
+ * User/Presence event data (for USER_JOINED, USER_LEFT, PRESENCE_UPDATE)
+ */
+export interface UserEventData {
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  status?: 'active' | 'away' | 'offline';
+  currentFile?: string | null;
+  vaultId?: string;
+}
+
+/**
+ * Cursor update event data
+ */
+export interface CursorEventData {
+  userId: string;
+  userName: string;
+  color: string;
+  filePath: string;
+  position: {
+    line: number;
+    ch: number;
+  };
+}
+
+/**
+ * Selection event data
+ */
+export interface SelectionEventData {
+  userId: string;
+  userName: string;
+  color: string;
+  filePath: string;
+  from: { line: number; ch: number };
+  to: { line: number; ch: number };
+}
+
+/**
+ * Typing indicator event data
+ */
+export interface TypingEventData {
+  userId: string;
+  userName: string;
+  filePath: string;
+  isTyping: boolean;
+}
+
+/**
+ * Collaborator event data (for COLLABORATOR_JOINED, COLLABORATOR_LEFT)
+ */
+export interface CollaboratorEventData {
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  color: string;
+  filePath: string;
+}
+
+/**
+ * Awareness update event data
+ */
+export interface AwarenessEventData {
+  clientId: number;
+  userId: string;
+  userName: string;
+  color: string;
+  cursor?: { line: number; ch: number };
+  selection?: {
+    from: { line: number; ch: number };
+    to: { line: number; ch: number };
+  };
+  isTyping?: boolean;
+  filePath?: string;
+}
+
+/**
+ * Error event data (for SYNC_ERROR, CONNECTION_ERROR, AUTH_ERROR)
+ */
+export interface ErrorEventData {
+  message: string;
+  code?: string;
+  details?: Record<string, unknown>;
+  recoverable?: boolean;
+  retryable?: boolean;
+}
+
+/**
+ * Sync progress event data
+ */
+export interface SyncProgressEventData {
+  current: number;
+  total: number;
+  currentFile?: string;
+  operation?: 'upload' | 'download' | 'check';
+  percentage?: number;
+}
+
+/**
+ * Sync drift event data
+ */
+export interface SyncDriftEventData {
+  driftCount: number;
+  files: string[];
+}
+
+/**
+ * Remote file info (from API responses)
+ */
+export interface RemoteFileInfo {
+  file_id: string;
+  path: string;
+  hash: string;
+  size: number;
+  updated_at: string;
+  created_at: string;
+}

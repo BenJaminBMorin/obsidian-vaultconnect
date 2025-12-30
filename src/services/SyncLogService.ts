@@ -1,6 +1,34 @@
 import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { SyncResult } from './SyncService';
+import { ErrorEventData, ConflictEventData } from '../types';
+
+/**
+ * Sync log event data interfaces
+ */
+interface SyncErrorEventData {
+  path?: string;
+  error?: string;
+  message?: string;
+}
+
+interface FileSyncedEventData {
+  path: string;
+  action: 'upload' | 'create' | 'update' | 'download' | 'delete';
+}
+
+interface ConflictEventInfo {
+  path: string;
+}
+
+interface ConnectionErrorData {
+  message?: string;
+}
+
+/**
+ * Log entry details - union of possible detail types
+ */
+type LogDetails = SyncResult | SyncErrorEventData | FileSyncedEventData | ConflictEventInfo | { connected: boolean } | Record<string, unknown>;
 
 /**
  * Sync log entry type
@@ -26,7 +54,7 @@ export interface SyncLogEntry {
   timestamp: Date;
   type: SyncLogType;
   message: string;
-  details?: any;
+  details?: LogDetails;
   filePath?: string;
   error?: string;
 }
@@ -127,7 +155,7 @@ export class SyncLogService {
       this.updateStatistics(result);
     });
 
-    this.eventBus.on(EVENTS.SYNC_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.SYNC_ERROR, (error: SyncErrorEventData) => {
       this.addLog(
         SyncLogType.SYNC_ERROR,
         'Sync error',
@@ -140,9 +168,9 @@ export class SyncLogService {
     });
 
     // File events
-    this.eventBus.on(EVENTS.FILE_SYNCED, (data: any) => {
+    this.eventBus.on(EVENTS.FILE_SYNCED, (data: FileSyncedEventData) => {
       const { path, action } = data;
-      
+
       switch (action) {
         case 'upload':
         case 'create':
@@ -159,12 +187,12 @@ export class SyncLogService {
           this.statistics.filesDeleted++;
           break;
       }
-      
+
       this.saveStatistics();
     });
 
     // Conflict events
-    this.eventBus.on(EVENTS.CONFLICT_DETECTED, (data: any) => {
+    this.eventBus.on(EVENTS.CONFLICT_DETECTED, (data: ConflictEventInfo) => {
       this.addLog(
         SyncLogType.CONFLICT_DETECTED,
         `Conflict detected: ${data.path}`,
@@ -175,7 +203,7 @@ export class SyncLogService {
       this.saveStatistics();
     });
 
-    this.eventBus.on(EVENTS.CONFLICT_RESOLVED, (data: any) => {
+    this.eventBus.on(EVENTS.CONFLICT_RESOLVED, (data: ConflictEventInfo) => {
       this.addLog(
         SyncLogType.CONFLICT_RESOLVED,
         `Conflict resolved: ${data.path}`,
@@ -195,7 +223,7 @@ export class SyncLogService {
       );
     });
 
-    this.eventBus.on(EVENTS.CONNECTION_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.CONNECTION_ERROR, (error: ConnectionErrorData) => {
       this.addLog(
         SyncLogType.CONNECTION_ERROR,
         'Connection error',
@@ -212,7 +240,7 @@ export class SyncLogService {
   private addLog(
     type: SyncLogType,
     message: string,
-    details?: any,
+    details?: LogDetails,
     filePath?: string,
     error?: string
   ): void {
