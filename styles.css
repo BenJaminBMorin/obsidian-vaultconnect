@@ -755,3 +755,431 @@ select:focus-visible {
 
 /* Import Initial Sync Styles */
 @import './src/styles/initial-sync.css';
+
+/* ========================================
+   UI Components - Replacing inline styles
+   ======================================== */
+
+/* Recent Activity View */
+.vaultconnect-activity-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vaultconnect-activity-header h4 {
+  margin: 0;
+}
+
+.vaultconnect-filter-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.vaultconnect-filter-select {
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.vaultconnect-empty-state {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.vaultconnect-activity-list {
+  padding: 8px;
+}
+
+.vaultconnect-date-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 8px 4px 4px 4px;
+  margin-top: 8px;
+}
+
+.vaultconnect-activity-entry {
+  padding: 8px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  background-color: var(--background-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.vaultconnect-activity-entry:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.vaultconnect-activity-icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.vaultconnect-activity-text {
+  font-size: 13px;
+  color: var(--text-normal);
+}
+
+.vaultconnect-activity-user {
+  color: var(--interactive-accent);
+}
+
+.vaultconnect-activity-file {
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.vaultconnect-activity-timestamp {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 2px;
+  margin-left: 22px;
+}
+
+/* Vault Selector Modal */
+.vaultconnect-vault-list {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 10px;
+}
+
+.vaultconnect-button-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.vaultconnect-button-container--end {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.vaultconnect-error-text {
+  color: var(--text-error);
+}
+
+.vaultconnect-vault-item {
+  padding: 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.vaultconnect-vault-item:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.vaultconnect-vault-name {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.vaultconnect-vault-info {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.vaultconnect-vault-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-radius: 3px;
+  font-size: 0.8em;
+  margin-top: 4px;
+}
+
+/* Active Users View */
+.vaultconnect-users-header {
+  margin: 0;
+  padding: 12px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.vaultconnect-count-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.vaultconnect-user-list {
+  padding: 8px;
+}
+
+.vaultconnect-user-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  background-color: var(--background-secondary);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.vaultconnect-user-item:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.vaultconnect-user-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.vaultconnect-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin-right: 12px;
+}
+
+.vaultconnect-status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.vaultconnect-status-indicator--active {
+  background-color: var(--color-green);
+}
+
+.vaultconnect-status-indicator--away {
+  background-color: var(--text-muted);
+}
+
+.vaultconnect-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.vaultconnect-user-name {
+  font-weight: 600;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vaultconnect-status-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.vaultconnect-status-badge--active {
+  background-color: var(--color-green);
+  color: white;
+}
+
+.vaultconnect-status-badge--away {
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.vaultconnect-current-file {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vaultconnect-current-file--clickable {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.vaultconnect-file-icon {
+  font-size: 14px;
+}
+
+.vaultconnect-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.vaultconnect-no-file {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-style: italic;
+  margin-bottom: 4px;
+}
+
+.vaultconnect-last-activity {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* Initial Sync Progress Modal */
+.vaultconnect-progress-container {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.vaultconnect-operation-label {
+  font-size: 1em;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.vaultconnect-operation-label--success {
+  color: var(--text-success);
+}
+
+.vaultconnect-operation-label--error {
+  color: var(--text-error);
+}
+
+.vaultconnect-current-file-label {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vaultconnect-progress-bar-container {
+  position: relative;
+  width: 100%;
+  height: 30px;
+  background-color: var(--background-modifier-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.vaultconnect-progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background-color: var(--interactive-accent);
+  transition: width 0.3s ease;
+}
+
+.vaultconnect-progress-bar-fill--success {
+  background-color: var(--text-success);
+}
+
+.vaultconnect-progress-bar-fill--error {
+  background-color: var(--text-error);
+}
+
+.vaultconnect-progress-percentage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.9em;
+  font-weight: bold;
+  color: var(--text-on-accent);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.vaultconnect-file-count-label {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.vaultconnect-estimated-time-label {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.vaultconnect-modal-buttons {
+  margin-top: 20px;
+  text-align: right;
+}
+
+.vaultconnect-header--success {
+  color: var(--text-success);
+}
+
+.vaultconnect-header--error {
+  color: var(--text-error);
+}
+
+/* Collaboration UI */
+.vaultconnect-cursor-widget {
+  position: absolute;
+  width: 2px;
+  height: 1.2em;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.vaultconnect-cursor-label {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.vaultconnect-selection-widget {
+  position: absolute;
+  opacity: 0.3;
+  z-index: 999;
+  pointer-events: none;
+}
+
+.vaultconnect-typing-indicator {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 8px;
+  color: #fff;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.vaultconnect-presence-indicator {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 2px 6px;
+  background-color: #4ECDC4;
+  color: #fff;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* Collaboration Metadata */
+.vaultconnect-collab-indicator {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--interactive-accent);
+}
+
+/* Status Bar */
+.vaultconnect-status-clickable {
+  cursor: pointer;
+}
+

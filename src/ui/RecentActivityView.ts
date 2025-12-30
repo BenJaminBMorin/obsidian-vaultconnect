@@ -22,7 +22,7 @@ export class RecentActivityView extends ItemView {
     super(leaf);
     this.eventBus = eventBus;
     this.metadataService = metadataService;
-    
+
     // Setup event listeners
     this.setupEventListeners();
   }
@@ -32,7 +32,7 @@ export class RecentActivityView extends ItemView {
   }
 
   getDisplayText(): string {
-    return 'Recent Activity';
+    return 'Recent activity';
   }
 
   getIcon(): string {
@@ -43,7 +43,7 @@ export class RecentActivityView extends ItemView {
     this.viewContainerEl = this.contentEl;
     this.viewContainerEl.empty();
     this.viewContainerEl.addClass('vaultsync-recent-activity-view');
-    
+
     this.render();
   }
 
@@ -58,30 +58,20 @@ export class RecentActivityView extends ItemView {
     this.viewContainerEl.empty();
 
     // Create header
-    const header = this.viewContainerEl.createDiv('activity-header');
-    header.style.padding = '12px';
-    header.style.borderBottom = '1px solid var(--background-modifier-border)';
-    header.style.display = 'flex';
-    header.style.justifyContent = 'space-between';
-    header.style.alignItems = 'center';
+    const header = this.viewContainerEl.createDiv('vaultconnect-activity-header');
 
-    const headerTitle = header.createEl('h4', { text: 'Recent Activity' });
-    headerTitle.style.margin = '0';
+    const headerTitle = header.createEl('h4', { text: 'Recent activity' });
 
     // Time filter dropdown
     const filterContainer = header.createDiv('activity-filter');
-    const filterLabel = filterContainer.createSpan({ text: 'Last ' });
-    filterLabel.style.fontSize = '12px';
-    filterLabel.style.color = 'var(--text-muted)';
-    filterLabel.style.marginRight = '4px';
+    const filterLabel = filterContainer.createSpan({
+      text: 'Last ',
+      cls: 'vaultconnect-filter-label'
+    });
 
-    const filterSelect = filterContainer.createEl('select');
-    filterSelect.style.fontSize = '12px';
-    filterSelect.style.padding = '2px 4px';
-    filterSelect.style.borderRadius = '4px';
-    filterSelect.style.backgroundColor = 'var(--background-secondary)';
-    filterSelect.style.border = '1px solid var(--background-modifier-border)';
-    filterSelect.style.color = 'var(--text-normal)';
+    const filterSelect = filterContainer.createEl('select', {
+      cls: 'vaultconnect-filter-select'
+    });
 
     const options = [
       { value: 1, label: '1 hour' },
@@ -91,7 +81,7 @@ export class RecentActivityView extends ItemView {
     ];
 
     options.forEach(opt => {
-      const option = filterSelect.createEl('option', { 
+      const option = filterSelect.createEl('option', {
         text: opt.label,
         value: String(opt.value)
       });
@@ -109,30 +99,21 @@ export class RecentActivityView extends ItemView {
     const activities = this.metadataService.getRecentActivity(this.timeFilter);
 
     if (activities.length === 0) {
-      const emptyState = this.viewContainerEl.createDiv('activity-empty');
-      emptyState.style.padding = '20px';
-      emptyState.style.textAlign = 'center';
-      emptyState.style.color = 'var(--text-muted)';
+      const emptyState = this.viewContainerEl.createDiv('vaultconnect-empty-state');
       emptyState.createEl('p', { text: 'No recent activity' });
       return;
     }
 
     // Create activity list
-    const activityList = this.viewContainerEl.createDiv('activity-list');
-    activityList.style.padding = '8px';
+    const activityList = this.viewContainerEl.createDiv('vaultconnect-activity-list');
 
     // Group activities by date
     const groupedActivities = this.groupActivitiesByDate(activities);
 
     groupedActivities.forEach((entries, dateLabel) => {
       // Date header
-      const dateHeader = activityList.createDiv('activity-date-header');
+      const dateHeader = activityList.createDiv('vaultconnect-date-header');
       dateHeader.textContent = dateLabel;
-      dateHeader.style.fontSize = '12px';
-      dateHeader.style.fontWeight = '600';
-      dateHeader.style.color = 'var(--text-muted)';
-      dateHeader.style.padding = '8px 4px 4px 4px';
-      dateHeader.style.marginTop = '8px';
 
       // Activity entries
       entries.forEach(entry => {
@@ -145,54 +126,28 @@ export class RecentActivityView extends ItemView {
    * Render a single activity entry
    */
   private renderActivityEntry(container: HTMLElement, entry: ActivityEntry): void {
-    const entryEl = container.createDiv('activity-entry');
-    entryEl.style.padding = '8px';
-    entryEl.style.marginBottom = '4px';
-    entryEl.style.borderRadius = '4px';
-    entryEl.style.backgroundColor = 'var(--background-secondary)';
-    entryEl.style.cursor = 'pointer';
-    entryEl.style.transition = 'background-color 0.2s';
-
-    // Hover effect
-    entryEl.addEventListener('mouseenter', () => {
-      entryEl.style.backgroundColor = 'var(--background-modifier-hover)';
-    });
-    entryEl.addEventListener('mouseleave', () => {
-      entryEl.style.backgroundColor = 'var(--background-secondary)';
-    });
+    const entryEl = container.createDiv('vaultconnect-activity-entry');
 
     // Activity icon
     const icon = this.getActivityIcon(entry.action);
-    const iconEl = entryEl.createSpan();
+    const iconEl = entryEl.createSpan({ cls: 'vaultconnect-activity-icon' });
     iconEl.textContent = icon;
-    iconEl.style.marginRight = '8px';
-    iconEl.style.fontSize = '14px';
 
     // Activity text
-    const textEl = entryEl.createSpan();
-    textEl.style.fontSize = '13px';
-    textEl.style.color = 'var(--text-normal)';
+    const textEl = entryEl.createSpan({ cls: 'vaultconnect-activity-text' });
 
-    const userName = textEl.createEl('strong');
+    const userName = textEl.createEl('strong', { cls: 'vaultconnect-activity-user' });
     userName.textContent = entry.userName;
-    userName.style.color = 'var(--interactive-accent)';
 
     const action = textEl.createSpan();
     action.textContent = ` ${this.getActionText(entry.action)} `;
 
-    const fileName = textEl.createEl('span');
+    const fileName = textEl.createEl('span', { cls: 'vaultconnect-activity-file' });
     fileName.textContent = entry.filePath;
-    fileName.style.fontFamily = 'var(--font-monospace)';
-    fileName.style.fontSize = '12px';
-    fileName.style.color = 'var(--text-muted)';
 
     // Timestamp
-    const timestamp = entryEl.createDiv('activity-timestamp');
+    const timestamp = entryEl.createDiv('vaultconnect-activity-timestamp');
     timestamp.textContent = this.formatTime(entry.timestamp);
-    timestamp.style.fontSize = '11px';
-    timestamp.style.color = 'var(--text-faint)';
-    timestamp.style.marginTop = '2px';
-    timestamp.style.marginLeft = '22px';
 
     // Click to open file
     entryEl.addEventListener('click', () => {

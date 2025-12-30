@@ -30,7 +30,7 @@ export class VaultSelectorModal extends Modal {
     contentEl.empty();
     contentEl.addClass('vaultsync-vault-selector');
 
-    contentEl.createEl('h2', { text: 'Select a Vault' });
+    contentEl.createEl('h2', { text: 'Select a vault' });
 
     // Search box
     const searchContainer = contentEl.createDiv({ cls: 'vault-search-container' });
@@ -48,22 +48,20 @@ export class VaultSelectorModal extends Modal {
       });
 
     // Vault list container
-    const listContainer = contentEl.createDiv({ cls: 'vault-list-container' });
-    listContainer.style.maxHeight = '400px';
-    listContainer.style.overflowY = 'auto';
-    listContainer.style.marginTop = '10px';
+    const listContainer = contentEl.createDiv({
+      cls: 'vault-list-container vaultconnect-vault-list'
+    });
 
     // Load vaults
     await this.loadVaults(listContainer);
 
     // Create new vault button
-    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-    buttonContainer.style.marginTop = '20px';
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'space-between';
+    const buttonContainer = contentEl.createDiv({
+      cls: 'modal-button-container vaultconnect-button-container'
+    });
 
     const createButton = buttonContainer.createEl('button', {
-      text: 'Create New Vault'
+      text: 'Create new vault'
     });
     createButton.addEventListener('click', () => {
       this.showCreateVaultDialog();
@@ -90,9 +88,8 @@ export class VaultSelectorModal extends Modal {
       this.renderVaultList();
     } catch (error) {
       container.empty();
-      const errorEl = container.createDiv({ cls: 'vault-error' });
+      const errorEl = container.createDiv({ cls: 'vault-error vaultconnect-error-text' });
       errorEl.textContent = `Failed to load vaults: ${error.message}`;
-      errorEl.style.color = 'var(--text-error)';
     } finally {
       this.isLoading = false;
     }
@@ -118,13 +115,10 @@ export class VaultSelectorModal extends Modal {
     listContainer.empty();
 
     if (this.filteredVaults.length === 0) {
-      const emptyEl = listContainer.createDiv({ cls: 'vault-empty' });
+      const emptyEl = listContainer.createDiv({ cls: 'vault-empty vaultconnect-empty-state' });
       emptyEl.textContent = this.searchQuery
         ? 'No vaults found matching your search'
         : 'No vaults available. Create one to get started!';
-      emptyEl.style.textAlign = 'center';
-      emptyEl.style.padding = '20px';
-      emptyEl.style.color = 'var(--text-muted)';
       return;
     }
 
@@ -135,21 +129,7 @@ export class VaultSelectorModal extends Modal {
   }
 
   private renderVaultItem(container: HTMLElement, vault: VaultInfo) {
-    const item = container.createDiv({ cls: 'vault-item' });
-    item.style.padding = '12px';
-    item.style.border = '1px solid var(--background-modifier-border)';
-    item.style.borderRadius = '4px';
-    item.style.marginBottom = '8px';
-    item.style.cursor = 'pointer';
-    item.style.transition = 'background-color 0.2s';
-
-    // Hover effect
-    item.addEventListener('mouseenter', () => {
-      item.style.backgroundColor = 'var(--background-modifier-hover)';
-    });
-    item.addEventListener('mouseleave', () => {
-      item.style.backgroundColor = '';
-    });
+    const item = container.createDiv({ cls: 'vault-item vaultconnect-vault-item' });
 
     // Click handler
     item.addEventListener('click', () => {
@@ -157,15 +137,11 @@ export class VaultSelectorModal extends Modal {
     });
 
     // Vault name
-    const nameEl = item.createDiv({ cls: 'vault-name' });
+    const nameEl = item.createDiv({ cls: 'vault-name vaultconnect-vault-name' });
     nameEl.textContent = vault.name;
-    nameEl.style.fontWeight = 'bold';
-    nameEl.style.marginBottom = '4px';
 
     // Vault info
-    const infoEl = item.createDiv({ cls: 'vault-info' });
-    infoEl.style.fontSize = '0.9em';
-    infoEl.style.color = 'var(--text-muted)';
+    const infoEl = item.createDiv({ cls: 'vault-info vaultconnect-vault-info' });
 
     const fileCount = vault.file_count === 1 ? '1 file' : `${vault.file_count} files`;
     const size = formatFileSize(vault.total_size_bytes);
@@ -176,15 +152,8 @@ export class VaultSelectorModal extends Modal {
     // Current vault indicator
     const currentVault = this.vaultService.getCurrentVault();
     if (currentVault && currentVault.vault_id === vault.vault_id) {
-      const badge = item.createDiv({ cls: 'vault-current-badge' });
+      const badge = item.createDiv({ cls: 'vault-current-badge vaultconnect-vault-badge' });
       badge.textContent = 'Current';
-      badge.style.display = 'inline-block';
-      badge.style.padding = '2px 8px';
-      badge.style.backgroundColor = 'var(--interactive-accent)';
-      badge.style.color = 'var(--text-on-accent)';
-      badge.style.borderRadius = '3px';
-      badge.style.fontSize = '0.8em';
-      badge.style.marginTop = '4px';
     }
   }
 
@@ -203,27 +172,25 @@ export class VaultSelectorModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    contentEl.createEl('h2', { text: 'Create New Vault' });
+    contentEl.createEl('h2', { text: 'Create new vault' });
 
     let vaultName = '';
 
     new Setting(contentEl)
-      .setName('Vault Name')
+      .setName('Vault name')
       .setDesc('Enter a name for your new vault')
       .addText(text => {
         text
-          .setPlaceholder('My Vault')
+          .setPlaceholder('My vault')
           .onChange(value => {
             vaultName = value.trim();
           });
         text.inputEl.focus();
       });
 
-    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-    buttonContainer.style.marginTop = '20px';
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'flex-end';
-    buttonContainer.style.gap = '10px';
+    const buttonContainer = contentEl.createDiv({
+      cls: 'modal-button-container vaultconnect-button-container vaultconnect-button-container--end'
+    });
 
     const backButton = buttonContainer.createEl('button', { text: 'Back' });
     backButton.addEventListener('click', () => {
