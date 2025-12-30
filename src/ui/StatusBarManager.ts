@@ -126,7 +126,7 @@ export class StatusBarManager {
    */
   setClickHandler(handler: () => void): void {
     this.onClickHandler = handler;
-    this.statusBarItem.style.cursor = 'pointer';
+    this.statusBarItem.addClass('vaultconnect-status-clickable');
     this.statusBarItem.onclick = handler;
   }
 
