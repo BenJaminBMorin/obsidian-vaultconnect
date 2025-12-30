@@ -110,7 +110,7 @@ export class SyncLogService {
       };
     }
 
-    console.log('SyncLogService initialized with', this.logs.length, 'log entries');
+    console.debug('SyncLogService initialized with', this.logs.length, 'log entries');
   }
 
   /**
@@ -217,7 +217,7 @@ export class SyncLogService {
     error?: string
   ): void {
     const entry: SyncLogEntry = {
-      id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `log_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       timestamp: new Date(),
       type,
       message,

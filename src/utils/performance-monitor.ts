@@ -194,22 +194,22 @@ export class PerformanceMonitor {
   logReport(name?: string): void {
     const report = this.getReport(name);
     const title = name ? `Performance Report: ${name}` : 'Performance Report';
-    
-    console.group(title);
-    console.log('Total Operations:', report.summary.totalOperations);
-    console.log('Average Duration:', report.summary.averageDuration.toFixed(2), 'ms');
-    console.log('Min Duration:', report.summary.minDuration.toFixed(2), 'ms');
-    console.log('Max Duration:', report.summary.maxDuration.toFixed(2), 'ms');
-    console.log('P95 Duration:', report.summary.p95Duration.toFixed(2), 'ms');
-    console.log('P99 Duration:', report.summary.p99Duration.toFixed(2), 'ms');
-    
+
     const memory = this.getMemoryUsage();
-    if (memory) {
-      console.log('Heap Used:', (memory.heapUsed / 1024 / 1024).toFixed(2), 'MB');
-      console.log('Heap Total:', (memory.heapTotal / 1024 / 1024).toFixed(2), 'MB');
-    }
-    
-    console.groupEnd();
+    const memoryInfo = memory
+      ? `\n  Heap Used: ${(memory.heapUsed / 1024 / 1024).toFixed(2)} MB\n  Heap Total: ${(memory.heapTotal / 1024 / 1024).toFixed(2)} MB`
+      : '';
+
+    console.debug(
+      `${title}\n` +
+      `  Total Operations: ${report.summary.totalOperations}\n` +
+      `  Average Duration: ${report.summary.averageDuration.toFixed(2)} ms\n` +
+      `  Min Duration: ${report.summary.minDuration.toFixed(2)} ms\n` +
+      `  Max Duration: ${report.summary.maxDuration.toFixed(2)} ms\n` +
+      `  P95 Duration: ${report.summary.p95Duration.toFixed(2)} ms\n` +
+      `  P99 Duration: ${report.summary.p99Duration.toFixed(2)} ms` +
+      memoryInfo
+    );
   }
 
   /**

@@ -58,10 +58,10 @@ export class AuthService {
       
       // Check if token is still valid
       if (this.isTokenExpired()) {
-        console.log('Stored API key has expired');
+        console.debug('Stored API key has expired');
         await this.clearApiKey();
       } else {
-        console.log('Loaded valid API key from storage');
+        console.debug('Loaded valid API key from storage');
         this.startExpirationCheck();
         this.eventBus.emit(EVENTS.AUTH_STATE_CHANGED, true);
       }
@@ -87,7 +87,7 @@ export class AuthService {
     // Emit auth state changed
     this.eventBus.emit(EVENTS.AUTH_STATE_CHANGED, true);
 
-    console.log('API key stored successfully');
+    console.debug('API key stored successfully');
   }
 
   /**
@@ -126,7 +126,7 @@ export class AuthService {
     // Emit auth state changed
     this.eventBus.emit(EVENTS.AUTH_STATE_CHANGED, false);
 
-    console.log('API key cleared');
+    console.debug('API key cleared');
   }
 
   /**
@@ -205,12 +205,12 @@ export class AuthService {
     // Check every hour
     this.expirationCheckInterval = setInterval(() => {
       if (this.isTokenExpired()) {
-        console.log('API key has expired');
+        console.debug('API key has expired');
         this.eventBus.emit(EVENTS.AUTH_TOKEN_EXPIRED);
         this.clearApiKey();
       } else if (this.isTokenExpiringSoon()) {
         const days = this.getDaysUntilExpiration();
-        console.log(`API key expires in ${days} days`);
+        console.debug(`API key expires in ${days} days`);
       }
     }, 60 * 60 * 1000); // Check every hour
   }

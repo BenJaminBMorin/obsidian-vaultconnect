@@ -624,9 +624,9 @@ export class WebSocketManager {
   private log(message: string, data?: any): void {
     if (this.debugMode) {
       if (data !== undefined) {
-        console.log(`[WebSocketManager] ${message}`, data);
+        console.debug(`[WebSocketManager] ${message}`, data);
       } else {
-        console.log(`[WebSocketManager] ${message}`);
+        console.debug(`[WebSocketManager] ${message}`);
       }
     }
   }

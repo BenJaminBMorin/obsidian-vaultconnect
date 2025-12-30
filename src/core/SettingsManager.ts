@@ -115,7 +115,7 @@ export class SettingsManager {
       return data;
     }
 
-    console.log(`Migrating settings from version ${version} to ${this.SETTINGS_VERSION}`);
+    console.debug(`Migrating settings from version ${version} to ${this.SETTINGS_VERSION}`);
     
     let migratedData = { ...data };
 
@@ -214,8 +214,15 @@ export class SettingsManager {
     if (!Array.isArray(this.settings.includedFolders)) {
       this.settings.includedFolders = [];
     }
+    // Use actual configDir instead of hardcoded .obsidian
+    const configDir = this.plugin.app.vault.configDir;
     if (!Array.isArray(this.settings.excludedFolders)) {
-      this.settings.excludedFolders = ['.obsidian', '.trash'];
+      this.settings.excludedFolders = [configDir, '.trash'];
+    } else if (configDir !== '.obsidian') {
+      // Replace any hardcoded .obsidian with actual configDir
+      this.settings.excludedFolders = this.settings.excludedFolders.map(
+        folder => folder === '.obsidian' ? configDir : folder
+      );
     }
 
     // Validate URLs
@@ -248,7 +255,7 @@ export class SettingsManager {
    * Generate a unique device ID
    */
   private generateDeviceId(): string {
-    return `obsidian-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `obsidian-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 
   /**

@@ -508,9 +508,9 @@ export class CollaborationService {
   private log(message: string, data?: any): void {
     if (this.debugMode) {
       if (data !== undefined) {
-        console.log(`[CollaborationService] ${message}`, data);
+        console.debug(`[CollaborationService] ${message}`, data);
       } else {
-        console.log(`[CollaborationService] ${message}`);
+        console.debug(`[CollaborationService] ${message}`);
       }
     }
   }

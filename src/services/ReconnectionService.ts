@@ -70,7 +70,7 @@ export class ReconnectionService {
    * Handle disconnection
    */
   private handleDisconnection(): void {
-    console.log('[ReconnectionService] Connection lost');
+    console.debug('[ReconnectionService] Connection lost');
     
     this.wasDisconnected = true;
     this.disconnectedAt = new Date();
@@ -83,7 +83,7 @@ export class ReconnectionService {
    * Handle reconnecting state
    */
   private handleReconnecting(attempt?: number): void {
-    console.log(`[ReconnectionService] Reconnecting... (attempt ${attempt || 0})`);
+    console.debug(`[ReconnectionService] Reconnecting... (attempt ${attempt || 0})`);
     
     // Could show a notification to user about reconnection attempts
   }
@@ -97,7 +97,7 @@ export class ReconnectionService {
       return;
     }
 
-    console.log('[ReconnectionService] Reconnected, resyncing state...');
+    console.debug('[ReconnectionService] Reconnected, resyncing state...');
     
     try {
       // Emit offline mode ended
@@ -106,7 +106,7 @@ export class ReconnectionService {
       // Resync state after reconnection
       await this.resyncState();
       
-      console.log('[ReconnectionService] State resync completed');
+      console.debug('[ReconnectionService] State resync completed');
       
     } catch (error) {
       console.error('[ReconnectionService] Failed to resync state:', error);
@@ -133,7 +133,7 @@ export class ReconnectionService {
    * Resync state after reconnection
    */
   private async resyncState(): Promise<void> {
-    console.log('[ReconnectionService] Starting state resync...');
+    console.debug('[ReconnectionService] Starting state resync...');
     
     // Step 1: Process queued sync operations
     await this.processQueuedOperations();
@@ -144,31 +144,31 @@ export class ReconnectionService {
     // Step 3: Sync any changes that happened while offline
     await this.syncOfflineChanges();
     
-    console.log('[ReconnectionService] State resync completed');
+    console.debug('[ReconnectionService] State resync completed');
   }
 
   /**
    * Process queued sync operations
    */
   private async processQueuedOperations(): Promise<void> {
-    console.log('[ReconnectionService] Processing queued operations...');
+    console.debug('[ReconnectionService] Processing queued operations...');
     
     try {
       // Get queued operations from sync service
       const queuedOperations = this.syncService.getQueue();
       
       if (queuedOperations.length === 0) {
-        console.log('[ReconnectionService] No queued operations');
+        console.debug('[ReconnectionService] No queued operations');
         return;
       }
       
-      console.log(`[ReconnectionService] Processing ${queuedOperations.length} queued operations`);
+      console.debug(`[ReconnectionService] Processing ${queuedOperations.length} queued operations`);
       
       // The sync queue service will automatically process these operations
       // We just need to trigger a retry for any failed operations
       await this.syncService.retryFailed();
       
-      console.log('[ReconnectionService] Queued operations processing initiated');
+      console.debug('[ReconnectionService] Queued operations processing initiated');
       
     } catch (error) {
       console.error('[ReconnectionService] Failed to process queued operations:', error);
@@ -180,14 +180,14 @@ export class ReconnectionService {
    * Check for conflicts that occurred during offline period
    */
   private async checkForConflicts(): Promise<void> {
-    console.log('[ReconnectionService] Checking for conflicts...');
+    console.debug('[ReconnectionService] Checking for conflicts...');
     
     try {
       // Detect conflicts
       const conflicts = await this.conflictService.detectConflicts();
       
       if (conflicts.length > 0) {
-        console.log(`[ReconnectionService] Found ${conflicts.length} conflicts`);
+        console.debug(`[ReconnectionService] Found ${conflicts.length} conflicts`);
         
         // Emit notification about conflicts
         this.eventBus.emit(EVENTS.CONFLICT_DETECTED, {
@@ -195,7 +195,7 @@ export class ReconnectionService {
           conflicts
         });
       } else {
-        console.log('[ReconnectionService] No conflicts found');
+        console.debug('[ReconnectionService] No conflicts found');
       }
       
     } catch (error) {
@@ -212,14 +212,14 @@ export class ReconnectionService {
       return;
     }
 
-    console.log('[ReconnectionService] Syncing offline changes...');
+    console.debug('[ReconnectionService] Syncing offline changes...');
     
     try {
       // Trigger a full sync to catch any changes
       // This will compare local and remote states
       await this.syncService.syncAll();
       
-      console.log('[ReconnectionService] Offline changes synced');
+      console.debug('[ReconnectionService] Offline changes synced');
       
     } catch (error) {
       console.error('[ReconnectionService] Failed to sync offline changes:', error);

@@ -118,7 +118,7 @@ export class VaultService {
         vault.permission = accessInfo.permission;
         vault.owner_tenant_id = accessInfo.owner_tenant_id;
         
-        console.log('Vault access info:', {
+        console.debug('Vault access info:', {
           vault_id: vaultId,
           is_cross_tenant: vault.is_cross_tenant,
           permission: vault.permission
@@ -145,7 +145,7 @@ export class VaultService {
       // Emit vault changed event
       this.eventBus.emit(EVENTS.VAULT_CHANGED, vault);
       
-      console.log('Vault selected:', vault.name, vault.is_cross_tenant ? '(cross-tenant)' : '(owned)');
+      console.debug('Vault selected:', vault.name, vault.is_cross_tenant ? '(cross-tenant)' : '(owned)');
     } catch (error) {
       console.error('Failed to select vault:', error);
       throw new Error(`Failed to select vault: ${parseErrorMessage(error)}`);
@@ -205,7 +205,7 @@ export class VaultService {
       // Invalidate cache
       this.vaultsCache = null;
       
-      console.log('Vault created:', vault.name);
+      console.debug('Vault created:', vault.name);
       return vault;
     } catch (error) {
       console.error('Failed to create vault:', error);
@@ -283,7 +283,7 @@ export class VaultService {
     // Emit vault changed event
     this.eventBus.emit(EVENTS.VAULT_CHANGED, null);
     
-    console.log('Vault selection cleared');
+    console.debug('Vault selection cleared');
   }
 
   /**

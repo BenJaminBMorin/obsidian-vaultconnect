@@ -17,7 +17,7 @@ export async function computeHash(content: string): Promise<string> {
  * Generate a unique device ID
  */
 export function generateDeviceId(): string {
-  return `obsidian-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `obsidian-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
@@ -191,5 +191,5 @@ export function isOnline(): boolean {
  * Generate unique ID
  */
 export function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 }

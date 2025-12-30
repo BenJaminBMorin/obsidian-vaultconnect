@@ -60,7 +60,7 @@ export class OfflineQueueService {
     if (stored && Array.isArray(stored)) {
       // Filter out already synced operations
       this.queue = stored.filter(op => op.status !== 'synced');
-      console.log(`OfflineQueueService: Loaded ${this.queue.length} queued operations from storage`);
+      console.debug(`OfflineQueueService: Loaded ${this.queue.length} queued operations from storage`);
       
       if (this.queue.length > 0) {
         this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
@@ -75,7 +75,7 @@ export class OfflineQueueService {
     // Listen for offline mode changes
     this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, (offline: boolean) => {
       this.isOffline = offline;
-      console.log(`OfflineQueueService: Offline mode ${offline ? 'enabled' : 'disabled'}`);
+      console.debug(`OfflineQueueService: Offline mode ${offline ? 'enabled' : 'disabled'}`);
     });
   }
 
@@ -119,11 +119,11 @@ export class OfflineQueueService {
       const oldOp = this.queue[existingIndex];
       queuedOp.queuedAt = oldOp.queuedAt; // Keep original queue time
       this.queue[existingIndex] = queuedOp;
-      console.log(`OfflineQueueService: Updated existing queue operation for ${path}`);
+      console.debug(`OfflineQueueService: Updated existing queue operation for ${path}`);
     } else {
       // Add new operation
       this.queue.push(queuedOp);
-      console.log(`OfflineQueueService: Enqueued ${operation} operation for ${path}`);
+      console.debug(`OfflineQueueService: Enqueued ${operation} operation for ${path}`);
     }
 
     await this.persistQueue();
@@ -198,7 +198,7 @@ export class OfflineQueueService {
       operation.error = undefined;
       await this.persistQueue();
       this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
-      console.log(`OfflineQueueService: Retrying operation ${id}`);
+      console.debug(`OfflineQueueService: Retrying operation ${id}`);
     }
   }
 
@@ -216,7 +216,7 @@ export class OfflineQueueService {
     if (failedOps.length > 0) {
       await this.persistQueue();
       this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
-      console.log(`OfflineQueueService: Retrying ${failedOps.length} failed operations`);
+      console.debug(`OfflineQueueService: Retrying ${failedOps.length} failed operations`);
     }
   }
 
@@ -229,7 +229,7 @@ export class OfflineQueueService {
       this.queue.splice(index, 1);
       await this.persistQueue();
       this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
-      console.log(`OfflineQueueService: Removed operation ${id}`);
+      console.debug(`OfflineQueueService: Removed operation ${id}`);
     }
   }
 
@@ -244,7 +244,7 @@ export class OfflineQueueService {
     if (removedCount > 0) {
       await this.persistQueue();
       this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
-      console.log(`OfflineQueueService: Cleared ${removedCount} synced operations`);
+      console.debug(`OfflineQueueService: Cleared ${removedCount} synced operations`);
     }
   }
 
@@ -259,7 +259,7 @@ export class OfflineQueueService {
     if (removedCount > 0) {
       await this.persistQueue();
       this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
-      console.log(`OfflineQueueService: Cleared ${removedCount} failed operations`);
+      console.debug(`OfflineQueueService: Cleared ${removedCount} failed operations`);
     }
   }
 
@@ -271,7 +271,7 @@ export class OfflineQueueService {
     this.queue = [];
     await this.persistQueue();
     this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
-    console.log(`OfflineQueueService: Cleared ${count} operations from queue`);
+    console.debug(`OfflineQueueService: Cleared ${count} operations from queue`);
   }
 
   /**

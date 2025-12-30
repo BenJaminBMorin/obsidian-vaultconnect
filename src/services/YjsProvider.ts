@@ -461,9 +461,9 @@ export class YjsProvider {
   private log(message: string, data?: any): void {
     if (this.debugMode) {
       if (data !== undefined) {
-        console.log(`[YjsProvider] ${message}`, data);
+        console.debug(`[YjsProvider] ${message}`, data);
       } else {
-        console.log(`[YjsProvider] ${message}`);
+        console.debug(`[YjsProvider] ${message}`);
       }
     }
   }

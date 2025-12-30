@@ -34,7 +34,7 @@ export class WebSocketEventHandler {
   private setupSyncEventHandlers(): void {
     // Handle sync_event - file updated from another device
     const unsubSyncEvent = this.wsManager.on(WS_EVENTS.SYNC_EVENT, (data: any) => {
-      console.log('Received sync event:', data);
+      console.debug('Received sync event:', data);
       
       const fileInfo: Partial<FileInfo> = {
         file_id: data.file_id,
@@ -57,7 +57,7 @@ export class WebSocketEventHandler {
 
     // Handle file_update - real-time file update notification
     const unsubFileUpdate = this.wsManager.on(WS_EVENTS.FILE_UPDATE, (data: any) => {
-      console.log('Received file update:', data);
+      console.debug('Received file update:', data);
       
       // Emit to sync service for processing
       this.eventBus.emit(EVENTS.FILE_SYNCED, {
@@ -88,7 +88,7 @@ export class WebSocketEventHandler {
   private setupDeviceEventHandlers(): void {
     // Handle device_connected - another device connected to vault
     const unsubDeviceConnected = this.wsManager.on(WS_EVENTS.DEVICE_CONNECTED, (data: any) => {
-      console.log('Device connected:', data);
+      console.debug('Device connected:', data);
       
       // Emit notification event
       this.eventBus.emit(EVENTS.CONNECTION_CHANGED, 'device_connected', {
@@ -102,7 +102,7 @@ export class WebSocketEventHandler {
 
     // Handle device_disconnected - another device disconnected from vault
     const unsubDeviceDisconnected = this.wsManager.on(WS_EVENTS.DEVICE_DISCONNECTED, (data: any) => {
-      console.log('Device disconnected:', data);
+      console.debug('Device disconnected:', data);
       
       // Emit notification event
       this.eventBus.emit(EVENTS.CONNECTION_CHANGED, 'device_disconnected', {
@@ -121,7 +121,7 @@ export class WebSocketEventHandler {
   private setupConflictEventHandlers(): void {
     // Handle conflict - conflict detected
     const unsubConflict = this.wsManager.on(WS_EVENTS.CONFLICT, (data: any) => {
-      console.log('Conflict detected:', data);
+      console.debug('Conflict detected:', data);
       
       const conflictInfo: ConflictInfo = {
         id: data.conflict_id,
@@ -142,7 +142,7 @@ export class WebSocketEventHandler {
 
     // Handle conflict_resolved - conflict resolved by another device
     const unsubConflictResolved = this.wsManager.on(WS_EVENTS.CONFLICT_RESOLVED, (data: any) => {
-      console.log('Conflict resolved:', data);
+      console.debug('Conflict resolved:', data);
       
       // Emit to conflict service
       this.eventBus.emit(EVENTS.CONFLICT_RESOLVED, {
@@ -163,7 +163,7 @@ export class WebSocketEventHandler {
   private setupPresenceEventHandlers(): void {
     // Handle user_joined - user joined vault
     const unsubUserJoined = this.wsManager.on(WS_EVENTS.USER_JOINED, (data: any) => {
-      console.log('User joined:', data);
+      console.debug('User joined:', data);
       
       const user: ActiveUser = {
         userId: data.user_id,
@@ -182,7 +182,7 @@ export class WebSocketEventHandler {
 
     // Handle user_left - user left vault
     const unsubUserLeft = this.wsManager.on(WS_EVENTS.USER_LEFT, (data: any) => {
-      console.log('User left:', data);
+      console.debug('User left:', data);
       
       // Emit to presence service
       this.eventBus.emit(EVENTS.USER_LEFT, {
@@ -196,7 +196,7 @@ export class WebSocketEventHandler {
 
     // Handle presence_update - user presence changed
     const unsubPresenceUpdate = this.wsManager.on(WS_EVENTS.PRESENCE_UPDATE, (data: any) => {
-      console.log('Presence update:', data);
+      console.debug('Presence update:', data);
       
       // Emit to presence service
       this.eventBus.emit(EVENTS.USER_ACTIVITY, {
@@ -216,7 +216,7 @@ export class WebSocketEventHandler {
   private setupCollaborationEventHandlers(): void {
     // Handle collaborator_joined - user opened same file
     const unsubCollabJoined = this.wsManager.on(WS_EVENTS.COLLABORATOR_JOINED, (data: any) => {
-      console.log('Collaborator joined:', data);
+      console.debug('Collaborator joined:', data);
       
       // Emit to collaboration service
       this.eventBus.emit(EVENTS.COLLABORATOR_JOINED, {
@@ -239,7 +239,7 @@ export class WebSocketEventHandler {
 
     // Handle collaborator_left - user closed file
     const unsubCollabLeft = this.wsManager.on(WS_EVENTS.COLLABORATOR_LEFT, (data: any) => {
-      console.log('Collaborator left:', data);
+      console.debug('Collaborator left:', data);
       
       // Emit to collaboration service
       this.eventBus.emit(EVENTS.COLLABORATOR_LEFT, {

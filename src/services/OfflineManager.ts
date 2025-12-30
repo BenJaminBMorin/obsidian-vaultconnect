@@ -84,7 +84,7 @@ export class OfflineManager {
    */
   async initialize(vaultId: string): Promise<void> {
     if (this.isInitialized) {
-      console.log('OfflineManager: Already initialized');
+      console.debug('OfflineManager: Already initialized');
       return;
     }
 
@@ -97,7 +97,7 @@ export class OfflineManager {
     await this.offlineSync.initialize(vaultId);
 
     this.isInitialized = true;
-    console.log('OfflineManager: Initialized');
+    console.debug('OfflineManager: Initialized');
   }
 
   /**
@@ -109,14 +109,14 @@ export class OfflineManager {
     }
 
     if (!this.config.enabled) {
-      console.log('OfflineManager: Offline mode disabled in config');
+      console.debug('OfflineManager: Offline mode disabled in config');
       return;
     }
 
     // Start offline detection
     this.offlineDetection.startMonitoring();
 
-    console.log('OfflineManager: Started');
+    console.debug('OfflineManager: Started');
   }
 
   /**
@@ -126,7 +126,7 @@ export class OfflineManager {
     // Stop offline detection
     this.offlineDetection.stopMonitoring();
 
-    console.log('OfflineManager: Stopped');
+    console.debug('OfflineManager: Stopped');
   }
 
   /**
@@ -179,7 +179,7 @@ export class OfflineManager {
       }
 
       await this.offlineQueue.enqueue(path, operation, content, oldPath);
-      console.log(`OfflineManager: Queued ${operation} operation for ${path}`);
+      console.debug(`OfflineManager: Queued ${operation} operation for ${path}`);
     } catch (error) {
       console.error('OfflineManager: Error queuing operation:', error);
     }
@@ -189,7 +189,7 @@ export class OfflineManager {
    * Disable real-time features during offline mode
    */
   private disableRealtimeFeatures(): void {
-    console.log('OfflineManager: Disabling real-time features');
+    console.debug('OfflineManager: Disabling real-time features');
     
     // Emit event to disable collaboration
     this.eventBus.emit('collaboration:disable');
@@ -205,7 +205,7 @@ export class OfflineManager {
    * Enable real-time features when back online
    */
   private enableRealtimeFeatures(): void {
-    console.log('OfflineManager: Enabling real-time features');
+    console.debug('OfflineManager: Enabling real-time features');
     
     // Emit event to enable collaboration
     this.eventBus.emit('collaboration:enable');

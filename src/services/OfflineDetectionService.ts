@@ -43,12 +43,12 @@ export class OfflineDetectionService {
    */
   startMonitoring(): void {
     if (this.isMonitoring) {
-      console.log('OfflineDetectionService: Already monitoring');
+      console.debug('OfflineDetectionService: Already monitoring');
       return;
     }
 
     this.isMonitoring = true;
-    console.log('OfflineDetectionService: Started monitoring');
+    console.debug('OfflineDetectionService: Started monitoring');
 
     // Set up browser online/offline event listeners
     this.setupBrowserListeners();
@@ -71,7 +71,7 @@ export class OfflineDetectionService {
     }
 
     this.isMonitoring = false;
-    console.log('OfflineDetectionService: Stopped monitoring');
+    console.debug('OfflineDetectionService: Stopped monitoring');
 
     // Remove browser event listeners
     this.removeBrowserListeners();
@@ -103,7 +103,7 @@ export class OfflineDetectionService {
    * Handle browser online event
    */
   private handleOnline = (): void => {
-    console.log('OfflineDetectionService: Browser online event');
+    console.debug('OfflineDetectionService: Browser online event');
     this.checkConnectivity();
   };
 
@@ -111,7 +111,7 @@ export class OfflineDetectionService {
    * Handle browser offline event
    */
   private handleOffline = (): void => {
-    console.log('OfflineDetectionService: Browser offline event');
+    console.debug('OfflineDetectionService: Browser offline event');
     this.setNetworkStatus(NetworkStatus.OFFLINE);
     this.enterOfflineMode();
   };
@@ -153,7 +153,7 @@ export class OfflineDetectionService {
     if (this.networkStatus !== status) {
       const oldStatus = this.networkStatus;
       this.networkStatus = status;
-      console.log(`OfflineDetectionService: Network status changed from ${oldStatus} to ${status}`);
+      console.debug(`OfflineDetectionService: Network status changed from ${oldStatus} to ${status}`);
       this.eventBus.emit('network:status-changed', status, oldStatus);
     }
   }
@@ -167,7 +167,7 @@ export class OfflineDetectionService {
     }
 
     this.isOfflineMode = true;
-    console.log('OfflineDetectionService: Entering offline mode');
+    console.debug('OfflineDetectionService: Entering offline mode');
     
     // Emit offline mode event
     this.eventBus.emit(EVENTS.OFFLINE_MODE_CHANGED, true);
@@ -189,7 +189,7 @@ export class OfflineDetectionService {
     }
 
     this.isOfflineMode = false;
-    console.log('OfflineDetectionService: Exiting offline mode');
+    console.debug('OfflineDetectionService: Exiting offline mode');
     
     // Emit offline mode event
     this.eventBus.emit(EVENTS.OFFLINE_MODE_CHANGED, false);

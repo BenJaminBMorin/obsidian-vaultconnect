@@ -48,7 +48,7 @@ export class ConflictService {
     // Load conflicts from storage
     await this.loadConflicts();
     
-    console.log('ConflictService initialized for vault:', vaultId, {
+    console.debug('ConflictService initialized for vault:', vaultId, {
       isCrossTenant,
       permission
     });
@@ -68,7 +68,7 @@ export class ConflictService {
             remoteModified: new Date(c.remoteModified)
           }])
         );
-        console.log(`Loaded ${this.conflicts.size} conflicts from storage`);
+        console.debug(`Loaded ${this.conflicts.size} conflicts from storage`);
       }
     } catch (error) {
       console.error('Failed to load conflicts:', error);
@@ -98,7 +98,7 @@ export class ConflictService {
     const detectedConflicts: ConflictInfo[] = [];
 
     try {
-      console.log('Detecting conflicts...');
+      console.debug('Detecting conflicts...');
 
       // Get all remote files
       const remoteFiles = await this.apiClient.listFiles(this.vaultId);
@@ -153,7 +153,7 @@ export class ConflictService {
         }
       }
 
-      console.log(`Detected ${detectedConflicts.length} conflicts`);
+      console.debug(`Detected ${detectedConflicts.length} conflicts`);
       return detectedConflicts;
     } catch (error) {
       console.error('Error detecting conflicts:', error);
@@ -256,7 +256,7 @@ export class ConflictService {
     // Emit event
     this.eventBus.emit(EVENTS.CONFLICT_DETECTED, conflict);
 
-    console.log(`Content conflict detected: ${localFile.path}`);
+    console.debug(`Content conflict detected: ${localFile.path}`);
     return conflict;
   }
 
@@ -293,7 +293,7 @@ export class ConflictService {
     // Emit event
     this.eventBus.emit(EVENTS.CONFLICT_DETECTED, conflict);
 
-    console.log(`Deletion conflict detected: ${filePath}`);
+    console.debug(`Deletion conflict detected: ${filePath}`);
     return conflict;
   }
 
@@ -398,15 +398,15 @@ export class ConflictService {
       throw new Error(`Conflict not found: ${conflictId}`);
     }
 
-    console.log(`Resolving conflict ${conflictId} with strategy: ${resolution.strategy}`);
+    console.debug(`Resolving conflict ${conflictId} with strategy: ${resolution.strategy}`);
 
     // For cross-tenant vaults, always use remote as source of truth
     if (this.isCrossTenant) {
-      console.log('Cross-tenant vault detected - using remote as source of truth');
+      console.debug('Cross-tenant vault detected - using remote as source of truth');
       
       // If read-only permission, always keep remote
       if (this.vaultPermission === 'read') {
-        console.log('Read-only permission - forcing KEEP_REMOTE strategy');
+        console.debug('Read-only permission - forcing KEEP_REMOTE strategy');
         resolution = { strategy: ResolutionStrategy.KEEP_REMOTE };
       } else if (resolution.strategy === ResolutionStrategy.KEEP_LOCAL) {
         // For write permission, warn but allow if explicitly chosen
@@ -439,7 +439,7 @@ export class ConflictService {
       // Remove conflict after successful resolution
       await this.removeConflict(conflictId);
 
-      console.log(`Conflict ${conflictId} resolved successfully`);
+      console.debug(`Conflict ${conflictId} resolved successfully`);
     } catch (error) {
       console.error(`Failed to resolve conflict ${conflictId}:`, error);
       throw error;
@@ -454,7 +454,7 @@ export class ConflictService {
       throw new Error('Vault not initialized');
     }
 
-    console.log(`Keeping local version for ${conflict.path}`);
+    console.debug(`Keeping local version for ${conflict.path}`);
 
     // Get the local file
     const localFile = this.vault.getAbstractFileByPath(conflict.path);
@@ -500,7 +500,7 @@ export class ConflictService {
       throw new Error('Vault not initialized');
     }
 
-    console.log(`Keeping remote version for ${conflict.path}`);
+    console.debug(`Keeping remote version for ${conflict.path}`);
 
     // Get remote file
     const remoteFile = await this.apiClient.getFileByPath(this.vaultId, conflict.path);
@@ -528,7 +528,7 @@ export class ConflictService {
       throw new Error('Vault not initialized');
     }
 
-    console.log(`Keeping both versions for ${conflict.path}`);
+    console.debug(`Keeping both versions for ${conflict.path}`);
 
     // Generate conflict copy path
     const conflictCopyPath = this.generateConflictCopyPath(conflict.path);
@@ -550,7 +550,7 @@ export class ConflictService {
       // Update sync state for original file
       await this.updateSyncState(conflict.path, remoteFile.content);
 
-      console.log(`Created conflict copy: ${conflictCopyPath}`);
+      console.debug(`Created conflict copy: ${conflictCopyPath}`);
     } else {
       throw new Error(`Local file not found: ${conflict.path}`);
     }
@@ -571,7 +571,7 @@ export class ConflictService {
       throw new Error('Merged content is required for manual merge');
     }
 
-    console.log(`Applying manual merge for ${conflict.path}`);
+    console.debug(`Applying manual merge for ${conflict.path}`);
 
     // Get local file
     const localFile = this.vault.getAbstractFileByPath(conflict.path);
@@ -609,7 +609,7 @@ export class ConflictService {
   async resolveAllConflicts(strategy: ResolutionStrategy): Promise<void> {
     const conflicts = Array.from(this.conflicts.values());
     
-    console.log(`Resolving ${conflicts.length} conflicts with strategy: ${strategy}`);
+    console.debug(`Resolving ${conflicts.length} conflicts with strategy: ${strategy}`);
 
     const errors: Array<{ conflictId: string; error: string }> = [];
 
@@ -629,7 +629,7 @@ export class ConflictService {
       );
     }
 
-    console.log('All conflicts resolved successfully');
+    console.debug('All conflicts resolved successfully');
   }
 
   /**
@@ -649,7 +649,7 @@ export class ConflictService {
     fileHashes[filePath] = hash;
     await this.storage.set('fileHashes', fileHashes);
 
-    console.log(`Updated sync state for ${filePath}`);
+    console.debug(`Updated sync state for ${filePath}`);
   }
 
   /**
@@ -666,7 +666,7 @@ export class ConflictService {
     delete fileHashes[filePath];
     await this.storage.set('fileHashes', fileHashes);
 
-    console.log(`Cleared sync state for ${filePath}`);
+    console.debug(`Cleared sync state for ${filePath}`);
   }
 
   /**

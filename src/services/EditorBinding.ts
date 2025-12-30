@@ -390,9 +390,9 @@ export class EditorBinding {
   private log(message: string, data?: any): void {
     if (this.debugMode) {
       if (data !== undefined) {
-        console.log(`[EditorBinding] ${message}`, data);
+        console.debug(`[EditorBinding] ${message}`, data);
       } else {
-        console.log(`[EditorBinding] ${message}`);
+        console.debug(`[EditorBinding] ${message}`);
       }
     }
   }

@@ -533,7 +533,7 @@ export class ErrorRecoveryManager {
    */
   async attemptRecovery(error: VaultSyncError): Promise<boolean> {
     if (!error.recoverable) {
-      console.log(`Error is not recoverable: ${error.type}`);
+      console.debug(`Error is not recoverable: ${error.type}`);
       return false;
     }
 
@@ -541,12 +541,12 @@ export class ErrorRecoveryManager {
     
     for (const strategy of strategies) {
       if (strategy.canRecover(error.toPluginError())) {
-        console.log(`Attempting recovery with strategy: ${strategy.description}`);
+        console.debug(`Attempting recovery with strategy: ${strategy.description}`);
         
         try {
           const recovered = await strategy.recover(error.toPluginError());
           if (recovered) {
-            console.log(`Successfully recovered from error: ${error.type}`);
+            console.debug(`Successfully recovered from error: ${error.type}`);
             return true;
           }
         } catch (recoveryError) {
@@ -555,7 +555,7 @@ export class ErrorRecoveryManager {
       }
     }
 
-    console.log(`No recovery strategy succeeded for error: ${error.type}`);
+    console.debug(`No recovery strategy succeeded for error: ${error.type}`);
     return false;
   }
 
@@ -586,7 +586,7 @@ export async function retryWithBackoff<T>(
       
       if (attempt < maxRetries) {
         const delay = Math.min(initialDelayMs * Math.pow(2, attempt), maxDelayMs);
-        console.log(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+        console.debug(`Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }

@@ -1280,13 +1280,13 @@ export class InitialSyncService {
     let retryCount = 0;
     const retryDelay = 1000; // Start with 1 second
 
-    console.log(`[InitialSync] Starting operation with retry: ${operationName} (max retries: ${maxRetries})`);
+    console.debug(`[InitialSync] Starting operation with retry: ${operationName} (max retries: ${maxRetries})`);
 
     while (retryCount < maxRetries) {
       try {
         const result = await fn();
         if (retryCount > 0) {
-          console.log(`[InitialSync] ${operationName} succeeded on attempt ${retryCount + 1}`);
+          console.debug(`[InitialSync] ${operationName} succeeded on attempt ${retryCount + 1}`);
         }
         return result;
       } catch (error) {
@@ -1298,7 +1298,7 @@ export class InitialSyncService {
 
         // Check if user cancelled
         if (this.cancelRequested) {
-          console.log(`[InitialSync] ${operationName} cancelled by user during retry`);
+          console.debug(`[InitialSync] ${operationName} cancelled by user during retry`);
           throw new Error('Operation cancelled by user');
         }
 
@@ -1317,7 +1317,7 @@ export class InitialSyncService {
 
         // Exponential backoff
         const delay = retryDelay * Math.pow(2, retryCount - 1);
-        console.log(`[InitialSync] Retrying ${operationName} in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
+        console.debug(`[InitialSync] Retrying ${operationName} in ${delay}ms... (attempt ${retryCount + 1}/${maxRetries})`);
         
         // Wait with ability to cancel
         await new Promise((resolve, reject) => {

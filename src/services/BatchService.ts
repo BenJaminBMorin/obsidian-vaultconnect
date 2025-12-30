@@ -398,7 +398,7 @@ export class BatchService {
    * Generate unique operation ID
    */
   private generateOperationId(): string {
-    return `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `op_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   /**

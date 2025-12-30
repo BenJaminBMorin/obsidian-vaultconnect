@@ -491,9 +491,9 @@ export class CollaborationUI {
   private log(message: string, data?: any): void {
     if (this.debugMode) {
       if (data !== undefined) {
-        console.log(`[CollaborationUI] ${message}`, data);
+        console.debug(`[CollaborationUI] ${message}`, data);
       } else {
-        console.log(`[CollaborationUI] ${message}`);
+        console.debug(`[CollaborationUI] ${message}`);
       }
     }
   }
