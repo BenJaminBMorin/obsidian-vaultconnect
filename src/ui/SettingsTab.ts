@@ -73,7 +73,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayAuthSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Authentication' });
+    new Setting(containerEl).setName('Authentication').setHeading();
 
     const authState = this.plugin.authService.getAuthState();
 
@@ -141,7 +141,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayVaultSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Vault selection' });
+    new Setting(containerEl).setName('Vault selection').setHeading();
 
     // Selected vault
     new Setting(containerEl)
@@ -215,7 +215,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displaySyncSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Sync settings' });
+    new Setting(containerEl).setName('Sync settings').setHeading();
 
     // Sync mode with detailed descriptions
     const syncModeDesc = containerEl.createDiv({ cls: 'vaultsync-sync-mode-desc' });
@@ -303,7 +303,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displaySelectiveSyncSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Selective sync' });
+    new Setting(containerEl).setName('Selective sync').setHeading();
 
     // Sync scope summary
     const scopeSummary = this.getSyncScopeSummary();
@@ -445,7 +445,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayCollaborationSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Collaboration' });
+    new Setting(containerEl).setName('Collaboration').setHeading();
 
     // Enable collaboration
     new Setting(containerEl)
@@ -501,7 +501,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayNotificationSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Notifications' });
+    new Setting(containerEl).setName('Notifications').setHeading();
 
     // Notify on sync
     new Setting(containerEl)
@@ -544,7 +544,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayPerformanceSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Performance' });
+    new Setting(containerEl).setName('Performance').setHeading();
 
     // Max concurrent uploads
     new Setting(containerEl)
@@ -608,7 +608,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayAdvancedSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Advanced' });
+    new Setting(containerEl).setName('Advanced').setHeading();
 
     // Warning message
     const warningEl = containerEl.createDiv({ cls: 'vaultsync-warning' });

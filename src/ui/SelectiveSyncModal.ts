@@ -48,7 +48,7 @@ export class SelectiveSyncModal extends Modal {
   }
 
   private createExcludedFoldersSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Excluded Folders' });
+    new Setting(containerEl).setName('Excluded folders').setHeading();
 
     const config = this.selectiveSyncService.getConfig();
 
@@ -58,7 +58,7 @@ export class SelectiveSyncModal extends Modal {
 
     // Add excluded folder
     new Setting(containerEl)
-      .setName('Add Excluded Folder')
+      .setName('Add excluded folder')
       .setDesc('Enter a folder path or pattern to exclude (e.g., "private" or "drafts/*")')
       .addText(text => {
         text.setPlaceholder('folder/path');
@@ -101,7 +101,7 @@ export class SelectiveSyncModal extends Modal {
   }
 
   private createIncludedFoldersSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Included Folders (Optional)' });
+    new Setting(containerEl).setName('Included folders (optional)').setHeading();
 
     containerEl.createEl('p', {
       text: 'If specified, only these folders will be synced (except those explicitly excluded). Leave empty to sync all folders except excluded ones.',
@@ -116,7 +116,7 @@ export class SelectiveSyncModal extends Modal {
 
     // Add included folder
     new Setting(containerEl)
-      .setName('Add Included Folder')
+      .setName('Add included folder')
       .setDesc('Enter a folder path or pattern to include (e.g., "notes" or "docs/*")')
       .addText(text => {
         text.setPlaceholder('folder/path');
@@ -160,7 +160,7 @@ export class SelectiveSyncModal extends Modal {
     // Clear all included folders
     if (config.includedFolders.length > 0) {
       new Setting(containerEl)
-        .setName('Clear All Included Folders')
+        .setName('Clear all included folders')
         .setDesc('Remove all included folders (sync all except excluded)')
         .addButton(button => {
           button
@@ -176,12 +176,12 @@ export class SelectiveSyncModal extends Modal {
   }
 
   private createPreviewSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Sync Scope Preview' });
+    new Setting(containerEl).setName('Sync scope preview').setHeading();
 
     const previewContainer = containerEl.createDiv({ cls: 'selective-sync-preview' });
 
     new Setting(previewContainer)
-      .setName('Calculate Preview')
+      .setName('Calculate preview')
       .setDesc('See how many files will be synced with current settings')
       .addButton(button => {
         button
@@ -231,7 +231,7 @@ export class SelectiveSyncModal extends Modal {
   }
 
   private createQuickTogglesSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Quick Toggles' });
+    new Setting(containerEl).setName('Quick toggles').setHeading();
 
     containerEl.createEl('p', {
       text: 'Quickly add common folders to exclusions',
@@ -335,7 +335,7 @@ export class SelectiveSyncModal extends Modal {
     new Setting(buttonContainer)
       .addButton(button => {
         button
-          .setButtonText('Reset to Defaults')
+          .setButtonText('Reset to defaults')
           .setWarning()
           .onClick(() => {
             this.selectiveSyncService.resetExcludedFolders();

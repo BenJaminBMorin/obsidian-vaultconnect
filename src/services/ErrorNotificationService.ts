@@ -5,6 +5,7 @@ import {
   ErrorType,
   ErrorSeverity,
   ErrorLogger,
+  ErrorClassifier,
   getUserMessage
 } from '../utils/errors';
 import { EventBus, EVENTS } from '../core/EventBus';
@@ -135,7 +136,6 @@ export class ErrorNotificationService {
    * Classify a generic error
    */
   private classifyError(error: ErrorData | Error, context?: Record<string, unknown>): VaultSyncError {
-    const { ErrorClassifier } = require('../utils/errors');
     return ErrorClassifier.classify(error, context);
   }
 
