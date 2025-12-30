@@ -3,6 +3,48 @@ import { EventBus, EVENTS } from '../core/EventBus';
 import { SyncResult } from './SyncService';
 
 /**
+ * Sync progress event data
+ */
+interface SyncProgressData {
+  current: number;
+  total: number;
+  currentFile?: string;
+  operation?: 'upload' | 'download' | 'check';
+}
+
+/**
+ * Sync error event data
+ */
+interface SyncErrorData {
+  message?: string;
+  path?: string;
+  error?: string;
+}
+
+/**
+ * File synced event data
+ */
+interface FileSyncedData {
+  path: string;
+  action: 'upload' | 'create' | 'update' | 'download' | 'delete';
+}
+
+/**
+ * Conflict event data
+ */
+interface ConflictData {
+  path: string;
+  conflictId?: string;
+}
+
+/**
+ * Connection error data
+ */
+interface ConnectionErrorData {
+  message?: string;
+}
+
+/**
  * Progress notification configuration
  */
 export interface ProgressNotificationConfig {
@@ -42,7 +84,7 @@ export class ProgressNotificationService {
     });
 
     // Sync progress
-    this.eventBus.on(EVENTS.SYNC_PROGRESS, (progress: any) => {
+    this.eventBus.on(EVENTS.SYNC_PROGRESS, (progress: SyncProgressData) => {
       this.handleSyncProgress(progress);
     });
 
@@ -52,17 +94,17 @@ export class ProgressNotificationService {
     });
 
     // Sync error
-    this.eventBus.on(EVENTS.SYNC_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.SYNC_ERROR, (error: SyncErrorData) => {
       this.handleSyncError(error);
     });
 
     // File synced (individual file operations)
-    this.eventBus.on(EVENTS.FILE_SYNCED, (data: any) => {
+    this.eventBus.on(EVENTS.FILE_SYNCED, (data: FileSyncedData) => {
       this.handleFileSynced(data);
     });
 
     // Conflict detected
-    this.eventBus.on(EVENTS.CONFLICT_DETECTED, (data: any) => {
+    this.eventBus.on(EVENTS.CONFLICT_DETECTED, (data: ConflictData) => {
       this.handleConflictDetected(data);
     });
 
@@ -71,7 +113,7 @@ export class ProgressNotificationService {
       this.handleConnectionChanged(connected);
     });
 
-    this.eventBus.on(EVENTS.CONNECTION_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.CONNECTION_ERROR, (error: ConnectionErrorData) => {
       this.handleConnectionError(error);
     });
   }
@@ -94,7 +136,7 @@ export class ProgressNotificationService {
   /**
    * Handle sync progress
    */
-  private handleSyncProgress(progress: any): void {
+  private handleSyncProgress(progress: SyncProgressData): void {
     if (!this.config.showSyncProgress) {
       return;
     }
@@ -112,10 +154,10 @@ export class ProgressNotificationService {
     const percent = Math.round((current / total) * 100);
 
     // Format operation
-    const operationText = this.formatOperation(operation);
+    const operationText = this.formatOperation(operation || 'check');
 
     // Update or create progress notification
-    const message = `🔄 Syncing: ${percent}% (${current}/${total})\n${operationText}: ${this.truncateFilePath(currentFile)}`;
+    const message = `🔄 Syncing: ${percent}% (${current}/${total})\n${operationText}: ${this.truncateFilePath(currentFile || '')}`;
     
     if (this.currentNotice) {
       this.currentNotice.setMessage(message);
@@ -183,7 +225,7 @@ export class ProgressNotificationService {
   /**
    * Handle sync error
    */
-  private handleSyncError(error: any): void {
+  private handleSyncError(error: SyncErrorData): void {
     // Hide progress notification
     if (this.currentNotice) {
       this.currentNotice.hide();
@@ -212,7 +254,7 @@ export class ProgressNotificationService {
   /**
    * Handle file synced
    */
-  private handleFileSynced(data: any): void {
+  private handleFileSynced(data: FileSyncedData): void {
     // Only show notifications for individual file operations if not in a bulk sync
     if (this.isLongOperation || !this.config.showSyncComplete) {
       return;
@@ -247,7 +289,7 @@ export class ProgressNotificationService {
   /**
    * Handle conflict detected
    */
-  private handleConflictDetected(data: any): void {
+  private handleConflictDetected(data: ConflictData): void {
     const { path, conflictId } = data;
     const message = `⚠️ Conflict detected: ${this.truncateFilePath(path)}\nClick "View Conflicts" to resolve`;
     this.showNotification(message, this.config.notificationDuration * 2);
@@ -267,7 +309,7 @@ export class ProgressNotificationService {
   /**
    * Handle connection error
    */
-  private handleConnectionError(error: any): void {
+  private handleConnectionError(error: ConnectionErrorData): void {
     const message = `🔴 Connection error: ${error.message || 'Unknown error'}`;
     this.showNotification(message, this.config.notificationDuration * 2);
   }

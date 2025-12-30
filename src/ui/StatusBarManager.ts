@@ -2,6 +2,14 @@ import { EventBus, EVENTS } from '../core/EventBus';
 import { SyncResult } from '../services/SyncService';
 
 /**
+ * Error event data
+ */
+interface ErrorEventData {
+  message?: string;
+  error?: string;
+}
+
+/**
  * Status bar state
  */
 export enum StatusBarState {
@@ -59,7 +67,7 @@ export class StatusBarManager {
       }
     });
 
-    this.eventBus.on(EVENTS.CONNECTION_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.CONNECTION_ERROR, (error: ErrorEventData) => {
       this.setError(error.message || 'Connection error');
     });
 
@@ -80,7 +88,7 @@ export class StatusBarManager {
       this.setState(StatusBarState.CONNECTED);
     });
 
-    this.eventBus.on(EVENTS.SYNC_ERROR, (error: any) => {
+    this.eventBus.on(EVENTS.SYNC_ERROR, (error: ErrorEventData) => {
       this.syncProgress = null;
       this.setError(error.message || error.error || 'Sync error');
     });

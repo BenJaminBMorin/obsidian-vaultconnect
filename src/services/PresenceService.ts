@@ -6,6 +6,29 @@ import { ActiveUser, PresenceState } from '../types';
 import { WS_EVENTS, PRESENCE_HEARTBEAT_MS, IDLE_TIMEOUT_MS } from '../utils/constants';
 import { parseErrorMessage } from '../utils/helpers';
 
+/**
+ * WebSocket presence event data interfaces
+ */
+interface WsUserJoinedData {
+  user_id: string;
+  user_name: string;
+  user_avatar?: string;
+  vault_id: string;
+}
+
+interface WsUserLeftData {
+  user_id: string;
+}
+
+interface WsPresenceUpdateData {
+  user_id: string;
+  user_name: string;
+  user_avatar?: string;
+  status: 'active' | 'away' | 'offline';
+  current_file?: string | null;
+  last_activity: string;
+}
+
 export interface UserActivity {
   type: 'viewing' | 'editing' | 'idle';
   filePath: string | null;
@@ -317,17 +340,17 @@ export class PresenceService {
    */
   private setupWebSocketListeners(): void {
     // User joined
-    this.wsManager.on(WS_EVENTS.USER_JOINED, (data: any) => {
+    this.wsManager.on(WS_EVENTS.USER_JOINED, (data: WsUserJoinedData) => {
       this.handleUserJoined(data);
     });
 
     // User left
-    this.wsManager.on(WS_EVENTS.USER_LEFT, (data: any) => {
+    this.wsManager.on(WS_EVENTS.USER_LEFT, (data: WsUserLeftData) => {
       this.handleUserLeft(data);
     });
 
     // Presence update
-    this.wsManager.on(WS_EVENTS.PRESENCE_UPDATE, (data: any) => {
+    this.wsManager.on(WS_EVENTS.PRESENCE_UPDATE, (data: WsPresenceUpdateData) => {
       this.handlePresenceUpdate(data);
     });
   }
@@ -335,7 +358,7 @@ export class PresenceService {
   /**
    * Handle user joined event
    */
-  private handleUserJoined(data: any): void {
+  private handleUserJoined(data: WsUserJoinedData): void {
     const { user_id, user_name, user_avatar, vault_id } = data;
     
     // Only track users in the same vault
@@ -367,7 +390,7 @@ export class PresenceService {
   /**
    * Handle user left event
    */
-  private handleUserLeft(data: any): void {
+  private handleUserLeft(data: WsUserLeftData): void {
     const { user_id } = data;
     
     // Remove from active users
@@ -391,13 +414,22 @@ export class PresenceService {
   /**
    * Handle presence update event
    */
-  private handlePresenceUpdate(data: any): void {
+  private handlePresenceUpdate(data: WsPresenceUpdateData): void {
     const { user_id, user_name, user_avatar, status, current_file, last_activity } = data;
-    
+
     // Don't track self
     if (user_id === this.currentUserId) {
       return;
     }
+
+    // If user is offline, remove them from active users
+    if (status === 'offline') {
+      this.handleUserLeft({ user_id });
+      return;
+    }
+
+    // Map status to ActiveUser status type (only 'active' or 'away')
+    const activeStatus: 'active' | 'away' = status === 'away' ? 'away' : 'active';
 
     // Get or create user
     let user = this.activeUsers.get(user_id);
@@ -406,7 +438,7 @@ export class PresenceService {
         userId: user_id,
         userName: user_name,
         userAvatar: user_avatar,
-        status: status || 'active',
+        status: activeStatus,
         currentFile: current_file || null,
         lastActivity: last_activity ? new Date(last_activity) : new Date()
       };
@@ -414,7 +446,7 @@ export class PresenceService {
     } else {
       // Update existing user
       const oldFile = user.currentFile;
-      user.status = status || user.status;
+      user.status = activeStatus;
       user.currentFile = current_file || null;
       user.lastActivity = last_activity ? new Date(last_activity) : new Date();
       

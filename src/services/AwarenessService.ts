@@ -21,6 +21,28 @@ export interface RemoteSelection {
 }
 
 /**
+ * Remote cursor event data
+ */
+interface RemoteCursorEventData {
+  filePath: string;
+  userId: string;
+  userName?: string;
+  color?: string;
+  cursor: { line: number; ch: number };
+}
+
+/**
+ * Remote selection event data
+ */
+interface RemoteSelectionEventData {
+  filePath: string;
+  userId: string;
+  userName?: string;
+  color?: string;
+  selection: { from: { line: number; ch: number }; to: { line: number; ch: number } };
+}
+
+/**
  * Awareness Service
  * Manages user awareness state (cursor, selection) and broadcasts updates
  */
@@ -284,12 +306,12 @@ export class AwarenessService {
    */
   private setupEventListeners(): void {
     // Listen for remote cursor updates
-    this.eventBus.on(EVENTS.YJS_REMOTE_CURSOR, (data: any) => {
+    this.eventBus.on(EVENTS.YJS_REMOTE_CURSOR, (data: RemoteCursorEventData) => {
       this.handleRemoteCursor(data);
     });
 
     // Listen for remote selection updates
-    this.eventBus.on(EVENTS.YJS_REMOTE_SELECTION, (data: any) => {
+    this.eventBus.on(EVENTS.YJS_REMOTE_SELECTION, (data: RemoteSelectionEventData) => {
       this.handleRemoteSelection(data);
     });
 
@@ -331,7 +353,7 @@ export class AwarenessService {
   /**
    * Handle remote cursor update
    */
-  private handleRemoteCursor(data: any): void {
+  private handleRemoteCursor(data: RemoteCursorEventData): void {
     const { filePath, userId, cursor } = data;
 
     // Skip if not active file
@@ -373,7 +395,7 @@ export class AwarenessService {
   /**
    * Handle remote selection update
    */
-  private handleRemoteSelection(data: any): void {
+  private handleRemoteSelection(data: RemoteSelectionEventData): void {
     const { filePath, userId, selection } = data;
 
     // Skip if not active file
