@@ -432,9 +432,9 @@ export class AwarenessService {
   private log(message: string, data?: any): void {
     if (this.debugMode) {
       if (data !== undefined) {
-        console.log(`[AwarenessService] ${message}`, data);
+        console.debug(`[AwarenessService] ${message}`, data);
       } else {
-        console.log(`[AwarenessService] ${message}`);
+        console.debug(`[AwarenessService] ${message}`);
       }
     }
   }

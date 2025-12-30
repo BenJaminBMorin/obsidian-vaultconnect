@@ -64,7 +64,7 @@ export class OfflineSyncService {
    */
   async initialize(vaultId: string): Promise<void> {
     this.vaultId = vaultId;
-    console.log('OfflineSyncService: Initialized for vault', vaultId);
+    console.debug('OfflineSyncService: Initialized for vault', vaultId);
   }
 
   /**
@@ -85,7 +85,7 @@ export class OfflineSyncService {
    */
   async syncQueuedOperations(): Promise<ReconnectionSyncResult> {
     if (this.isSyncing) {
-      console.log('OfflineSyncService: Already syncing');
+      console.debug('OfflineSyncService: Already syncing');
       throw new Error('Sync already in progress');
     }
 
@@ -111,12 +111,12 @@ export class OfflineSyncService {
       const queuedOps = queue.filter(op => op.status === 'queued');
 
       if (queuedOps.length === 0) {
-        console.log('OfflineSyncService: No queued operations to sync');
+        console.debug('OfflineSyncService: No queued operations to sync');
         this.isSyncing = false;
         return result;
       }
 
-      console.log(`OfflineSyncService: Starting sync of ${queuedOps.length} queued operations`);
+      console.debug(`OfflineSyncService: Starting sync of ${queuedOps.length} queued operations`);
       
       // Emit sync started event
       this.eventBus.emit(EVENTS.SYNC_STARTED);
@@ -146,7 +146,7 @@ export class OfflineSyncService {
               'Conflict detected - manual resolution required'
             );
             result.operationsFailed++;
-            console.log(`OfflineSyncService: Conflict detected for ${operation.path}`);
+            console.debug(`OfflineSyncService: Conflict detected for ${operation.path}`);
           } else {
             // Process the operation
             const syncResult = await this.processOperation(operation);
@@ -154,7 +154,7 @@ export class OfflineSyncService {
             if (syncResult.success) {
               await this.offlineQueue.markAsSynced(operation.id);
               result.operationsSynced++;
-              console.log(`OfflineSyncService: Successfully synced ${operation.path}`);
+              console.debug(`OfflineSyncService: Successfully synced ${operation.path}`);
             } else {
               await this.offlineQueue.markAsFailed(operation.id, syncResult.error || 'Unknown error');
               result.operationsFailed++;
@@ -183,7 +183,7 @@ export class OfflineSyncService {
       // Show summary notification
       this.showSyncSummary(result);
 
-      console.log(
+      console.debug(
         `OfflineSyncService: Sync completed - ` +
         `${result.operationsSynced} synced, ` +
         `${result.operationsFailed} failed, ` +
@@ -235,7 +235,7 @@ export class OfflineSyncService {
 
       if (remoteModified > operationTime) {
         // Remote file was modified after this operation - potential conflict
-        console.log(
+        console.debug(
           `OfflineSyncService: Potential conflict for ${operation.path} - ` +
           `remote modified at ${new Date(remoteModified).toISOString()}, ` +
           `operation queued at ${new Date(operationTime).toISOString()}`
@@ -290,7 +290,7 @@ export class OfflineSyncService {
         source: 'offline-sync'
       });
 
-      console.log(`OfflineSyncService: Conflict stored for ${operation.path}`);
+      console.debug(`OfflineSyncService: Conflict stored for ${operation.path}`);
     } catch (error) {
       console.error('OfflineSyncService: Error storing conflict:', error);
     }

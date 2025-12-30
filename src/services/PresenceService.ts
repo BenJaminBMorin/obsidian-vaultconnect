@@ -581,9 +581,9 @@ export class PresenceService {
   private log(message: string, data?: any): void {
     if (this.debugMode) {
       if (data !== undefined) {
-        console.log(`[PresenceService] ${message}`, data);
+        console.debug(`[PresenceService] ${message}`, data);
       } else {
-        console.log(`[PresenceService] ${message}`);
+        console.debug(`[PresenceService] ${message}`);
       }
     }
   }

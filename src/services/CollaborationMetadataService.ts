@@ -431,9 +431,9 @@ export class CollaborationMetadataService {
   private log(message: string, data?: any): void {
     if (this.debugMode) {
       if (data !== undefined) {
-        console.log(`[CollaborationMetadataService] ${message}`, data);
+        console.debug(`[CollaborationMetadataService] ${message}`, data);
       } else {
-        console.log(`[CollaborationMetadataService] ${message}`);
+        console.debug(`[CollaborationMetadataService] ${message}`);
       }
     }
   }

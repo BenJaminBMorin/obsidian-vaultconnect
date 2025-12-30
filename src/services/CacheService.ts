@@ -364,7 +364,7 @@ export class CacheService {
     }
     
     if (removedCount > 0) {
-      console.log(`Cache size limit reached. Removed ${removedCount} oldest entries.`);
+      console.debug(`Cache size limit reached. Removed ${removedCount} oldest entries.`);
     }
   }
 

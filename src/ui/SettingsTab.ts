@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice, TextComponent } from 'obsidian';
 import VaultSyncPlugin from '../../main';
 import { DeviceAuthModal } from './DeviceAuthModal';
+import { showConfirmationModal } from './ConfirmationModal';
 import { formatRelativeTime } from '../utils/helpers';
 import { SyncMode, PluginSettings } from '../types';
 
@@ -323,12 +324,13 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       ? excludedFolders.slice(0, 3).join(', ') + (excludedFolders.length > 3 ? '...' : '')
       : 'None';
 
+    const configDir = this.app.vault.configDir;
     new Setting(containerEl)
       .setName('Excluded Folders')
       .setDesc(excludedDisplay)
       .addTextArea(text => {
         text
-          .setPlaceholder('.obsidian, .trash, private/')
+          .setPlaceholder(`${configDir}, .trash, private/`)
           .setValue(this.plugin.settings.excludedFolders.join(', '))
           .onChange(async (value) => {
             this.plugin.settings.excludedFolders = value
@@ -776,8 +778,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     confirmMessage += '• Not affect your current files or sync settings\n\n';
     confirmMessage += 'This is useful for testing or if you want to re-run the initial sync setup.';
 
-    const confirmed = confirm(confirmMessage);
-    
+    const confirmed = await showConfirmationModal(
+      this.app,
+      confirmMessage,
+      { title: 'Reset initial sync state', confirmText: 'Reset', confirmClass: 'mod-warning' }
+    );
+
     if (!confirmed) {
       return;
     }
@@ -980,10 +986,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private async resetSettings(): Promise<void> {
-    const confirmed = confirm(
-      'Are you sure you want to reset all settings to defaults? This will preserve your authentication and device ID.'
+    const confirmed = await showConfirmationModal(
+      this.app,
+      'Are you sure you want to reset all settings to defaults? This will preserve your authentication and device ID.',
+      { title: 'Reset settings', confirmText: 'Reset', confirmClass: 'mod-warning' }
     );
-    
+
     if (!confirmed) return;
     
     try {

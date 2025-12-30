@@ -5,6 +5,7 @@ import { StorageManager } from '../core/StorageManager';
 import { FileChangeEvent } from './FileWatcherService';
 import { QueuedOperation } from './SyncQueueService';
 import { LargeFileService } from './LargeFileService';
+import { logger } from '../utils/logger';
 
 /**
  * File sync status
@@ -101,7 +102,7 @@ export class FileSyncService {
     // Load sync state from storage
     await this.loadSyncState();
     
-    console.log('FileSyncService initialized for vault:', vaultId, {
+    console.debug('FileSyncService initialized for vault:', vaultId, {
       isCrossTenant,
       permission
     });
@@ -132,7 +133,7 @@ export class FileSyncService {
         this.locallyDeletedFiles = new Set(locallyDeletedFiles);
       }
 
-      console.log(`Loaded sync state: ${this.lastSyncTimestamps.size} timestamps, ${this.fileHashes.size} hashes, ${this.readOnlyFiles.size} read-only files, ${this.locallyDeletedFiles.size} locally deleted files`);
+      console.debug(`Loaded sync state: ${this.lastSyncTimestamps.size} timestamps, ${this.fileHashes.size} hashes, ${this.readOnlyFiles.size} read-only files, ${this.locallyDeletedFiles.size} locally deleted files`);
     } catch (error) {
       console.error('Failed to load sync state:', error);
     }
@@ -193,7 +194,7 @@ export class FileSyncService {
 
     // Check if file is read-only (cross-tenant with read permission)
     if (this.isFileReadOnly(file.path)) {
-      console.log(`Skipping upload for read-only file: ${file.path} (cross-tenant vault with read permission)`);
+      console.debug(`Skipping upload for read-only file: ${file.path} (cross-tenant vault with read permission)`);
       return {
         success: false,
         path: file.path,
@@ -230,7 +231,7 @@ export class FileSyncService {
       // Check if file has changed since last sync (skip if unchanged)
       const lastHash = this.fileHashes.get(file.path);
       if (lastHash === hash && !forceCreate) {
-        console.log(`Skipping upload for ${file.path} - content unchanged (hash: ${hash})`);
+        console.debug(`Skipping upload for ${file.path} - content unchanged (hash: ${hash})`);
         this.updateSyncStatus(file.path, 'synced', hash);
         return {
           success: true,
@@ -248,7 +249,7 @@ export class FileSyncService {
 
       if (fileSize > CHUNK_THRESHOLD && this.largeFileService) {
         // Use LargeFileService for chunked upload
-        console.log(`Using chunked upload for large file: ${file.path} (${fileSize} bytes)`);
+        console.debug(`Using chunked upload for large file: ${file.path} (${fileSize} bytes)`);
 
         // Check if file exists to get fileId (unless forceCreate is true)
         let fileId: string | undefined;
@@ -277,7 +278,7 @@ export class FileSyncService {
           await this.saveSyncState();
         }
 
-        console.log(`Chunked upload completed: ${file.path}`);
+        console.debug(`Chunked upload completed: ${file.path}`);
 
         return {
           success: true,
@@ -350,7 +351,7 @@ export class FileSyncService {
         await this.saveSyncState();
       }
 
-      console.log(`Uploaded ${file.path} (${isBinary ? 'binary' : 'text'}, ${hash.substring(0, 8)}...)`);
+      console.debug(`Uploaded ${file.path} (${isBinary ? 'binary' : 'text'}, ${hash.substring(0, 8)}...)`);
       
       return result;
     } catch (error) {
@@ -450,16 +451,16 @@ export class FileSyncService {
 
       if (localFile instanceof TFile) {
         // Update existing file
-        console.log(`[Download Debug] About to modify ${filePath}`);
-        console.log(`[Download Debug] Remote hash: ${remoteFile.hash}`);
-        console.log(`[Download Debug] Remote content length: ${remoteFile.content.length}`);
-        console.log(`[Download Debug] Remote content preview: ${remoteFile.content.substring(0, 100)}`);
+        console.debug(`[Download Debug] About to modify ${filePath}`);
+        console.debug(`[Download Debug] Remote hash: ${remoteFile.hash}`);
+        console.debug(`[Download Debug] Remote content length: ${remoteFile.content.length}`);
+        console.debug(`[Download Debug] Remote content preview: ${remoteFile.content.substring(0, 100)}`);
 
         // Read current local content before modify
         const beforeContent = await this.vault.read(localFile);
         const beforeHash = await this.computeHash(beforeContent);
-        console.log(`[Download Debug] Local hash BEFORE modify: ${beforeHash}`);
-        console.log(`[Download Debug] Local content length BEFORE: ${beforeContent.length}`);
+        console.debug(`[Download Debug] Local hash BEFORE modify: ${beforeHash}`);
+        console.debug(`[Download Debug] Local content length BEFORE: ${beforeContent.length}`);
 
         if (isBinary) {
           // Binary files: decode base64 and use modifyBinary
@@ -473,9 +474,9 @@ export class FileSyncService {
         // Verify the content was actually written
         const afterContent = await this.vault.read(localFile);
         const afterHash = await this.computeHash(afterContent);
-        console.log(`[Download Debug] Local hash AFTER modify: ${afterHash}`);
-        console.log(`[Download Debug] Local content length AFTER: ${afterContent.length}`);
-        console.log(`[Download Debug] Hash matches remote? ${afterHash === remoteFile.hash}`);
+        console.debug(`[Download Debug] Local hash AFTER modify: ${afterHash}`);
+        console.debug(`[Download Debug] Local content length AFTER: ${afterContent.length}`);
+        console.debug(`[Download Debug] Hash matches remote? ${afterHash === remoteFile.hash}`);
         
         // Preserve original file timestamps to prevent sync conflicts
         await this.preserveFileTimestamps(localFile, remoteFile.created_at, remoteFile.updated_at);
@@ -524,7 +525,7 @@ export class FileSyncService {
       // Mark as read-only if cross-tenant with read permission
       if (this.isCrossTenant && this.vaultPermission === 'read') {
         this.readOnlyFiles.add(filePath);
-        console.log(`Marked ${filePath} as read-only (cross-tenant vault with read permission)`);
+        console.debug(`Marked ${filePath} as read-only (cross-tenant vault with read permission)`);
       } else {
         // Remove from read-only if it was previously marked
         this.readOnlyFiles.delete(filePath);
@@ -532,7 +533,7 @@ export class FileSyncService {
       
       await this.saveSyncState();
 
-      console.log(`Downloaded ${filePath} (${isBinary ? 'binary' : 'text'}, ${remoteFile.hash.substring(0, 8)}...)`);
+      console.debug(`Downloaded ${filePath} (${isBinary ? 'binary' : 'text'}, ${remoteFile.hash.substring(0, 8)}...)`);
 
       return {
         success: true,
@@ -546,7 +547,7 @@ export class FileSyncService {
       
       // If file already exists, treat as success but log it
       if (errorMessage.includes('File already exists')) {
-        console.log(`File already exists locally: ${filePath}, skipping download`);
+        console.debug(`File already exists locally: ${filePath}, skipping download`);
         return {
           success: true,
           path: filePath,
@@ -607,7 +608,7 @@ export class FileSyncService {
       
       await this.saveSyncState();
 
-      console.log(`Deleted ${filePath} from remote and marked as locally deleted`);
+      console.debug(`Deleted ${filePath} from remote and marked as locally deleted`);
 
       return {
         success: true,
@@ -620,7 +621,7 @@ export class FileSyncService {
 
       // If file is already deleted (404), treat as success and clean up state
       if (errorMessage.includes('404') || errorMessage.includes('Not Found') || errorMessage.includes('not found')) {
-        console.log(`File already deleted remotely: ${filePath}`);
+        console.debug(`File already deleted remotely: ${filePath}`);
 
         // Clean up sync state anyway
         this.fileHashes.delete(filePath);
@@ -682,7 +683,7 @@ export class FileSyncService {
       const storedHash = this.fileHashes.get(filePath);
 
       const hasChanges = !storedHash || remoteFile.hash !== storedHash;
-      console.log(`Remote change check for ${filePath}:`, {
+      console.debug(`Remote change check for ${filePath}:`, {
         remoteHash: remoteFile.hash.substring(0, 8),
         storedHash: storedHash?.substring(0, 8) || 'none',
         hasChanges
@@ -770,7 +771,7 @@ export class FileSyncService {
    * Process queued operation
    */
   async processQueuedOperation(operation: QueuedOperation): Promise<FileSyncResult> {
-    console.log(`Processing queued operation: ${operation.operation} ${operation.path}`);
+    console.debug(`Processing queued operation: ${operation.operation} ${operation.path}`);
 
     switch (operation.operation) {
       case 'create':
@@ -795,7 +796,7 @@ export class FileSyncService {
           } catch (error) {
             // If delete fails (e.g., file doesn't exist), log but continue
             const errorMsg = error instanceof Error ? error.message : String(error);
-            console.log(`[FileSyncService] Could not delete old path during rename: ${errorMsg}`);
+            console.debug(`[FileSyncService] Could not delete old path during rename: ${errorMsg}`);
             // Continue with upload of new path
           }
         }
@@ -817,7 +818,7 @@ export class FileSyncService {
    * Handle file rename - update sync state with new path
    */
   async handleFileRename(oldPath: string, newPath: string): Promise<void> {
-    console.log(`[FileSyncService] Updating sync state for rename: ${oldPath} -> ${newPath}`);
+    console.debug(`[FileSyncService] Updating sync state for rename: ${oldPath} -> ${newPath}`);
 
     // Transfer sync state from old path to new path
     const hash = this.fileHashes.get(oldPath);
@@ -842,7 +843,7 @@ export class FileSyncService {
     // Save updated state
     await this.saveSyncState();
 
-    console.log(`[FileSyncService] Sync state updated for renamed file`);
+    console.debug(`[FileSyncService] Sync state updated for renamed file`);
   }
 
   /**
@@ -879,7 +880,7 @@ export class FileSyncService {
   async clearLocallyDeletedFiles(): Promise<void> {
     this.locallyDeletedFiles.clear();
     await this.saveSyncState();
-    console.log('Cleared all locally deleted files tracking');
+    console.debug('Cleared all locally deleted files tracking');
   }
 
   /**
@@ -961,11 +962,11 @@ export class FileSyncService {
     if (isCrossTenant && permission === 'read') {
       const allFiles = Array.from(this.fileHashes.keys());
       allFiles.forEach(path => this.readOnlyFiles.add(path));
-      console.log(`Marked ${allFiles.length} files as read-only due to permission change`);
+      console.debug(`Marked ${allFiles.length} files as read-only due to permission change`);
     } else if (permission === 'write' || permission === 'admin') {
       // If permission changed to write/admin, remove read-only status
       this.readOnlyFiles.clear();
-      console.log('Cleared read-only status for all files due to permission change');
+      console.debug('Cleared read-only status for all files due to permission change');
     }
     
     this.saveSyncState();

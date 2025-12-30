@@ -12,6 +12,7 @@ import { ConflictResolutionModal } from './src/ui/ConflictResolutionModal';
 import { APIClient } from './src/api/APIClient';
 import { EventBus, EVENTS } from './src/core/EventBus';
 import { StorageManager } from './src/core/StorageManager';
+import { showConfirmationModal } from './src/ui/ConfirmationModal';
 import { InitialSyncService } from './src/services/InitialSyncService';
 import { InitialSyncState } from './src/types/initial-sync.types';
 import { logger, LogLevel, LOG_LEVEL_NAMES, LOG_LEVEL_DESCRIPTIONS } from './src/utils/logger';
@@ -266,6 +267,7 @@ export default class VaultSyncPlugin extends Plugin {
 				autoSync: this.settings.autoSync,
 				includedFolders: this.settings.includedFolders,
 				excludedFolders: this.settings.excludedFolders,
+				configDir: this.app.vault.configDir,
 				debounceDelay: 1000,
 				maxRetries: 3,
 				retryDelayMs: 1000,
@@ -412,7 +414,14 @@ export default class VaultSyncPlugin extends Plugin {
 			id: 'vaultconnect-connect',
 			name: 'Connect',
 			icon: 'plug-zap',
-			callback: () => this.connect()
+			callback: async () => {
+				try {
+					await this.connect();
+				} catch (error) {
+					logger.error('Connect command failed:', error);
+					new Notice('Failed to connect');
+				}
+			}
 		});
 
 		// Disconnect command
@@ -420,7 +429,14 @@ export default class VaultSyncPlugin extends Plugin {
 			id: 'vaultconnect-disconnect',
 			name: 'Disconnect',
 			icon: 'plug-zap-off',
-			callback: () => this.disconnect()
+			callback: async () => {
+				try {
+					await this.disconnect();
+				} catch (error) {
+					logger.error('Disconnect command failed:', error);
+					new Notice('Failed to disconnect');
+				}
+			}
 		});
 
 		// Pull all command
@@ -428,7 +444,14 @@ export default class VaultSyncPlugin extends Plugin {
 			id: 'vaultconnect-pull-all',
 			name: 'Pull all',
 			icon: 'download',
-			callback: () => this.performPullAll()
+			callback: async () => {
+				try {
+					await this.performPullAll();
+				} catch (error) {
+					logger.error('Pull all command failed:', error);
+					new Notice('Pull all failed');
+				}
+			}
 		});
 
 		// Push all command
@@ -436,7 +459,14 @@ export default class VaultSyncPlugin extends Plugin {
 			id: 'vaultconnect-push-all',
 			name: 'Push all',
 			icon: 'upload',
-			callback: () => this.performPushAll()
+			callback: async () => {
+				try {
+					await this.performPushAll();
+				} catch (error) {
+					logger.error('Push all command failed:', error);
+					new Notice('Push all failed');
+				}
+			}
 		});
 
 		// Force sync command
@@ -444,7 +474,14 @@ export default class VaultSyncPlugin extends Plugin {
 			id: 'vaultconnect-force-sync',
 			name: 'Force sync',
 			icon: 'zap',
-			callback: () => this.performForceSync()
+			callback: async () => {
+				try {
+					await this.performForceSync();
+				} catch (error) {
+					logger.error('Force sync command failed:', error);
+					new Notice('Force sync failed');
+				}
+			}
 		});
 
 		// View conflicts command
@@ -468,19 +505,34 @@ export default class VaultSyncPlugin extends Plugin {
 			id: 'vaultconnect-smart-sync',
 			name: 'Smart sync',
 			icon: 'refresh-cw',
-			callback: () => this.performSmartSync()
+			callback: async () => {
+				try {
+					await this.performSmartSync();
+				} catch (error) {
+					logger.error('Smart sync command failed:', error);
+					new Notice('Smart sync failed');
+				}
+			}
 		});
 
 		logger.debug('Commands registered');
 	}
 
-	onunload() {
-		this.disconnect();
+	async onunload() {
+		await this.disconnect();
 		logger.info('VaultConnect plugin unloaded');
 	}
 
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+		// Replace hardcoded .obsidian with actual configDir
+		const configDir = this.app.vault.configDir;
+		if (configDir !== '.obsidian') {
+			this.settings.excludedFolders = this.settings.excludedFolders.map(
+				folder => folder === '.obsidian' ? configDir : folder
+			);
+		}
 	}
 
 	async saveSettings() {
@@ -1121,8 +1173,10 @@ export default class VaultSyncPlugin extends Plugin {
 			return;
 		}
 
-		const confirmed = confirm(
-			'Pull All will download all remote files and create conflict copies for any local differences. Continue?'
+		const confirmed = await showConfirmationModal(
+			this.app,
+			'Pull all will download all remote files and create conflict copies for any local differences. Continue?',
+			{ title: 'Pull all', confirmText: 'Pull all', confirmClass: 'mod-warning' }
 		);
 
 		if (!confirmed) {
@@ -1162,8 +1216,10 @@ export default class VaultSyncPlugin extends Plugin {
 			return;
 		}
 
-		const confirmed = confirm(
-			'Push All will upload all local files and overwrite remote versions. Continue?'
+		const confirmed = await showConfirmationModal(
+			this.app,
+			'Push all will upload all local files and overwrite remote versions. Continue?',
+			{ title: 'Push all', confirmText: 'Push all', confirmClass: 'mod-warning' }
 		);
 
 		if (!confirmed) {
@@ -1203,8 +1259,10 @@ export default class VaultSyncPlugin extends Plugin {
 			return;
 		}
 
-		const confirmed = confirm(
-			'Force Sync will clear sync state and re-sync all files. Continue?'
+		const confirmed = await showConfirmationModal(
+			this.app,
+			'Force sync will clear sync state and re-sync all files. Continue?',
+			{ title: 'Force sync', confirmText: 'Force sync', confirmClass: 'mod-warning' }
 		);
 
 		if (!confirmed) {
@@ -1688,11 +1746,12 @@ class VaultSyncSettingTab extends PluginSettingTab {
 				}));
 
 		// Excluded Folders
+		const configDir = this.app.vault.configDir;
 		new Setting(containerEl)
 			.setName('Excluded Folders')
 			.setDesc('Folders to exclude from sync (comma-separated)')
 			.addText(text => text
-				.setPlaceholder('.obsidian, .trash')
+				.setPlaceholder(`${configDir}, .trash`)
 				.setValue(this.plugin.settings.excludedFolders.join(', '))
 				.onChange(async (value) => {
 					this.plugin.settings.excludedFolders = value

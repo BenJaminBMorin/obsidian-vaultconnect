@@ -338,8 +338,9 @@ export class InitialSyncWizardModal extends Modal {
       excludedRow.style.gap = '8px';
       
       const icon = excludedRow.createSpan({ text: '🚫' });
-      const text = excludedRow.createSpan({ 
-        text: `${analysis.excludedFiles.length} file${analysis.excludedFiles.length === 1 ? '' : 's'} excluded (.obsidian, .trash)` 
+      const configDir = this.app.vault.configDir;
+      const text = excludedRow.createSpan({
+        text: `${analysis.excludedFiles.length} file${analysis.excludedFiles.length === 1 ? '' : 's'} excluded (${configDir}, .trash)`
       });
       text.style.color = 'var(--text-muted)';
       text.style.fontSize = '0.9em';

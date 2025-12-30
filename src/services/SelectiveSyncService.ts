@@ -36,18 +36,25 @@ export class SelectiveSyncService {
   private eventBus: EventBus;
   private storage: StorageManager;
   private config: SelectiveSyncConfig;
-
-  // Default exclusions
-  private static readonly DEFAULT_EXCLUDED_FOLDERS = ['.obsidian', '.trash'];
+  private configDir: string;
 
   constructor(
     eventBus: EventBus,
     storage: StorageManager,
-    config: SelectiveSyncConfig
+    config: SelectiveSyncConfig,
+    configDir: string = '.obsidian'
   ) {
     this.eventBus = eventBus;
     this.storage = storage;
+    this.configDir = configDir;
     this.config = this.normalizeConfig(config);
+  }
+
+  /**
+   * Get default excluded folders (uses configDir dynamically)
+   */
+  private getDefaultExcludedFolders(): string[] {
+    return [this.configDir, '.trash'];
   }
 
   /**
@@ -60,7 +67,7 @@ export class SelectiveSyncService {
     };
 
     // Ensure default exclusions are present
-    for (const defaultExcluded of SelectiveSyncService.DEFAULT_EXCLUDED_FOLDERS) {
+    for (const defaultExcluded of this.getDefaultExcludedFolders()) {
       if (!normalized.excludedFolders.includes(defaultExcluded)) {
         normalized.excludedFolders.push(defaultExcluded);
       }
@@ -211,14 +218,14 @@ export class SelectiveSyncService {
    */
   setExcludedFolders(folders: string[]): void {
     this.config.excludedFolders = folders.map(f => this.normalizeFolderPath(f));
-    
+
     // Ensure defaults are present
-    for (const defaultExcluded of SelectiveSyncService.DEFAULT_EXCLUDED_FOLDERS) {
+    for (const defaultExcluded of this.getDefaultExcludedFolders()) {
       if (!this.config.excludedFolders.includes(defaultExcluded)) {
         this.config.excludedFolders.push(defaultExcluded);
       }
     }
-    
+
     this.emitConfigChanged();
   }
 
@@ -242,7 +249,7 @@ export class SelectiveSyncService {
    * Reset excluded folders to defaults
    */
   resetExcludedFolders(): void {
-    this.config.excludedFolders = [...SelectiveSyncService.DEFAULT_EXCLUDED_FOLDERS];
+    this.config.excludedFolders = [...this.getDefaultExcludedFolders()];
     this.emitConfigChanged();
   }
 
@@ -289,21 +296,23 @@ export class SelectiveSyncService {
   }
 
   /**
-   * Get default excluded folders
+   * Get default excluded folders (static version for external use)
+   * Note: Uses '.obsidian' as default since we don't have access to configDir statically
    */
-  static getDefaultExcludedFolders(): string[] {
-    return [...SelectiveSyncService.DEFAULT_EXCLUDED_FOLDERS];
+  static getStaticDefaultExcludedFolders(): string[] {
+    return ['.obsidian', '.trash'];
   }
 
   /**
    * Check if using default exclusions only
    */
   isUsingDefaultExclusionsOnly(): boolean {
-    if (this.config.excludedFolders.length !== SelectiveSyncService.DEFAULT_EXCLUDED_FOLDERS.length) {
+    const defaults = this.getDefaultExcludedFolders();
+    if (this.config.excludedFolders.length !== defaults.length) {
       return false;
     }
-    
-    for (const defaultExcluded of SelectiveSyncService.DEFAULT_EXCLUDED_FOLDERS) {
+
+    for (const defaultExcluded of defaults) {
       if (!this.config.excludedFolders.includes(defaultExcluded)) {
         return false;
       }

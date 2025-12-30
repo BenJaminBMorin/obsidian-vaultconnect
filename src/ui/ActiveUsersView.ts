@@ -282,7 +282,7 @@ export class ActiveUsersView extends ItemView {
     
     // For now, just log to console
     // In a full implementation, this would show a modal
-    console.log(details);
+    console.debug(details);
   }
 
   /**

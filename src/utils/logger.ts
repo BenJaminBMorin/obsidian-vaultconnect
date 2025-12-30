@@ -83,7 +83,7 @@ export class Logger {
    */
   info(...args: any[]): void {
     if (this.config.level >= LogLevel.INFO) {
-      console.log(...this.format('INFO', ...args))
+      console.debug(...this.format('INFO', ...args))
     }
   }
 
@@ -92,7 +92,7 @@ export class Logger {
    */
   debug(...args: any[]): void {
     if (this.config.level >= LogLevel.DEBUG) {
-      console.log(...this.format('DEBUG', ...args))
+      console.debug(...this.format('DEBUG', ...args))
     }
   }
 
@@ -101,7 +101,7 @@ export class Logger {
    */
   trace(...args: any[]): void {
     if (this.config.level >= LogLevel.TRACE) {
-      console.log(...this.format('TRACE', ...args))
+      console.debug(...this.format('TRACE', ...args))
     }
   }
 

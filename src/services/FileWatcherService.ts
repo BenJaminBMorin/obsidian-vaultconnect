@@ -54,7 +54,7 @@ export class FileWatcherService {
     }
 
     this.isWatching = true;
-    console.log('FileWatcherService started');
+    console.debug('FileWatcherService started');
   }
 
   /**
@@ -70,7 +70,7 @@ export class FileWatcherService {
     this.debounceTimers.clear();
 
     this.isWatching = false;
-    console.log('FileWatcherService stopped');
+    console.debug('FileWatcherService stopped');
   }
 
   /**
@@ -78,7 +78,7 @@ export class FileWatcherService {
    */
   ignorePath(path: string): void {
     this.ignoredPaths.add(path);
-    console.log(`[FileWatcher] Ignoring path: ${path}`);
+    console.debug(`[FileWatcher] Ignoring path: ${path}`);
   }
 
   /**
@@ -86,7 +86,7 @@ export class FileWatcherService {
    */
   unignorePath(path: string): void {
     this.ignoredPaths.delete(path);
-    console.log(`[FileWatcher] Unignoring path: ${path}`);
+    console.debug(`[FileWatcher] Unignoring path: ${path}`);
   }
 
   /**
@@ -112,7 +112,7 @@ export class FileWatcherService {
     if (file instanceof TFile) {
       // Skip if this file is being written by a download
       if (this.isPathIgnored(file.path)) {
-        console.log(`[FileWatcher] Skipping create event for ignored path: ${file.path}`);
+        console.debug(`[FileWatcher] Skipping create event for ignored path: ${file.path}`);
         return;
       }
 
@@ -131,7 +131,7 @@ export class FileWatcherService {
     if (file instanceof TFile) {
       // Skip if this file is being written by a download
       if (this.isPathIgnored(file.path)) {
-        console.log(`[FileWatcher] Skipping modify event for ignored path: ${file.path}`);
+        console.debug(`[FileWatcher] Skipping modify event for ignored path: ${file.path}`);
         return;
       }
 
@@ -205,7 +205,7 @@ export class FileWatcherService {
       timestamp: Date.now()
     };
 
-    console.log(`File ${action}:`, event.path);
+    console.debug(`File ${action}:`, event.path);
     this.eventBus.emit(EVENTS.FILE_SYNCED, event);
   }
 

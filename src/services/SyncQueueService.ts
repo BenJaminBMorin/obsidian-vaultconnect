@@ -55,7 +55,7 @@ export class SyncQueueService {
     const stored = await this.storage.get<QueuedOperation[]>('syncQueue');
     if (stored && Array.isArray(stored)) {
       this.queue = stored.filter(op => op.status !== 'processing');
-      console.log(`Loaded ${this.queue.length} queued operations from storage`);
+      console.debug(`Loaded ${this.queue.length} queued operations from storage`);
     }
   }
 
@@ -91,11 +91,11 @@ export class SyncQueueService {
     if (existingIndex !== -1) {
       // Replace existing operation with newer one
       this.queue[existingIndex] = queuedOp;
-      console.log(`Updated existing queue operation for ${path}`);
+      console.debug(`Updated existing queue operation for ${path}`);
     } else {
       // Add new operation
       this.queue.push(queuedOp);
-      console.log(`Enqueued ${operation} operation for ${path}`);
+      console.debug(`Enqueued ${operation} operation for ${path}`);
     }
 
     // Sort by priority (higher first) and timestamp (older first)
@@ -143,7 +143,7 @@ export class SyncQueueService {
     }
 
     this.isProcessing = true;
-    console.log('SyncQueueService: Started processing');
+    console.debug('SyncQueueService: Started processing');
     this.processQueue();
   }
 
@@ -152,7 +152,7 @@ export class SyncQueueService {
    */
   stopProcessing(): void {
     this.isProcessing = false;
-    console.log('SyncQueueService: Stopped processing');
+    console.debug('SyncQueueService: Stopped processing');
   }
 
   /**
@@ -189,7 +189,7 @@ export class SyncQueueService {
    */
   private async processOperation(operation: QueuedOperation): Promise<void> {
     try {
-      console.log(`Processing ${operation.operation} for ${operation.path}`);
+      console.debug(`Processing ${operation.operation} for ${operation.path}`);
 
       // Emit event for external handler to process
       const result = await new Promise<boolean>((resolve, reject) => {
@@ -213,7 +213,7 @@ export class SyncQueueService {
         // Success - remove from queue
         await this.dequeue(operation.id);
         this.processing.delete(operation.id);
-        console.log(`Successfully processed ${operation.operation} for ${operation.path}`);
+        console.debug(`Successfully processed ${operation.operation} for ${operation.path}`);
       }
     } catch (error) {
       console.error(`Failed to process ${operation.operation} for ${operation.path}:`, error);
@@ -234,7 +234,7 @@ export class SyncQueueService {
       } else {
         // Schedule retry with exponential backoff
         const delay = this.calculateRetryDelay(operation.retries);
-        console.log(`Retrying ${operation.path} in ${delay}ms (attempt ${operation.retries + 1}/${this.config.maxRetries})`);
+        console.debug(`Retrying ${operation.path} in ${delay}ms (attempt ${operation.retries + 1}/${this.config.maxRetries})`);
         
         setTimeout(() => {
           operation.status = 'pending';
@@ -331,7 +331,7 @@ export class SyncQueueService {
     if (failedOps.length > 0) {
       await this.persistQueue();
       this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getQueueStats());
-      console.log(`Retrying ${failedOps.length} failed operations`);
+      console.debug(`Retrying ${failedOps.length} failed operations`);
     }
   }
 
@@ -339,7 +339,7 @@ export class SyncQueueService {
    * Generate unique operation ID
    */
   private generateOperationId(): string {
-    return `op_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `op_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   /**

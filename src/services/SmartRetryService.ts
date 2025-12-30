@@ -56,7 +56,7 @@ export class SmartRetryService {
     // Auto-reset circuit breaker after timeout
     const timeSinceLastFailure = Date.now() - this.lastFailureTime;
     if (timeSinceLastFailure > this.config.circuitBreakerResetMs) {
-      console.log('[SmartRetry] Circuit breaker reset after timeout');
+      console.debug('[SmartRetry] Circuit breaker reset after timeout');
       this.circuitOpen = false;
       this.failureCount = 0;
       return false;
@@ -93,7 +93,7 @@ export class SmartRetryService {
     
     // Reset circuit breaker on success
     if (this.circuitOpen && this.consecutiveSuccesses >= 1) {
-      console.log('[SmartRetry] Circuit breaker reset after successful operation');
+      console.debug('[SmartRetry] Circuit breaker reset after successful operation');
       this.circuitOpen = false;
       this.failureCount = 0;
     }

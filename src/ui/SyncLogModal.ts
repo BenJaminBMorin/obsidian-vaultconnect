@@ -1,5 +1,6 @@
 import { App, Modal, Setting } from 'obsidian';
 import { SyncLogService, SyncLogEntry, SyncLogType, SyncLogFilter } from '../services/SyncLogService';
+import { showConfirmationModal } from './ConfirmationModal';
 
 /**
  * Sync log modal
@@ -153,10 +154,15 @@ export class SyncLogModal extends Modal {
       })
       .addButton(button => {
         button
-          .setButtonText('Clear Logs')
+          .setButtonText('Clear logs')
           .setWarning()
           .onClick(async () => {
-            if (confirm('Are you sure you want to clear all sync logs?')) {
+            const confirmed = await showConfirmationModal(
+              this.app,
+              'Are you sure you want to clear all sync logs?',
+              { title: 'Clear logs', confirmText: 'Clear', confirmClass: 'mod-warning' }
+            );
+            if (confirmed) {
               await this.syncLogService.clearLogs();
               this.onOpen(); // Refresh
             }

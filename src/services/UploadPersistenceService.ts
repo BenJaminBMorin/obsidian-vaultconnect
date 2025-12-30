@@ -42,7 +42,7 @@ export class UploadPersistenceService {
       };
       
       await this.storage.set(this.storageKey, existing);
-      console.log(`[UploadPersistence] Saved state for ${state.filePath} (${state.uploadedChunks.length}/${state.totalChunks} chunks)`);
+      console.debug(`[UploadPersistence] Saved state for ${state.filePath} (${state.uploadedChunks.length}/${state.totalChunks} chunks)`);
     } catch (error) {
       console.error('[UploadPersistence] Failed to save upload state:', error);
     }
@@ -77,7 +77,7 @@ export class UploadPersistenceService {
       const states = await this.loadAllStates();
       delete states[uploadId];
       await this.storage.set(this.storageKey, states);
-      console.log(`[UploadPersistence] Deleted state for ${uploadId}`);
+      console.debug(`[UploadPersistence] Deleted state for ${uploadId}`);
     } catch (error) {
       console.error('[UploadPersistence] Failed to delete upload state:', error);
     }
@@ -105,7 +105,7 @@ export class UploadPersistenceService {
       
       if (cleanedCount > 0) {
         await this.storage.set(this.storageKey, cleaned);
-        console.log(`[UploadPersistence] Cleaned up ${cleanedCount} old upload state(s)`);
+        console.debug(`[UploadPersistence] Cleaned up ${cleanedCount} old upload state(s)`);
       }
       
       return cleanedCount;
@@ -178,6 +178,6 @@ export class UploadPersistenceService {
    */
   async clearAllStates(): Promise<void> {
     await this.storage.set(this.storageKey, {});
-    console.log('[UploadPersistence] Cleared all upload states');
+    console.debug('[UploadPersistence] Cleared all upload states');
   }
 }

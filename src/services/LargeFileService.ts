@@ -119,7 +119,7 @@ export class LargeFileService {
   initializePersistence(persistence: UploadPersistenceService, vault: Vault): void {
     this.persistence = persistence;
     this.vault = vault;
-    console.log('[LargeFileService] Persistence enabled');
+    console.debug('[LargeFileService] Persistence enabled');
   }
 
   /**
@@ -362,7 +362,7 @@ export class LargeFileService {
         // Wait before retry with exponential backoff and jitter
         if (attempt < this.config.retryAttempts - 1) {
           const delay = this.smartRetry.calculateDelay(attempt);
-          console.log(`[LargeFileService] Retrying chunk ${chunk.index} in ${delay}ms`);
+          console.debug(`[LargeFileService] Retrying chunk ${chunk.index} in ${delay}ms`);
           await this.delay(delay);
         }
       }
@@ -407,7 +407,7 @@ export class LargeFileService {
           const bytesSaved = compressionResult.originalSize - compressionResult.compressedSize;
           this.stats.totalBytesSaved += bytesSaved;
           
-          console.log(
+          console.debug(
             `[Compression] Chunk ${chunk.index}: ${compressionRatio.toFixed(1)}% reduction ` +
             `(${compressionResult.originalSize} → ${compressionResult.compressedSize} bytes)`
           );
@@ -432,11 +432,11 @@ export class LargeFileService {
     });
     
     const compressionInfo = isCompressed ? ` (compressed ${compressionRatio.toFixed(1)}%)` : '';
-    console.log(`Uploaded chunk ${chunk.index + 1}/${session.chunks.length} for ${session.filePath}${compressionInfo}`);
+    console.debug(`Uploaded chunk ${chunk.index + 1}/${session.chunks.length} for ${session.filePath}${compressionInfo}`);
     
     // If this was the last chunk and upload is complete, we're done
     if (result.isComplete && result.file) {
-      console.log(`Chunked upload completed for ${session.filePath}`);
+      console.debug(`Chunked upload completed for ${session.filePath}`);
     }
   }
 
@@ -446,7 +446,7 @@ export class LargeFileService {
   private async finalizeUpload(session: UploadSession, fileId?: string): Promise<void> {
     // The backend automatically combines chunks when the last chunk is uploaded
     // No additional finalization needed
-    console.log(`Finalized chunked upload for ${session.filePath}`);
+    console.debug(`Finalized chunked upload for ${session.filePath}`);
   }
 
   /**
@@ -620,7 +620,7 @@ export class LargeFileService {
    * Generate unique upload ID
    */
   private generateUploadId(): string {
-    return `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `upload_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   /**

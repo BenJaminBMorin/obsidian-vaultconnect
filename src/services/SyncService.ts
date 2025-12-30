@@ -25,6 +25,7 @@ export interface SyncConfig {
   autoSync: boolean;
   includedFolders: string[];
   excludedFolders: string[];
+  configDir: string;
   debounceDelay: number;
   maxRetries: number;
   retryDelayMs: number;
@@ -86,7 +87,8 @@ export class SyncService {
       {
         includedFolders: config.includedFolders,
         excludedFolders: config.excludedFolders
-      }
+      },
+      config.configDir
     );
 
     // Initialize sub-services
@@ -130,7 +132,7 @@ export class SyncService {
       if (this.config.autoSync && this.config.mode === SyncMode.SMART_SYNC) {
         await this.handleFileChange(event);
       } else if (this.config.mode === SyncMode.MANUAL) {
-        console.log(`File change detected but manual mode is active: ${event.path}`);
+        console.debug(`File change detected but manual mode is active: ${event.path}`);
       }
     });
 
@@ -161,10 +163,10 @@ export class SyncService {
     const storedTimestamp = await this.storage.get<string>(`lastSyncTimestamp:${vaultId}`);
     if (storedTimestamp) {
       this.lastSyncTimestamp = new Date(storedTimestamp);
-      console.log(`[SyncService] Restored last sync timestamp: ${this.lastSyncTimestamp.toISOString()}`);
+      console.debug(`[SyncService] Restored last sync timestamp: ${this.lastSyncTimestamp.toISOString()}`);
     }
 
-    console.log('SyncService initialized for vault:', vaultId, {
+    console.debug('SyncService initialized for vault:', vaultId, {
       isCrossTenant,
       permission
     });
@@ -194,7 +196,7 @@ export class SyncService {
     // Start periodic sync check (every 5 minutes)
     this.startPeriodicSyncCheck();
 
-    console.log('SyncService started');
+    console.debug('SyncService started');
     this.eventBus.emit(EVENTS.SYNC_STARTED);
   }
 
@@ -216,7 +218,7 @@ export class SyncService {
     this.stopPeriodicSyncCheck();
 
     this.isRunning = false;
-    console.log('SyncService stopped');
+    console.debug('SyncService stopped');
   }
 
   /**
@@ -226,7 +228,7 @@ export class SyncService {
     try {
       const { file, path, action, oldPath } = event;
 
-      console.log(`Handling file ${action}: ${path}`);
+      console.debug(`Handling file ${action}: ${path}`);
 
       // Add to sync queue
       let operation: 'create' | 'update' | 'delete' | 'rename';
@@ -311,7 +313,7 @@ export class SyncService {
     };
 
     try {
-      console.log('Starting full sync...');
+      console.debug('Starting full sync...');
       this.eventBus.emit(EVENTS.SYNC_STARTED);
 
       const files = this.vault.getMarkdownFiles();
@@ -347,7 +349,7 @@ export class SyncService {
       result.success = result.errors.length === 0;
       result.duration = Date.now() - startTime;
 
-      console.log(`Full sync completed: ${result.filesUploaded} uploaded, ${result.errors.length} errors`);
+      console.debug(`Full sync completed: ${result.filesUploaded} uploaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
 
       return result;
@@ -381,13 +383,13 @@ export class SyncService {
     }
 
     try {
-      console.log('[VaultSync] Starting smart sync for vault:', this.vaultId);
+      console.debug('[VaultSync] Starting smart sync for vault:', this.vaultId);
       this.eventBus.emit(EVENTS.SYNC_STARTED);
 
       // Get all remote files
-      console.log('[VaultSync] Fetching files from vault:', this.vaultId);
+      console.debug('[VaultSync] Fetching files from vault:', this.vaultId);
       const remoteFiles = await this.apiClient.listFiles(this.vaultId);
-      console.log(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
+      console.debug(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
       const remoteFileMap = new Map(remoteFiles.map(f => [f.path, f]));
 
       // Get all local files
@@ -421,7 +423,7 @@ export class SyncService {
 
             if (hasLocalChanges && hasRemoteChanges) {
               // Conflict detected - queue for manual resolution
-              console.log(`Conflict detected: ${localFile.path}`);
+              console.debug(`Conflict detected: ${localFile.path}`);
               await this.handleConflict(localFile, remoteFile);
               result.errors.push(`${localFile.path}: Conflict detected`);
             } else if (hasLocalChanges) {
@@ -474,7 +476,7 @@ export class SyncService {
         try {
           // Skip if file was locally deleted (user intentionally deleted it)
           if (this.fileSync.isLocallyDeleted(remoteFile.path)) {
-            console.log(`Skipping download of ${remoteFile.path} - was locally deleted`);
+            console.debug(`Skipping download of ${remoteFile.path} - was locally deleted`);
             result.filesProcessed++;
             processed++;
             continue;
@@ -507,7 +509,7 @@ export class SyncService {
       result.success = result.errors.length === 0;
       result.duration = Date.now() - startTime;
 
-      console.log(`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
+      console.debug(`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
 
       return result;
@@ -532,7 +534,7 @@ export class SyncService {
       // Store conflict information
       const conflicts = await this.storage.get<any[]>('conflicts') || [];
       conflicts.push({
-        id: `conflict_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: localFile.path,
         localContent,
         remoteContent: remoteContent.content,
@@ -551,7 +553,7 @@ export class SyncService {
         conflictId: conflicts[conflicts.length - 1].id
       });
 
-      console.log(`Conflict stored for ${localFile.path}`);
+      console.debug(`Conflict stored for ${localFile.path}`);
     } catch (error) {
       console.error('Error handling conflict:', error);
     }
@@ -577,13 +579,13 @@ export class SyncService {
     }
 
     try {
-      console.log('[VaultSync] Starting pull all for vault:', this.vaultId);
+      console.debug('[VaultSync] Starting pull all for vault:', this.vaultId);
       this.eventBus.emit(EVENTS.SYNC_STARTED);
 
       // Get all remote files
-      console.log('[VaultSync] Fetching files from vault:', this.vaultId);
+      console.debug('[VaultSync] Fetching files from vault:', this.vaultId);
       const remoteFiles = await this.apiClient.listFiles(this.vaultId);
-      console.log(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
+      console.debug(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
       const totalFiles = remoteFiles.length;
 
       for (const remoteFile of remoteFiles) {
@@ -599,7 +601,7 @@ export class SyncService {
               // Content differs - create conflict copy
               const conflictPath = this.generateConflictPath(remoteFile.path);
               await this.vault.create(conflictPath, localContent);
-              console.log(`Created conflict copy: ${conflictPath}`);
+              console.debug(`Created conflict copy: ${conflictPath}`);
 
               // Download remote version
               const syncResult = await this.fileSync.downloadFile(remoteFile.path);
@@ -613,7 +615,7 @@ export class SyncService {
           } else {
             // File doesn't exist locally - check if it was intentionally deleted
             if (this.fileSync.isLocallyDeleted(remoteFile.path)) {
-              console.log(`Skipping download of ${remoteFile.path} - was locally deleted`);
+              console.debug(`Skipping download of ${remoteFile.path} - was locally deleted`);
             } else {
               // Download it
               const syncResult = await this.fileSync.downloadFile(remoteFile.path);
@@ -643,7 +645,7 @@ export class SyncService {
       result.success = result.errors.length === 0;
       result.duration = Date.now() - startTime;
 
-      console.log(`Pull all completed: ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
+      console.debug(`Pull all completed: ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
 
       return result;
@@ -677,7 +679,7 @@ export class SyncService {
     }
 
     try {
-      console.log('Starting push all...');
+      console.debug('Starting push all...');
       this.eventBus.emit(EVENTS.SYNC_STARTED);
 
       // Get all local files
@@ -717,7 +719,7 @@ export class SyncService {
       result.success = result.errors.length === 0;
       result.duration = Date.now() - startTime;
 
-      console.log(`Push all completed: ${result.filesUploaded} uploaded, ${result.errors.length} errors`);
+      console.debug(`Push all completed: ${result.filesUploaded} uploaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
 
       return result;
@@ -735,7 +737,7 @@ export class SyncService {
    * Force Sync: Sync all files regardless of change detection
    */
   async forceSync(): Promise<SyncResult> {
-    console.log('Force sync - clearing sync state and syncing all files');
+    console.debug('Force sync - clearing sync state and syncing all files');
     
     // Clear sync state to force re-sync
     await this.fileSync.clearAllSyncState();
@@ -796,17 +798,17 @@ export class SyncService {
    * Handle sync mode change
    */
   private handleModeChange(oldMode: SyncMode, newMode: SyncMode): void {
-    console.log(`Sync mode changed from ${oldMode} to ${newMode}`);
+    console.debug(`Sync mode changed from ${oldMode} to ${newMode}`);
 
     // If switching to manual mode, disable auto-sync
     if (newMode === SyncMode.MANUAL) {
       this.config.autoSync = false;
-      console.log('Auto-sync disabled for manual mode');
+      console.debug('Auto-sync disabled for manual mode');
     }
 
     // If switching from manual mode to another mode, may want to enable auto-sync
     if (oldMode === SyncMode.MANUAL && newMode === SyncMode.SMART_SYNC) {
-      console.log('Consider enabling auto-sync for smart sync mode');
+      console.debug('Consider enabling auto-sync for smart sync mode');
     }
 
     this.eventBus.emit(EVENTS.SYNC_MODE_CHANGED, { oldMode, newMode });
@@ -991,7 +993,7 @@ export class SyncService {
         return;
       }
 
-      console.log('[SyncService] Running periodic sync check...');
+      console.debug('[SyncService] Running periodic sync check...');
       this.lastSyncCheck = now;
 
       try {
@@ -1001,7 +1003,7 @@ export class SyncService {
       }
     }, intervalMs);
 
-    console.log('[SyncService] Periodic sync check started (every 2 minutes)');
+    console.debug('[SyncService] Periodic sync check started (every 2 minutes)');
   }
 
   /**
@@ -1011,7 +1013,7 @@ export class SyncService {
     if (this.periodicSyncInterval !== null) {
       window.clearInterval(this.periodicSyncInterval);
       this.periodicSyncInterval = null;
-      console.log('[SyncService] Periodic sync check stopped');
+      console.debug('[SyncService] Periodic sync check stopped');
     }
   }
 
@@ -1028,10 +1030,10 @@ export class SyncService {
       // Use incremental sync if we have a last sync timestamp
       // Otherwise, fall back to full check (first time)
       if (this.lastSyncTimestamp) {
-        console.log(`[SyncCheck] Using incremental check since ${this.lastSyncTimestamp.toISOString()}`);
+        console.debug(`[SyncCheck] Using incremental check since ${this.lastSyncTimestamp.toISOString()}`);
         await this.performIncrementalCheck();
       } else {
-        console.log('[SyncCheck] No last sync timestamp - performing initial full check');
+        console.debug('[SyncCheck] No last sync timestamp - performing initial full check');
         await this.performFullCheck();
       }
 
@@ -1059,11 +1061,11 @@ export class SyncService {
     const changedFiles = await this.apiClient.getChangedFiles(this.vaultId, this.lastSyncTimestamp);
 
     if (changedFiles.length === 0) {
-      console.log('[SyncCheck] ✓ No remote changes detected');
+      console.debug('[SyncCheck] ✓ No remote changes detected');
       return;
     }
 
-    console.log(`[SyncCheck] 📥 Found ${changedFiles.length} changed file(s) on remote`, {
+    console.debug(`[SyncCheck] 📥 Found ${changedFiles.length} changed file(s) on remote`, {
       files: changedFiles.map(f => f.path).slice(0, 5),
       ...(changedFiles.length > 5 && { more: `... and ${changedFiles.length - 5} more` })
     });
@@ -1097,11 +1099,11 @@ export class SyncService {
 
       // Auto-trigger sync
       if (this.config.mode === SyncMode.SMART_SYNC && this.config.autoSync) {
-        console.log('[SyncCheck] Auto-triggering smart sync...');
+        console.debug('[SyncCheck] Auto-triggering smart sync...');
         await this.smartSync();
       }
     } else {
-      console.log('[SyncCheck] ✓ All changed files already in sync');
+      console.debug('[SyncCheck] ✓ All changed files already in sync');
     }
   }
 
@@ -1126,7 +1128,7 @@ export class SyncService {
     let driftCount = 0;
     const driftedFiles: string[] = [];
 
-    console.log(`[SyncCheck] Full check: ${syncableLocalFiles.length} local vs ${remoteFiles.length} remote`);
+    console.debug(`[SyncCheck] Full check: ${syncableLocalFiles.length} local vs ${remoteFiles.length} remote`);
 
     // Check local files against remote
     for (const localFile of syncableLocalFiles) {
@@ -1161,11 +1163,11 @@ export class SyncService {
       this.eventBus.emit(EVENTS.SYNC_DRIFT_DETECTED, { driftCount, files: driftedFiles });
 
       if (this.config.mode === SyncMode.SMART_SYNC && this.config.autoSync) {
-        console.log('[SyncCheck] Auto-triggering initial smart sync...');
+        console.debug('[SyncCheck] Auto-triggering initial smart sync...');
         await this.smartSync();
       }
     } else {
-      console.log('[SyncCheck] ✓ Initial check complete - all files in sync');
+      console.debug('[SyncCheck] ✓ Initial check complete - all files in sync');
     }
   }
 
@@ -1173,7 +1175,7 @@ export class SyncService {
    * Handle reconnection - perform immediate sync check
    */
   async handleReconnection(): Promise<void> {
-    console.log('[SyncService] Handling reconnection, performing sync check...');
+    console.debug('[SyncService] Handling reconnection, performing sync check...');
     this.lastSyncCheck = Date.now();
     
     try {
