@@ -30,13 +30,13 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     
     // Export settings button
     actionsEl.createEl('button', {
-      text: 'Export Settings',
+      text: 'Export settings',
       cls: 'mod-cta'
     }).addEventListener('click', () => this.exportSettings());
     
     // Import settings button
     actionsEl.createEl('button', {
-      text: 'Import Settings',
+      text: 'Import settings',
       cls: 'mod-cta'
     }).addEventListener('click', () => this.importSettings());
     
@@ -141,11 +141,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayVaultSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Vault Selection' });
+    containerEl.createEl('h3', { text: 'Vault selection' });
 
     // Selected vault
     new Setting(containerEl)
-      .setName('Selected Vault')
+      .setName('Selected vault')
       .setDesc('The VaultSync vault to sync with')
       .addText(text => {
         text
@@ -215,13 +215,13 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displaySyncSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Sync Settings' });
+    containerEl.createEl('h3', { text: 'Sync settings' });
 
     // Sync mode with detailed descriptions
     const syncModeDesc = containerEl.createDiv({ cls: 'vaultsync-sync-mode-desc' });
     
     new Setting(containerEl)
-      .setName('Sync Mode')
+      .setName('Sync mode')
       .setDesc('Choose how files should be synchronized')
       .addDropdown(dropdown => {
         dropdown
@@ -243,7 +243,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Auto sync
     new Setting(containerEl)
-      .setName('Auto Sync')
+      .setName('Auto sync')
       .setDesc('Automatically sync file changes as you work')
       .addToggle(toggle => {
         toggle
@@ -257,7 +257,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Sync interval with validation
     new Setting(containerEl)
-      .setName('Sync Interval')
+      .setName('Sync interval')
       .setDesc('How often to check for changes (10-300 seconds)')
       .addText(text => {
         this.addNumberValidation(text,
@@ -303,12 +303,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displaySelectiveSyncSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Selective Sync' });
+    containerEl.createEl('h3', { text: 'Selective sync' });
 
     // Sync scope summary
     const scopeSummary = this.getSyncScopeSummary();
     new Setting(containerEl)
-      .setName('Sync Scope')
+      .setName('Sync scope')
       .setDesc(scopeSummary)
       .addButton(button => {
         button
@@ -326,7 +326,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     const configDir = this.app.vault.configDir;
     new Setting(containerEl)
-      .setName('Excluded Folders')
+      .setName('Excluded folders')
       .setDesc(excludedDisplay)
       .addTextArea(text => {
         text
@@ -354,7 +354,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       : 'All (except excluded)';
 
     new Setting(containerEl)
-      .setName('Included Folders')
+      .setName('Included folders')
       .setDesc(includedDisplay)
       .addTextArea(text => {
         text
@@ -449,7 +449,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Enable collaboration
     new Setting(containerEl)
-      .setName('Enable Collaboration')
+      .setName('Enable collaboration')
       .setDesc('Enable real-time collaborative editing')
       .addToggle(toggle => {
         toggle
@@ -462,7 +462,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Show presence
     new Setting(containerEl)
-      .setName('Show Presence')
+      .setName('Show presence')
       .setDesc('Show active users and their current files')
       .addToggle(toggle => {
         toggle
@@ -475,7 +475,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Show cursors
     new Setting(containerEl)
-      .setName('Show Cursors')
+      .setName('Show cursors')
       .setDesc('Show cursor positions of other users')
       .addToggle(toggle => {
         toggle
@@ -488,7 +488,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Show typing indicators
     new Setting(containerEl)
-      .setName('Show Typing Indicators')
+      .setName('Show typing indicators')
       .setDesc('Show when other users are typing')
       .addToggle(toggle => {
         toggle
@@ -505,7 +505,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Notify on sync
     new Setting(containerEl)
-      .setName('Sync Notifications')
+      .setName('Sync notifications')
       .setDesc('Show notifications when files are synced')
       .addToggle(toggle => {
         toggle
@@ -518,7 +518,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Notify on conflict
     new Setting(containerEl)
-      .setName('Conflict Notifications')
+      .setName('Conflict notifications')
       .setDesc('Show notifications when conflicts are detected')
       .addToggle(toggle => {
         toggle
@@ -531,7 +531,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Notify on collaborator join
     new Setting(containerEl)
-      .setName('Collaborator Notifications')
+      .setName('Collaborator notifications')
       .setDesc('Show notifications when collaborators join or leave')
       .addToggle(toggle => {
         toggle
@@ -548,7 +548,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Max concurrent uploads
     new Setting(containerEl)
-      .setName('Max Concurrent Uploads')
+      .setName('Max concurrent uploads')
       .setDesc('Maximum number of files to upload simultaneously (1-10)')
       .addText(text => {
         this.addNumberValidation(text, 
@@ -568,7 +568,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Chunk size
     new Setting(containerEl)
-      .setName('Chunk Size')
+      .setName('Chunk size')
       .setDesc('Size of file chunks for large file uploads (in MB, 1-10)')
       .addText(text => {
         const chunkSizeMB = Math.round(this.plugin.settings.chunkSize / 1048576);
@@ -589,7 +589,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Cache enabled
     new Setting(containerEl)
-      .setName('Enable Caching')
+      .setName('Enable caching')
       .setDesc('Cache vault metadata and file lists for better performance')
       .addToggle(toggle => {
         toggle
@@ -664,7 +664,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // Debug mode
     new Setting(containerEl)
-      .setName('Debug Mode')
+      .setName('Debug mode')
       .setDesc('Enable verbose logging for troubleshooting (check console)')
       .addToggle(toggle => {
         toggle
@@ -718,7 +718,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
       // Create or update the setting
       new Setting(containerEl)
-        .setName('Reset Initial Sync')
+        .setName('Reset initial sync')
         .setDesc(description)
         .addButton(button => {
           button
@@ -733,7 +733,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       
       // Show basic reset option even if we can't get state
       new Setting(containerEl)
-        .setName('Reset Initial Sync')
+        .setName('Reset initial sync')
         .setDesc('Reset initial sync state for troubleshooting')
         .addButton(button => {
           button
