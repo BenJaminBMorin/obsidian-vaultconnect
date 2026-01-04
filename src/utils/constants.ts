@@ -15,7 +15,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   
   // Selective sync
   includedFolders: [],
-  excludedFolders: ['.obsidian', '.trash'],
+  excludedFolders: ['.trash'], // Note: vault configDir will be added dynamically during settings load
   
   // Collaboration
   collaborationEnabled: true,

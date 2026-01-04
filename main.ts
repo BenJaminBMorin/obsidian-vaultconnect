@@ -74,7 +74,7 @@ const DEFAULT_SETTINGS: VaultSyncSettings = {
 	vaultId: '',
 	deviceId: '',
 	includedFolders: [],
-	excludedFolders: ['.obsidian', '.trash'],
+	excludedFolders: ['.trash'], // .obsidian will be added dynamically in loadSettings
 	autoSync: true,
 	syncMode: SyncMode.SMART_SYNC,
 	apiKeyExpires: null,
@@ -526,12 +526,13 @@ export default class VaultSyncPlugin extends Plugin {
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
-		// Replace hardcoded .obsidian with actual configDir
+		// Ensure configDir is always in excludedFolders
 		const configDir = this.app.vault.configDir;
-		if (configDir !== '.obsidian') {
-			this.settings.excludedFolders = this.settings.excludedFolders.map(
-				folder => folder === '.obsidian' ? configDir : folder
-			);
+		if (!this.settings.excludedFolders.includes(configDir)) {
+			// Remove any old .obsidian reference and add the correct configDir
+			this.settings.excludedFolders = this.settings.excludedFolders
+				.filter(folder => folder !== '.obsidian')
+				.concat([configDir]);
 		}
 	}
 

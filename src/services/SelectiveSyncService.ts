@@ -42,7 +42,7 @@ export class SelectiveSyncService {
     eventBus: EventBus,
     storage: StorageManager,
     config: SelectiveSyncConfig,
-    configDir: string = '.obsidian'
+    configDir: string
   ) {
     this.eventBus = eventBus;
     this.storage = storage;
@@ -297,10 +297,11 @@ export class SelectiveSyncService {
 
   /**
    * Get default excluded folders (static version for external use)
-   * Note: Uses '.obsidian' as default since we don't have access to configDir statically
+   * Note: This returns '.trash' only. The configDir should be added by the caller
+   * since config directory location varies per vault.
    */
   static getStaticDefaultExcludedFolders(): string[] {
-    return ['.obsidian', '.trash'];
+    return ['.trash'];
   }
 
   /**
