@@ -293,7 +293,7 @@ export class InitialSyncWizardModal extends Modal {
 
       remoteRow.createSpan({ text: '☁️' });
       remoteRow.createSpan({
-        text: `${analysis.remoteFiles.length} file${analysis.remoteFiles.length === 1 ? '' : 's'} only on Vault Connect`
+        text: `${analysis.remoteFiles.length} file${analysis.remoteFiles.length === 1 ? '' : 's'} only on vault connect`
       });
     }
 
@@ -359,7 +359,7 @@ export class InitialSyncWizardModal extends Modal {
 
         if (option === InitialSyncOption.START_FRESH) {
           // Start Fresh confirmation - requires typing "DELETE"
-          contentEl.createEl('h2', { text: '⚠️  Confirm: Start fresh' });
+          contentEl.createEl('h2', { text: '⚠️  Confirm: start fresh' });
 
           const warning = contentEl.createDiv();
           warning.addClass('vaultconnect-bg-error');
@@ -388,7 +388,7 @@ export class InitialSyncWizardModal extends Modal {
           }
 
           warning.createEl('p', {
-            text: 'These files will be permanently deleted and replaced with files from Vault Connect.',
+            text: 'These files will be permanently deleted and replaced with files from vault connect.',
             cls: 'mod-warning'
           });
 
@@ -452,7 +452,7 @@ export class InitialSyncWizardModal extends Modal {
 
         } else if (option === InitialSyncOption.UPLOAD_LOCAL) {
           // Upload Local confirmation - simpler warning
-          contentEl.createEl('h2', { text: '⚠️  Confirm: Upload local files' });
+          contentEl.createEl('h2', { text: '⚠️  Confirm: upload local files' });
 
           const warning = contentEl.createDiv();
           warning.addClass('vaultconnect-bg-error');

@@ -35,7 +35,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('Vault Connect')
+      .setName('Vault connect')
       .setHeading();
 
     // Settings actions
@@ -83,7 +83,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         cls: 'setting-item-description'
       });
       infoEl.createEl('p', {
-        text: 'Click the Login button above to connect your Vault Connect account.',
+        text: 'Click the login button above to connect your vault connect account.',
         cls: 'setting-item-description'
       });
     }
@@ -139,9 +139,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // API Key info (if authenticated)
     if (authState.isAuthenticated && authState.apiKey) {
       const maskedKey = authState.apiKey.substring(0, 12) + '****' + authState.apiKey.substring(authState.apiKey.length - 4);
-      
+
       new Setting(containerEl)
-        .setName('API Key')
+        .setName('API key')
         .setDesc(maskedKey);
 
       // Expiration info
@@ -171,7 +171,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Selected vault
     new Setting(containerEl)
       .setName('Selected vault')
-      .setDesc('The Vault Connect vault to sync with')
+      .setDesc('The vault connect vault to sync with')
       .addText(text => {
         text
           .setPlaceholder('vault-id')
@@ -199,16 +199,16 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         if (vault.is_cross_tenant) {
           const permissionIcon = vault.permission === 'read' ? '👁️' : vault.permission === 'write' ? '✏️' : '👑';
           const permissionLabel = vault.permission === 'read' ? 'Read-only' : vault.permission === 'write' ? 'Read-write' : 'Admin';
-          
+
           statusEl.createEl('div', {
             text: `🔗 Cross-tenant vault (${permissionIcon} ${permissionLabel})`,
             cls: 'vaultsync-cross-tenant-badge'
           });
-          
+
           const descEl = statusEl.createEl('p', {
             cls: 'setting-item-description'
           });
-          
+
           if (vault.permission === 'read') {
             descEl.setText('⚠️ This vault is shared from another tenant with read-only access. You can download and view files, but uploads are disabled to prevent sync conflicts.');
           } else if (vault.permission === 'write') {
@@ -654,8 +654,8 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // API Base URL
     new Setting(containerEl)
-      .setName('API base URL')
-      .setDesc('Vault Connect API server URL (requires reconnection)')
+      .setName('API base url')
+      .setDesc('Vault connect API server url (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.apiBaseURL,
@@ -670,15 +670,15 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // WebSocket Base URL
     new Setting(containerEl)
-      .setName('WebSocket base URL')
-      .setDesc('Vault Connect WebSocket server URL (requires reconnection)')
+      .setName('WebSocket base url')
+      .setDesc('Vault connect WebSocket server url (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.wsBaseURL,
           async (value) => {
             this.plugin.settings.wsBaseURL = value.trim();
             await this.plugin.saveSettings();
-            new Notice('WebSocket URL updated. Please reconnect to apply changes.');
+            new Notice('WebSocket url updated. Please reconnect to apply changes.');
             return true;
           }
         );
