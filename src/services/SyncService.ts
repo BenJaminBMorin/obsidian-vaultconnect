@@ -6,7 +6,7 @@ import { FileWatcherService, FileChangeEvent } from './FileWatcherService';
 import { SyncQueueService, QueuedOperation } from './SyncQueueService';
 import { FileSyncService, FileSyncResult } from './FileSyncService';
 import { SelectiveSyncService } from './SelectiveSyncService';
-import { FileInfo } from '../types';
+import { FileInfo, ConflictInfo, ConflictType } from '../types';
 
 /**
  * Sync mode
@@ -533,7 +533,7 @@ export class SyncService {
       const remoteContent = await this.apiClient.getFileByPath(this.vaultId!, localFile.path);
 
       // Store conflict information
-      const conflicts = await this.storage.get<any[]>('conflicts') || [];
+      const conflicts = await this.storage.get<ConflictInfo[]>('conflicts') || [];
       conflicts.push({
         id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: localFile.path,
@@ -541,9 +541,8 @@ export class SyncService {
         remoteContent: remoteContent.content,
         localModified: new Date(localFile.stat.mtime),
         remoteModified: remoteFile.updated_at,
-        conflictType: 'content',
-        autoResolvable: false,
-        timestamp: Date.now()
+        conflictType: ConflictType.CONTENT,
+        autoResolvable: false
       });
 
       await this.storage.set('conflicts', conflicts);

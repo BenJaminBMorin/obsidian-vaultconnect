@@ -33,7 +33,7 @@ export class ActiveUsersView extends ItemView {
   }
 
   getDisplayText(): string {
-    return 'Active Users';
+    return 'Active users';
   }
 
   getIcon(): string {
@@ -63,7 +63,7 @@ export class ActiveUsersView extends ItemView {
 
     // Create header
     const header = this.viewContainerEl.createDiv('vaultconnect-users-header');
-    header.createEl('h4', { text: 'Active Users' });
+    header.createEl('h4', { text: 'Active users' });
 
     // Get active users
     const activeUsers = this.presenceService.getActiveUsers();

@@ -115,7 +115,7 @@ export class ConflictListView extends ItemView {
     footer.addClass('vaultconnect-border-top');
 
     const resolveAllBtn = footer.createEl('button', {
-      text: 'Resolve All Conflicts',
+      text: 'Resolve all conflicts',
       cls: 'mod-cta'
     });
     resolveAllBtn.addClass('vaultconnect-w-full');

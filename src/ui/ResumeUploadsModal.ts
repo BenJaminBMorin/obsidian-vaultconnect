@@ -31,7 +31,7 @@ export class ResumeUploadsModal extends Modal {
     contentEl.addClass('resume-uploads-modal');
 
     // Title
-    contentEl.createEl('h2', { text: 'Resume Incomplete Uploads' });
+    contentEl.createEl('h2', { text: 'Resume incomplete uploads' });
 
     // Description
     const desc = contentEl.createDiv({ cls: 'resume-uploads-description' });
@@ -108,7 +108,7 @@ export class ResumeUploadsModal extends Modal {
 
     new Setting(bottomActions)
       .addButton(btn => btn
-        .setButtonText('Discard All')
+        .setButtonText('Discard all')
         .setWarning()
         .onClick(async () => {
           await this.onDiscardAll();

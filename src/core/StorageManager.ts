@@ -68,10 +68,10 @@ export class StorageManager {
   /**
    * Convert date strings to Date objects
    */
-  private convertDates(obj: Record<string, any>): Record<string, Date> {
+  private convertDates(obj: Record<string, unknown>): Record<string, Date> {
     const result: Record<string, Date> = {};
     for (const [key, value] of Object.entries(obj)) {
-      result[key] = new Date(value);
+      result[key] = new Date(value as string | number | Date);
     }
     return result;
   }
@@ -79,12 +79,13 @@ export class StorageManager {
   /**
    * Convert user dates
    */
-  private convertUserDates(users: Record<string, any>): Record<string, ActiveUser> {
+  private convertUserDates(users: Record<string, unknown>): Record<string, ActiveUser> {
     const result: Record<string, ActiveUser> = {};
     for (const [key, user] of Object.entries(users)) {
+      const activeUser = user as ActiveUser;
       result[key] = {
-        ...user,
-        lastActivity: new Date(user.lastActivity)
+        ...activeUser,
+        lastActivity: new Date(activeUser.lastActivity)
       };
     }
     return result;

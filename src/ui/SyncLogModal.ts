@@ -22,7 +22,7 @@ export class SyncLogModal extends Modal {
     contentEl.addClass('vaultsync-sync-log-modal');
 
     // Title
-    contentEl.createEl('h2', { text: 'Sync Log' });
+    contentEl.createEl('h2', { text: 'Sync log' });
 
     // Statistics section
     this.renderStatistics(contentEl);
@@ -46,19 +46,19 @@ export class SyncLogModal extends Modal {
     const statsGrid = statsContainer.createDiv({ cls: 'stats-grid' });
 
     // Total syncs
-    this.createStatItem(statsGrid, 'Total Syncs', stats.totalSyncs.toString());
+    this.createStatItem(statsGrid, 'Total syncs', stats.totalSyncs.toString());
 
     // Success rate
     const successRate = stats.totalSyncs > 0
       ? Math.round((stats.successfulSyncs / stats.totalSyncs) * 100)
       : 0;
-    this.createStatItem(statsGrid, 'Success Rate', `${successRate}%`);
+    this.createStatItem(statsGrid, 'Success rate', `${successRate}%`);
 
     // Files uploaded
-    this.createStatItem(statsGrid, 'Files Uploaded', stats.filesUploaded.toString());
+    this.createStatItem(statsGrid, 'Files uploaded', stats.filesUploaded.toString());
 
     // Files downloaded
-    this.createStatItem(statsGrid, 'Files Downloaded', stats.filesDownloaded.toString());
+    this.createStatItem(statsGrid, 'Files downloaded', stats.filesDownloaded.toString());
 
     // Conflicts
     this.createStatItem(statsGrid, 'Conflicts', stats.conflictsDetected.toString());
@@ -67,13 +67,13 @@ export class SyncLogModal extends Modal {
     const avgDuration = stats.averageSyncDuration > 0
       ? `${(stats.averageSyncDuration / 1000).toFixed(1)}s`
       : 'N/A';
-    this.createStatItem(statsGrid, 'Avg Duration', avgDuration);
+    this.createStatItem(statsGrid, 'Avg duration', avgDuration);
 
     // Last sync
     const lastSync = stats.lastSyncTime
       ? this.formatTimestamp(stats.lastSyncTime)
       : 'Never';
-    this.createStatItem(statsGrid, 'Last Sync', lastSync);
+    this.createStatItem(statsGrid, 'Last sync', lastSync);
   }
 
   /**
@@ -111,17 +111,17 @@ export class SyncLogModal extends Modal {
       .setDesc('Filter by log type')
       .addDropdown(dropdown => {
         dropdown
-          .addOption('all', 'All Types')
-          .addOption(SyncLogType.SYNC_STARTED, 'Sync Started')
-          .addOption(SyncLogType.SYNC_COMPLETED, 'Sync Completed')
-          .addOption(SyncLogType.SYNC_ERROR, 'Sync Error')
-          .addOption(SyncLogType.FILE_UPLOADED, 'File Uploaded')
-          .addOption(SyncLogType.FILE_DOWNLOADED, 'File Downloaded')
-          .addOption(SyncLogType.FILE_DELETED, 'File Deleted')
-          .addOption(SyncLogType.CONFLICT_DETECTED, 'Conflict Detected')
-          .addOption(SyncLogType.CONFLICT_RESOLVED, 'Conflict Resolved')
-          .addOption(SyncLogType.CONNECTION_CHANGED, 'Connection Changed')
-          .addOption(SyncLogType.CONNECTION_ERROR, 'Connection Error')
+          .addOption('all', 'All types')
+          .addOption(SyncLogType.SYNC_STARTED, 'Sync started')
+          .addOption(SyncLogType.SYNC_COMPLETED, 'Sync completed')
+          .addOption(SyncLogType.SYNC_ERROR, 'Sync error')
+          .addOption(SyncLogType.FILE_UPLOADED, 'File uploaded')
+          .addOption(SyncLogType.FILE_DOWNLOADED, 'File downloaded')
+          .addOption(SyncLogType.FILE_DELETED, 'File deleted')
+          .addOption(SyncLogType.CONFLICT_DETECTED, 'Conflict detected')
+          .addOption(SyncLogType.CONFLICT_RESOLVED, 'Conflict resolved')
+          .addOption(SyncLogType.CONNECTION_CHANGED, 'Connection changed')
+          .addOption(SyncLogType.CONNECTION_ERROR, 'Connection error')
           .setValue('all')
           .onChange(value => {
             if (value === 'all') {
@@ -139,7 +139,7 @@ export class SyncLogModal extends Modal {
     new Setting(actionsContainer)
       .addButton(button => {
         button
-          .setButtonText('Clear Filters')
+          .setButtonText('Clear filters')
           .onClick(() => {
             this.filter = {};
             this.onOpen(); // Refresh entire modal
@@ -147,7 +147,7 @@ export class SyncLogModal extends Modal {
       })
       .addButton(button => {
         button
-          .setButtonText('Export Logs')
+          .setButtonText('Export logs')
           .onClick(() => {
             this.exportLogs();
           });

@@ -217,7 +217,7 @@ export class ErrorNotificationService {
 
     if (noticeEl) {
       const button = noticeEl.createEl('button', {
-        text: 'Resolve Conflict',
+        text: 'Resolve conflict',
         cls: 'vaultsync-conflict-button'
       });
       button.addEventListener('click', () => {
@@ -382,7 +382,7 @@ export class ErrorNotificationService {
   showNetworkError(error: VaultSyncError, retryCallback: () => void): void {
     this.showErrorNotification(error, {
       actionButton: {
-        text: 'Retry Now',
+        text: 'Retry now',
         callback: retryCallback
       }
     });
@@ -394,7 +394,7 @@ export class ErrorNotificationService {
   showAuthError(error: VaultSyncError, loginCallback: () => void): void {
     this.showErrorNotification(error, {
       actionButton: {
-        text: 'Log In',
+        text: 'Log in',
         callback: loginCallback
       }
     });

@@ -632,7 +632,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
             const pluginExt = this.plugin as unknown as PluginWithServices;
             if (!value && pluginExt.cacheService) {
               // Clear cache when disabled
-              await pluginExt.cacheService.clearAll();
+              pluginExt.cacheService.clearAll();
               new Notice('Cache cleared');
             }
           });
@@ -737,9 +737,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
         // Get option label
         const optionLabels: Record<string, string> = {
-          'start-fresh': 'Start Fresh',
-          'upload-local': 'Upload Local',
-          'smart-merge': 'Smart Merge'
+          'start-fresh': 'Start fresh',
+          'upload-local': 'Upload local',
+          'smart-merge': 'Smart merge'
         };
         const optionLabel = syncState.chosenOption ? (optionLabels[syncState.chosenOption] || syncState.chosenOption) : 'Unknown';
         
@@ -792,9 +792,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     
     if (syncState && syncState.completed) {
       const optionLabels: Record<string, string> = {
-        'start-fresh': 'Start Fresh',
-        'upload-local': 'Upload Local',
-        'smart-merge': 'Smart Merge'
+        'start-fresh': 'Start fresh',
+        'upload-local': 'Upload local',
+        'smart-merge': 'Smart merge'
       };
       const optionLabel = syncState.chosenOption ? (optionLabels[syncState.chosenOption] || syncState.chosenOption) : 'Unknown';
 

@@ -215,15 +215,13 @@ export class SettingsManager {
     if (!Array.isArray(this.settings.includedFolders)) {
       this.settings.includedFolders = [];
     }
-    // Use actual configDir instead of hardcoded .obsidian
+    // Use actual configDir instead of hardcoded path
     const configDir = this.plugin.app.vault.configDir;
     if (!Array.isArray(this.settings.excludedFolders)) {
       this.settings.excludedFolders = [configDir, '.trash'];
-    } else if (configDir !== '.obsidian') {
-      // Replace any hardcoded .obsidian with actual configDir
-      this.settings.excludedFolders = this.settings.excludedFolders.map(
-        folder => folder === '.obsidian' ? configDir : folder
-      );
+    } else if (!this.settings.excludedFolders.includes(configDir)) {
+      // Ensure configDir is in the excluded folders list
+      this.settings.excludedFolders.push(configDir);
     }
 
     // Validate URLs

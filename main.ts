@@ -18,6 +18,7 @@ import { InitialSyncState } from './src/types/initial-sync.types';
 import { logger, LogLevel, LOG_LEVEL_NAMES, LOG_LEVEL_DESCRIPTIONS } from './src/utils/logger';
 import { VaultService } from './src/services/VaultService';
 import { AuthService } from './src/services/AuthService';
+import { VaultInfo } from './src/types';
 import { requestUrl, RequestUrlParam } from 'obsidian';
 
 // Event data types
@@ -186,8 +187,8 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Initialize auth service
 		this.authService = new AuthService(this, this.eventBus);
-		
-		this.apiClient = new APIClient(this.authService as any, this.settings.apiUrl);
+
+		this.apiClient = new APIClient(this.authService, this.settings.apiUrl);
 
 		// Initialize vault service
 		this.vaultService = new VaultService(
@@ -385,7 +386,7 @@ export default class VaultSyncPlugin extends Plugin {
 	private registerCommands(): void {
 		// Connect command
 		this.addCommand({
-			id: 'vaultconnect-connect',
+			id: 'connect',
 			name: 'Connect',
 			icon: 'plug-zap',
 			callback: async () => {
@@ -400,12 +401,12 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Disconnect command
 		this.addCommand({
-			id: 'vaultconnect-disconnect',
+			id: 'disconnect',
 			name: 'Disconnect',
 			icon: 'plug-zap-off',
-			callback: async () => {
+			callback: () => {
 				try {
-					await this.disconnect();
+					this.disconnect();
 				} catch (error) {
 					logger.error('Disconnect command failed:', error);
 					new Notice('Failed to disconnect');
@@ -415,7 +416,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Pull all command
 		this.addCommand({
-			id: 'vaultconnect-pull-all',
+			id: 'pull-all',
 			name: 'Pull all',
 			icon: 'download',
 			callback: async () => {
@@ -430,7 +431,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Push all command
 		this.addCommand({
-			id: 'vaultconnect-push-all',
+			id: 'push-all',
 			name: 'Push all',
 			icon: 'upload',
 			callback: async () => {
@@ -445,7 +446,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Force sync command
 		this.addCommand({
-			id: 'vaultconnect-force-sync',
+			id: 'force-sync',
 			name: 'Force sync',
 			icon: 'zap',
 			callback: async () => {
@@ -460,7 +461,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// View conflicts command
 		this.addCommand({
-			id: 'vaultconnect-view-conflicts',
+			id: 'view-conflicts',
 			name: 'View conflicts',
 			icon: 'alert-triangle',
 			callback: () => this.viewConflicts()
@@ -468,7 +469,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// View sync log command
 		this.addCommand({
-			id: 'vaultconnect-view-sync-log',
+			id: 'view-sync-log',
 			name: 'View sync log',
 			icon: 'file-text',
 			callback: () => this.viewSyncLog()
@@ -476,7 +477,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Smart sync command
 		this.addCommand({
-			id: 'vaultconnect-smart-sync',
+			id: 'smart-sync',
 			name: 'Smart sync',
 			icon: 'refresh-cw',
 			callback: async () => {
@@ -492,8 +493,8 @@ export default class VaultSyncPlugin extends Plugin {
 		logger.debug('Commands registered');
 	}
 
-	async onunload() {
-		await this.disconnect();
+	onunload() {
+		this.disconnect();
 		logger.info('VaultConnect plugin unloaded');
 	}
 
@@ -503,10 +504,8 @@ export default class VaultSyncPlugin extends Plugin {
 		// Ensure configDir is always in excludedFolders
 		const configDir = this.app.vault.configDir;
 		if (!this.settings.excludedFolders.includes(configDir)) {
-			// Remove any old .obsidian reference and add the correct configDir
-			this.settings.excludedFolders = this.settings.excludedFolders
-				.filter(folder => folder !== '.obsidian')
-				.concat([configDir]);
+			// Add the correct configDir
+			this.settings.excludedFolders = this.settings.excludedFolders.concat([configDir]);
 		}
 	}
 
@@ -1113,24 +1112,24 @@ export default class VaultSyncPlugin extends Plugin {
 
 		try {
 			if (this.settings.notifyOnSync) {
-				new Notice('Starting Smart Sync...');
+				new Notice('Starting smart sync...');
 			}
 			const result = await this.syncService.smartSync();
 
 			if (this.settings.notifyOnSync) {
 				if (result.success) {
 					new Notice(
-						`Smart Sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded`
+						`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded`
 					);
 				} else {
 					new Notice(
-						`Smart Sync completed with ${result.errors.length} error(s). Check sync log for details.`
+						`Smart sync completed with ${result.errors.length} error(s). Check sync log for details.`
 					);
 				}
 			}
 		} catch (error) {
 			logger.error('Smart Sync error:', error);
-			new Notice(`Smart Sync failed: ${error.message}`);
+			new Notice(`Smart sync failed: ${error.message}`);
 		}
 	}
 
@@ -1159,21 +1158,21 @@ export default class VaultSyncPlugin extends Plugin {
 		}
 
 		try {
-			new Notice('Starting Pull All...');
+			new Notice('Starting pull all...');
 			const result = await this.syncService.pullAll();
-			
+
 			if (result.success) {
 				new Notice(
-					`Pull All completed: ${result.filesDownloaded} files downloaded`
+					`Pull all completed: ${result.filesDownloaded} files downloaded`
 				);
 			} else {
 				new Notice(
-					`Pull All completed with ${result.errors.length} error(s). Check sync log for details.`
+					`Pull all completed with ${result.errors.length} error(s). Check sync log for details.`
 				);
 			}
 		} catch (error) {
 			logger.error('Pull All error:', error);
-			new Notice(`Pull All failed: ${error.message}`);
+			new Notice(`Pull all failed: ${error.message}`);
 		}
 	}
 
@@ -1202,21 +1201,21 @@ export default class VaultSyncPlugin extends Plugin {
 		}
 
 		try {
-			new Notice('Starting Push All...');
+			new Notice('Starting push all...');
 			const result = await this.syncService.pushAll();
-			
+
 			if (result.success) {
 				new Notice(
-					`Push All completed: ${result.filesUploaded} files uploaded`
+					`Push all completed: ${result.filesUploaded} files uploaded`
 				);
 			} else {
 				new Notice(
-					`Push All completed with ${result.errors.length} error(s). Check sync log for details.`
+					`Push all completed with ${result.errors.length} error(s). Check sync log for details.`
 				);
 			}
 		} catch (error) {
 			logger.error('Push All error:', error);
-			new Notice(`Push All failed: ${error.message}`);
+			new Notice(`Push all failed: ${error.message}`);
 		}
 	}
 
@@ -1246,24 +1245,24 @@ export default class VaultSyncPlugin extends Plugin {
 
 		try {
 			if (this.settings.notifyOnSync) {
-				new Notice('Starting Force Sync...');
+				new Notice('Starting force sync...');
 			}
 			const result = await this.syncService.forceSync();
 
 			if (this.settings.notifyOnSync) {
 				if (result.success) {
 					new Notice(
-						`Force Sync completed: ${result.filesProcessed} files processed`
+						`Force sync completed: ${result.filesProcessed} files processed`
 					);
 				} else {
 					new Notice(
-						`Force Sync completed with ${result.errors.length} error(s). Check sync log for details.`
+						`Force sync completed with ${result.errors.length} error(s). Check sync log for details.`
 					);
 				}
 			}
 		} catch (error) {
 			logger.error('Force Sync error:', error);
-			new Notice(`Force Sync failed: ${error.message}`);
+			new Notice(`Force sync failed: ${error.message}`);
 		}
 	}
 
@@ -1345,7 +1344,7 @@ export default class VaultSyncPlugin extends Plugin {
 		// Sync operations
 		menu.addItem((item) => {
 			item
-				.setTitle('Smart Sync')
+				.setTitle('Smart sync')
 				.setIcon('refresh-cw')
 				.setDisabled(!this.isConnected)
 				.onClick(() => this.performSmartSync());
@@ -1353,7 +1352,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		menu.addItem((item) => {
 			item
-				.setTitle('Pull All')
+				.setTitle('Pull all')
 				.setIcon('download')
 				.setDisabled(!this.isConnected)
 				.onClick(() => this.performPullAll());
@@ -1361,7 +1360,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		menu.addItem((item) => {
 			item
-				.setTitle('Push All')
+				.setTitle('Push all')
 				.setIcon('upload')
 				.setDisabled(!this.isConnected)
 				.onClick(() => this.performPushAll());
@@ -1369,7 +1368,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		menu.addItem((item) => {
 			item
-				.setTitle('Force Sync')
+				.setTitle('Force sync')
 				.setIcon('zap')
 				.setDisabled(!this.isConnected)
 				.onClick(() => this.performForceSync());
@@ -1381,14 +1380,14 @@ export default class VaultSyncPlugin extends Plugin {
 		menu.addItem((item) => {
 			const conflictCount = this.conflictService?.getConflictCount() || 0;
 			item
-				.setTitle(`View Conflicts ${conflictCount > 0 ? `(${conflictCount})` : ''}`)
+				.setTitle(`View conflicts ${conflictCount > 0 ? `(${conflictCount})` : ''}`)
 				.setIcon('alert-triangle')
 				.onClick(() => this.viewConflicts());
 		});
 
 		menu.addItem((item) => {
 			item
-				.setTitle('View Sync Log')
+				.setTitle('View sync log')
 				.setIcon('file-text')
 				.onClick(() => this.viewSyncLog());
 		});
@@ -1754,10 +1753,10 @@ class VaultSyncSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Force Sync All')
+			.setName('Force sync all')
 			.setDesc('Sync all files in the vault')
 			.addButton(button => button
-				.setButtonText('Sync All')
+				.setButtonText('Sync all')
 				.onClick(async () => {
 					await this.plugin.forceSyncAll();
 				}));
@@ -1766,7 +1765,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		containerEl.createEl('h3', { text: 'Logging' });
 		
 		new Setting(containerEl)
-			.setName('Log Level')
+			.setName('Log level')
 			.setDesc('Control how much information is logged to the console')
 			.addDropdown(dropdown => {
 				// Add all log levels
@@ -1839,9 +1838,9 @@ class VaultSyncSettingTab extends PluginSettingTab {
 				} else {
 					// Add placeholder option
 					dropdown.createEl('option', { text: 'Select a vault...', value: '' });
-					
+
 					// Add vault options
-					vaults.forEach((vault: any) => {
+					vaults.forEach((vault: VaultInfo) => {
 						const option = dropdown.createEl('option', {
 							text: `${vault.name} (${vault.file_count || 0} files)`,
 							value: vault.vault_id

@@ -28,7 +28,7 @@ export class UploadProgressModal extends Modal {
     contentEl.addClass('upload-progress-modal');
 
     // Title
-    contentEl.createEl('h2', { text: 'Uploading File' });
+    contentEl.createEl('h2', { text: 'Uploading file' });
 
     // File info
     const fileInfo = contentEl.createDiv({ cls: 'upload-file-info' });
@@ -59,7 +59,7 @@ export class UploadProgressModal extends Modal {
     
     new Setting(buttonContainer)
       .addButton(btn => btn
-        .setButtonText('Cancel Upload')
+        .setButtonText('Cancel upload')
         .setWarning()
         .onClick(() => {
           this.cancelCallback();

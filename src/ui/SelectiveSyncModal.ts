@@ -23,7 +23,7 @@ export class SelectiveSyncModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    contentEl.createEl('h2', { text: 'Selective Sync Configuration' });
+    contentEl.createEl('h2', { text: 'Selective sync configuration' });
 
     // Description
     contentEl.createEl('p', {
@@ -164,7 +164,7 @@ export class SelectiveSyncModal extends Modal {
         .setDesc('Remove all included folders (sync all except excluded)')
         .addButton(button => {
           button
-            .setButtonText('Clear All')
+            .setButtonText('Clear all')
             .setWarning()
             .onClick(() => {
               this.selectiveSyncService.clearIncludedFolders();
@@ -349,7 +349,7 @@ export class SelectiveSyncModal extends Modal {
     new Setting(buttonContainer)
       .addButton(button => {
         button
-          .setButtonText('Save & Close')
+          .setButtonText('Save & close')
           .setCta()
           .onClick(() => {
             this.onSave();

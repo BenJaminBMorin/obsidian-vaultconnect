@@ -49,7 +49,7 @@ export class ConflictResolutionModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    contentEl.createEl('h2', { text: 'No Conflicts' });
+    contentEl.createEl('h2', { text: 'No conflicts' });
 
     const message = contentEl.createDiv('vaultconnect-empty');
     message.textContent = 'All files are in sync. No conflicts to resolve.';
@@ -232,7 +232,7 @@ export class ConflictResolutionModal extends Modal {
 
     // Keep Local button (disabled for read-only cross-tenant vaults)
     const keepLocalBtn = optionsContainer.createEl('button', {
-      text: 'Keep Local',
+      text: 'Keep local',
       cls: 'mod-cta'
     });
 
@@ -248,7 +248,7 @@ export class ConflictResolutionModal extends Modal {
 
     // Keep Remote button
     const keepRemoteBtn = optionsContainer.createEl('button', {
-      text: 'Keep Remote',
+      text: 'Keep remote',
       cls: 'mod-cta'
     });
     keepRemoteBtn.addEventListener('click', () => {
@@ -257,7 +257,7 @@ export class ConflictResolutionModal extends Modal {
 
     // Keep Both button
     const keepBothBtn = optionsContainer.createEl('button', {
-      text: 'Keep Both'
+      text: 'Keep both'
     });
     keepBothBtn.addEventListener('click', () => {
       this.resolveConflict(conflict, ResolutionStrategy.KEEP_BOTH);
@@ -265,7 +265,7 @@ export class ConflictResolutionModal extends Modal {
 
     // Merge Manually button
     const mergeBtn = optionsContainer.createEl('button', {
-      text: 'Merge Manually'
+      text: 'Merge manually'
     });
     mergeBtn.addEventListener('click', () => {
       this.showMergeEditor(conflict);
@@ -351,7 +351,7 @@ export class ConflictResolutionModal extends Modal {
     });
 
     const saveButton = buttonContainer.createEl('button', {
-      text: 'Save Merged Version',
+      text: 'Save merged version',
       cls: 'mod-cta'
     });
     saveButton.addEventListener('click', () => {

@@ -129,7 +129,7 @@ export class AuthModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    contentEl.createEl('h2', { text: 'How to Get an API Key' });
+    contentEl.createEl('h2', { text: 'How to get an API key' });
 
     const steps = [
       'Log in to your VaultSync dashboard at https://vaultsync.io',

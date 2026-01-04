@@ -97,7 +97,7 @@ export class InitialSyncWizardModal extends Modal {
       optionsContainer,
       {
         icon: '🔄',
-        title: 'Smart Merge',
+        title: 'Smart merge',
         badge: 'Recommended',
         badgeColor: 'var(--interactive-accent)',
         description: 'Intelligently merge files from both locations:',
@@ -110,7 +110,7 @@ export class InitialSyncWizardModal extends Modal {
           '✓ No data loss',
           '✓ Safe for important files'
         ],
-        buttonText: 'Select Smart Merge',
+        buttonText: 'Select smart merge',
         buttonClass: 'mod-cta',
         onClick: () => this.handleSmartMerge()
       }
@@ -121,7 +121,7 @@ export class InitialSyncWizardModal extends Modal {
       optionsContainer,
       {
         icon: '⬇️',
-        title: 'Start Fresh',
+        title: 'Start fresh',
         badge: 'Warning',
         badgeColor: 'var(--text-error)',
         description: 'Clear this device and download from VaultSync',
@@ -129,7 +129,7 @@ export class InitialSyncWizardModal extends Modal {
           ? [`⚠️  Will delete ${analysis.localFiles.length + analysis.commonFiles.length} local file${analysis.localFiles.length + analysis.commonFiles.length === 1 ? '' : 's'}`]
           : ['No local files will be deleted'],
         benefits: [],
-        buttonText: 'Select Start Fresh',
+        buttonText: 'Select start fresh',
         buttonClass: '',
         onClick: () => this.handleStartFresh()
       }
@@ -140,7 +140,7 @@ export class InitialSyncWizardModal extends Modal {
       optionsContainer,
       {
         icon: '⬆️',
-        title: 'Upload Local Files',
+        title: 'Upload local files',
         badge: analysis.commonFiles.length > 0 ? 'Warning' : undefined,
         badgeColor: 'var(--text-error)',
         description: 'Upload all files from this device to VaultSync',
@@ -148,7 +148,7 @@ export class InitialSyncWizardModal extends Modal {
           ? [`⚠️  Will overwrite ${analysis.commonFiles.length} remote file${analysis.commonFiles.length === 1 ? '' : 's'}`]
           : ['No remote files will be overwritten'],
         benefits: [],
-        buttonText: 'Select Upload Local',
+        buttonText: 'Select upload local',
         buttonClass: '',
         onClick: () => this.handleUploadLocal()
       }
@@ -359,7 +359,7 @@ export class InitialSyncWizardModal extends Modal {
 
         if (option === InitialSyncOption.START_FRESH) {
           // Start Fresh confirmation - requires typing "DELETE"
-          contentEl.createEl('h2', { text: '⚠️  Confirm: Start Fresh' });
+          contentEl.createEl('h2', { text: '⚠️  Confirm: Start fresh' });
 
           const warning = contentEl.createDiv();
           warning.addClass('vaultconnect-bg-error');
@@ -430,7 +430,7 @@ export class InitialSyncWizardModal extends Modal {
           });
 
           const confirmButton = buttonContainer.createEl('button', {
-            text: 'Confirm Delete',
+            text: 'Confirm delete',
             cls: 'mod-warning'
           });
           confirmButton.disabled = true;
@@ -452,7 +452,7 @@ export class InitialSyncWizardModal extends Modal {
 
         } else if (option === InitialSyncOption.UPLOAD_LOCAL) {
           // Upload Local confirmation - simpler warning
-          contentEl.createEl('h2', { text: '⚠️  Confirm: Upload Local Files' });
+          contentEl.createEl('h2', { text: '⚠️  Confirm: Upload local files' });
 
           const warning = contentEl.createDiv();
           warning.addClass('vaultconnect-bg-error');
@@ -480,7 +480,7 @@ export class InitialSyncWizardModal extends Modal {
           });
 
           const confirmButton = buttonContainer.createEl('button', {
-            text: 'Confirm Upload',
+            text: 'Confirm upload',
             cls: 'mod-warning'
           });
           confirmButton.addEventListener('click', () => {

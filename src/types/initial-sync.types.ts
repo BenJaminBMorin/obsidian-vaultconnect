@@ -109,7 +109,7 @@ export interface InitialSyncErrorInfo {
   /** Human-readable error message */
   message: string;
   /** Additional error details (optional) */
-  details?: any;
+  details?: unknown;
   /** Whether the error is recoverable (can retry) */
   recoverable: boolean;
 }

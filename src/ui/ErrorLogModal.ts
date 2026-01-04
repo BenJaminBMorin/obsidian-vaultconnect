@@ -36,7 +36,7 @@ export class ErrorLogModal extends Modal {
 
     // Title
     const title = header.createDiv('vaultsync-error-log-title');
-    title.textContent = 'Error Log';
+    title.textContent = 'Error log';
 
     // Actions
     const actions = header.createDiv('vaultsync-error-log-actions');
@@ -50,7 +50,7 @@ export class ErrorLogModal extends Modal {
 
     // Clear button
     const clearBtn = actions.createEl('button', {
-      text: 'Clear All',
+      text: 'Clear all',
       cls: 'vaultsync-error-log-clear-button'
     });
     clearBtn.addEventListener('click', () => this.clearLogs());
@@ -68,7 +68,7 @@ export class ErrorLogModal extends Modal {
     const typeFilters = ['all', ...Object.values(ErrorType)];
     typeFilters.forEach(type => {
       const button = filters.createEl('button', {
-        text: type === 'all' ? 'All Types' : this.formatErrorType(type),
+        text: type === 'all' ? 'All types' : this.formatErrorType(type),
         cls: 'vaultsync-error-log-filter-button'
       });
 
@@ -86,7 +86,7 @@ export class ErrorLogModal extends Modal {
     const severityFilters = ['all', ...Object.values(ErrorSeverity)];
     severityFilters.forEach(severity => {
       const button = filters.createEl('button', {
-        text: severity === 'all' ? 'All Severities' : severity.toUpperCase(),
+        text: severity === 'all' ? 'All severities' : severity.toUpperCase(),
         cls: 'vaultsync-error-log-filter-button'
       });
 

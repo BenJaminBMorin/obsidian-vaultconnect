@@ -33,7 +33,7 @@ export class InitialSyncProgressModal extends Modal {
     contentEl.addClass('initial-sync-progress-modal');
 
     // Header
-    contentEl.createEl('h2', { text: 'Syncing Files...' });
+    contentEl.createEl('h2', { text: 'Syncing files...' });
 
     // Content container
     this.contentContainer = contentEl.createDiv('progress-content');
@@ -169,7 +169,7 @@ export class InitialSyncProgressModal extends Modal {
     // Update header
     const header = this.contentEl.querySelector('h2');
     if (header) {
-      header.textContent = '✓ Sync Complete';
+      header.textContent = '✓ Sync complete';
       header.addClass('vaultconnect-text-success');
     }
 
@@ -221,7 +221,7 @@ export class InitialSyncProgressModal extends Modal {
     // Update header
     const header = this.contentEl.querySelector('h2');
     if (header) {
-      header.textContent = '✗ Sync Failed';
+      header.textContent = '✗ Sync failed';
       header.addClass('vaultconnect-text-error');
     }
 

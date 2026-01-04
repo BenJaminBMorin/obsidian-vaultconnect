@@ -140,7 +140,7 @@ export class DeviceAuthModal extends Modal {
     // Open browser button
     const buttonContainer = this.statusEl.createDiv({ cls: 'device-auth-buttons' });
     const openBrowserBtn = buttonContainer.createEl('button', {
-      text: 'Open Browser',
+      text: 'Open browser',
       cls: 'mod-cta'
     });
     openBrowserBtn.addEventListener('click', () => {
@@ -170,13 +170,13 @@ export class DeviceAuthModal extends Modal {
 
     const errorDiv = this.statusEl.createDiv({ cls: 'device-auth-error' });
     errorDiv.createEl('div', { cls: 'error-icon', text: '✗' });
-    errorDiv.createEl('h3', { text: 'Authorization Failed' });
+    errorDiv.createEl('h3', { text: 'Authorization failed' });
     errorDiv.createEl('p', { text: message });
 
     // Retry button
     const buttonContainer = errorDiv.createDiv({ cls: 'device-auth-buttons' });
     const retryBtn = buttonContainer.createEl('button', {
-      text: 'Try Again',
+      text: 'Try again',
       cls: 'mod-cta'
     });
     retryBtn.addEventListener('click', () => {
