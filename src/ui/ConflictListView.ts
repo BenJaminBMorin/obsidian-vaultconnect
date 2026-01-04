@@ -46,16 +46,18 @@ export class ConflictListView extends ItemView {
     container.addClass('vaultsync-conflict-list');
 
     // Header
-    const header = container.createDiv({ cls: 'conflict-list-header' });
-    header.style.padding = '16px';
-    header.style.borderBottom = '1px solid var(--background-modifier-border)';
+    const header = container.createDiv('conflict-list-header');
+    header.addClass('vaultconnect-header');
+    header.addClass('vaultconnect-p-lg');
+    header.addClass('vaultconnect-border-bottom');
 
     const title = header.createEl('h4', { text: 'Sync Conflicts' });
-    title.style.margin = '0 0 8px 0';
+    title.addClass('vaultconnect-mb-sm');
+    title.setCssProps({ 'margin-top': '0' });
 
-    const count = header.createDiv({ cls: 'conflict-count' });
-    count.style.fontSize = '0.9em';
-    count.style.color = 'var(--text-muted)';
+    const count = header.createDiv('conflict-count');
+    count.addClass('vaultconnect-text-sm');
+    count.addClass('vaultconnect-text-muted');
     
     if (this.conflicts.length === 0) {
       count.textContent = 'No conflicts';
@@ -68,15 +70,15 @@ export class ConflictListView extends ItemView {
       text: 'Refresh',
       cls: 'clickable-icon'
     });
-    refreshBtn.style.marginTop = '8px';
+    refreshBtn.addClass('vaultconnect-mt-sm');
     refreshBtn.addEventListener('click', () => {
       this.refresh();
     });
 
     // Content
-    const content = container.createDiv({ cls: 'conflict-list-content' });
-    content.style.padding = '8px';
-    content.style.overflowY = 'auto';
+    const content = container.createDiv('conflict-list-content');
+    content.addClass('vaultconnect-p-sm');
+    content.addClass('vaultconnect-overflow-auto');
 
     if (this.conflicts.length === 0) {
       this.renderEmptyState(content);
@@ -86,20 +88,19 @@ export class ConflictListView extends ItemView {
   }
 
   private renderEmptyState(container: HTMLElement) {
-    const empty = container.createDiv({ cls: 'conflict-list-empty' });
-    empty.style.textAlign = 'center';
-    empty.style.padding = '40px 20px';
-    empty.style.color = 'var(--text-muted)';
+    const empty = container.createDiv('conflict-list-empty');
+    empty.addClass('vaultconnect-empty');
+    empty.addClass('vaultconnect-text-center');
 
-    const icon = empty.createDiv({ cls: 'conflict-empty-icon' });
+    const icon = empty.createDiv('conflict-empty-icon');
     icon.textContent = '✓';
-    icon.style.fontSize = '48px';
-    icon.style.marginBottom = '16px';
-    icon.style.color = 'var(--text-success)';
+    icon.addClass('vaultconnect-text-success');
+    icon.addClass('vaultconnect-mb-lg');
+    icon.setCssProps({ 'font-size': '48px' });
 
-    const message = empty.createDiv({ cls: 'conflict-empty-message' });
+    const message = empty.createDiv('conflict-empty-message');
     message.textContent = 'All files are in sync';
-    message.style.fontSize = '1.1em';
+    message.setCssProps({ 'font-size': '1.1em' });
   }
 
   private renderConflictList(container: HTMLElement) {
@@ -108,37 +109,28 @@ export class ConflictListView extends ItemView {
     });
 
     // Resolve all button
-    const footer = container.createDiv({ cls: 'conflict-list-footer' });
-    footer.style.marginTop = '16px';
-    footer.style.padding = '8px';
-    footer.style.borderTop = '1px solid var(--background-modifier-border)';
+    const footer = container.createDiv('conflict-list-footer');
+    footer.addClass('vaultconnect-mt-lg');
+    footer.addClass('vaultconnect-p-sm');
+    footer.addClass('vaultconnect-border-top');
 
     const resolveAllBtn = footer.createEl('button', {
       text: 'Resolve All Conflicts',
       cls: 'mod-cta'
     });
-    resolveAllBtn.style.width = '100%';
+    resolveAllBtn.addClass('vaultconnect-w-full');
     resolveAllBtn.addEventListener('click', () => {
       this.openConflictResolutionModal();
     });
   }
 
   private renderConflictItem(container: HTMLElement, conflict: ConflictInfo) {
-    const item = container.createDiv({ cls: 'conflict-list-item' });
-    item.style.padding = '12px';
-    item.style.marginBottom = '8px';
-    item.style.border = '1px solid var(--background-modifier-border)';
-    item.style.borderRadius = '4px';
-    item.style.cursor = 'pointer';
-    item.style.transition = 'background-color 0.2s';
-
-    // Hover effect
-    item.addEventListener('mouseenter', () => {
-      item.style.backgroundColor = 'var(--background-modifier-hover)';
-    });
-    item.addEventListener('mouseleave', () => {
-      item.style.backgroundColor = '';
-    });
+    const item = container.createDiv('conflict-list-item');
+    item.addClass('vaultconnect-conflict-item');
+    item.addClass('vaultconnect-p-md');
+    item.addClass('vaultconnect-mb-sm');
+    item.addClass('vaultconnect-rounded-md');
+    item.addClass('vaultconnect-cursor-pointer');
 
     // Click to resolve
     item.addEventListener('click', () => {
@@ -146,45 +138,40 @@ export class ConflictListView extends ItemView {
     });
 
     // Conflict type badge
-    const badge = item.createDiv({ cls: 'conflict-type-badge' });
+    const badge = item.createDiv('conflict-type-badge');
     badge.textContent = conflict.conflictType.toUpperCase();
-    badge.style.display = 'inline-block';
-    badge.style.padding = '2px 8px';
-    badge.style.fontSize = '0.75em';
-    badge.style.fontWeight = 'bold';
-    badge.style.borderRadius = '3px';
-    badge.style.marginBottom = '8px';
-    
+    badge.addClass('vaultconnect-badge');
+    badge.addClass('vaultconnect-mb-sm');
+    badge.setCssProps({ 'font-size': '0.75em' });
+
     if (conflict.conflictType === 'content') {
-      badge.style.backgroundColor = 'var(--background-modifier-error)';
-      badge.style.color = 'var(--text-error)';
+      badge.addClass('vaultconnect-badge--error');
     } else if (conflict.conflictType === 'deletion') {
-      badge.style.backgroundColor = 'var(--background-modifier-warning)';
-      badge.style.color = 'var(--text-warning)';
+      badge.addClass('vaultconnect-badge--warning');
     }
 
     // File path
-    const path = item.createDiv({ cls: 'conflict-path' });
+    const path = item.createDiv('conflict-path');
     path.textContent = conflict.path;
-    path.style.fontWeight = '500';
-    path.style.marginBottom = '4px';
-    path.style.wordBreak = 'break-word';
+    path.addClass('vaultconnect-font-medium');
+    path.addClass('vaultconnect-mb-xs');
+    path.addClass('vaultconnect-word-break');
 
     // Timestamps
-    const timestamps = item.createDiv({ cls: 'conflict-timestamps' });
-    timestamps.style.fontSize = '0.85em';
-    timestamps.style.color = 'var(--text-muted)';
-    
+    const timestamps = item.createDiv('conflict-timestamps');
+    timestamps.addClass('vaultconnect-text-sm');
+    timestamps.addClass('vaultconnect-text-muted');
+
     const localTime = formatRelativeTime(conflict.localModified);
     const remoteTime = formatRelativeTime(conflict.remoteModified);
     timestamps.textContent = `Local: ${localTime} • Remote: ${remoteTime}`;
 
     // Action hint
-    const hint = item.createDiv({ cls: 'conflict-hint' });
+    const hint = item.createDiv('conflict-hint');
     hint.textContent = 'Click to resolve →';
-    hint.style.fontSize = '0.8em';
-    hint.style.color = 'var(--text-accent)';
-    hint.style.marginTop = '8px';
+    hint.addClass('vaultconnect-text-xs');
+    hint.addClass('vaultconnect-text-accent');
+    hint.addClass('vaultconnect-mt-sm');
   }
 
   private openConflictResolutionModal(conflict?: ConflictInfo) {
