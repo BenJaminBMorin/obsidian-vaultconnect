@@ -63,7 +63,7 @@ export class CollaborationService {
   /**
    * Initialize collaboration service
    */
-  async initialize(userId: string, userName: string): Promise<void> {
+  initialize(userId: string, userName: string): void {
     this.userId = userId;
     this.userName = userName;
     
@@ -73,7 +73,7 @@ export class CollaborationService {
   /**
    * Enable collaboration
    */
-  async enable(): Promise<void> {
+  enable(): void {
     if (this.enabled) {
       return;
     }

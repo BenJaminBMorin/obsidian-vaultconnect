@@ -178,10 +178,10 @@ export class ErrorNotificationService {
   /**
    * Show error notification
    */
-  async showErrorNotification(
+  showErrorNotification(
     error: VaultSyncError,
     options?: NotificationOptions
-  ): Promise<void> {
+  ): void {
     const duration = options?.duration ?? this.getNotificationDuration(error.severity);
     const message = this.formatNotificationMessage(error, options?.showDetails);
 

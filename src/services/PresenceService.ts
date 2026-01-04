@@ -83,7 +83,7 @@ export class PresenceService {
   /**
    * Initialize presence service
    */
-  async initialize(): Promise<void> {
+  initialize(): void {
     this.log('Initializing presence service');
     
     // Load cached active users

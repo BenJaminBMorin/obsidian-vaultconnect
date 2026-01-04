@@ -212,7 +212,7 @@ export class BatchService {
   /**
    * Process batches
    */
-  private async processBatches(): Promise<void> {
+  private processBatches(): void {
     if (this.isProcessing || this.operationQueue.length === 0) {
       return;
     }

@@ -650,7 +650,7 @@ export default class VaultSyncPlugin extends Plugin {
 		}
 	}
 
-	async syncFileRename(oldPath: string, newPath: string) {
+	syncFileRename(oldPath: string, newPath: string) {
 		try {
 			if (this.socket && this.socket.connected) {
 				this.socket.emit('file_rename', {

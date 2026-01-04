@@ -131,7 +131,7 @@ export class WebSocketManager {
   /**
    * Disconnect from WebSocket server
    */
-  async disconnect(): Promise<void> {
+  disconnect(): void {
     this.log('Disconnecting...');
     
     // Disable auto-reconnect
@@ -206,7 +206,7 @@ export class WebSocketManager {
   /**
    * Unsubscribe from vault events
    */
-  async unsubscribe(vaultId: string): Promise<void> {
+  unsubscribe(vaultId: string): void {
     if (!this.isConnected()) {
       return;
     }

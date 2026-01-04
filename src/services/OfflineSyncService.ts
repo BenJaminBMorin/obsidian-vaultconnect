@@ -63,7 +63,7 @@ export class OfflineSyncService {
   /**
    * Initialize service
    */
-  async initialize(vaultId: string): Promise<void> {
+  initialize(vaultId: string): void {
     this.vaultId = vaultId;
     console.debug('OfflineSyncService: Initialized for vault', vaultId);
   }

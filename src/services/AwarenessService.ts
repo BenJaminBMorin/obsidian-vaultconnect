@@ -99,7 +99,7 @@ export class AwarenessService {
   /**
    * Initialize awareness service
    */
-  async initialize(): Promise<void> {
+  initialize(): void {
     this.log('Initializing AwarenessService');
     
     // Register editor change listeners

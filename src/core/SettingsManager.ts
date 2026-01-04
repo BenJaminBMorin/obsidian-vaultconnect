@@ -108,7 +108,7 @@ export class SettingsManager {
   /**
    * Migrate settings from older versions
    */
-  private async migrateSettings(data: unknown): Promise<Record<string, unknown>> {
+  private migrateSettings(data: unknown): Record<string, unknown> {
     const dataObj = data as Record<string, unknown>;
     const version = (dataObj._version as number) || 0;
 
