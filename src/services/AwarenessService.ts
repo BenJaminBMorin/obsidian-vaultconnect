@@ -1,9 +1,7 @@
-import { Awareness } from 'y-protocols/awareness';
 import { App, MarkdownView, EditorPosition } from 'obsidian';
 import { EventBus, EVENTS } from '../core/EventBus';
 import { CollaborationService } from './CollaborationService';
 import { AwarenessState } from '../types';
-import { parseErrorMessage } from '../utils/helpers';
 
 export interface RemoteCursor {
   userId: string;

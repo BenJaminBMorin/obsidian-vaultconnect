@@ -1,10 +1,9 @@
 import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness';
-import { App, TFile } from 'obsidian';
+import { App } from 'obsidian';
 import { EventBus, EVENTS } from '../core/EventBus';
-import { YjsProvider, YjsDocumentInfo } from './YjsProvider';
+import { YjsProvider } from './YjsProvider';
 import { AuthService } from './AuthService';
-import { parseErrorMessage } from '../utils/helpers';
 import { AwarenessState } from '../types';
 
 export interface CollaboratorInfo {
@@ -22,8 +21,6 @@ export interface CollaboratorInfo {
  * Manages real-time collaborative editing using Yjs
  */
 export class CollaborationService {
-  private app: App;
-  private authService: AuthService;
   private eventBus: EventBus;
   private yjsProvider: YjsProvider;
   
@@ -44,18 +41,16 @@ export class CollaborationService {
   private debugMode: boolean = false;
 
   constructor(
-    app: App,
-    authService: AuthService,
+    _app: App,
+    _authService: AuthService,
     eventBus: EventBus,
     yjsProvider: YjsProvider,
     debugMode: boolean = false
   ) {
-    this.app = app;
-    this.authService = authService;
     this.eventBus = eventBus;
     this.yjsProvider = yjsProvider;
     this.debugMode = debugMode;
-    
+
     // Generate user color
     this.userColor = this.generateUserColor();
   }
@@ -151,15 +146,16 @@ export class CollaborationService {
       this.updateLocalAwareness(filePath);
 
       this.log(`Collaboration enabled for ${filePath}`);
-      
+
       // Emit event
       this.eventBus.emit(EVENTS.FILE_OPENED, {
         userId: this.userId,
         filePath
       });
-      
+
     } catch (error) {
-      this.log(`Failed to enable collaboration: ${parseErrorMessage(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.log(`Failed to enable collaboration: ${errorMessage}`);
       throw error;
     }
   }
@@ -419,7 +415,7 @@ export class CollaborationService {
   /**
    * Handle awareness update (cursor, selection, typing)
    */
-  private handleAwarenessUpdate(clientId: number, state: AwarenessState, filePath: string): void {
+  private handleAwarenessUpdate(_clientId: number, state: AwarenessState, filePath: string): void {
     // Skip local user
     if (state.user?.id === this.userId) {
       return;
@@ -454,13 +450,13 @@ export class CollaborationService {
   /**
    * Handle collaborator left
    */
-  private handleCollaboratorLeft(clientId: number, filePath: string): void {
+  private handleCollaboratorLeft(_clientId: number, filePath: string): void {
     // Find and remove collaborator
     for (const [userId, collaborator] of this.collaborators.entries()) {
       if (collaborator.currentFile === filePath) {
         this.log(`Collaborator left: ${collaborator.userName} from ${filePath}`);
         this.collaborators.delete(userId);
-        
+
         // Emit event
         this.eventBus.emit(EVENTS.COLLABORATOR_LEFT, userId);
         break;

@@ -1,4 +1,4 @@
-import { TFile, Vault, TAbstractFile } from 'obsidian';
+import { TFile, Vault } from 'obsidian';
 import { APIClient } from '../api/APIClient';
 import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
@@ -198,9 +198,6 @@ export class ConflictService {
       }
 
       // Check if both local and remote changed since last sync
-      const localModified = new Date(localFile.stat.mtime);
-      const lastSync = new Date(lastSyncTime);
-
       const localChanged = localHash !== lastSyncHash;
       const remoteChanged = remoteHash !== lastSyncHash;
 
@@ -265,7 +262,7 @@ export class ConflictService {
    */
   private async createDeletionConflict(
     filePath: string,
-    remoteHash: string,
+    _remoteHash: string,
     remoteModified: Date
   ): Promise<ConflictInfo> {
     if (!this.vaultId) {
@@ -433,7 +430,7 @@ export class ConflictService {
           break;
 
         default:
-          throw new Error(`Unknown resolution strategy: ${resolution.strategy}`);
+          throw new Error(`Unknown resolution strategy: ${String(resolution.strategy)}`);
       }
 
       // Remove conflict after successful resolution

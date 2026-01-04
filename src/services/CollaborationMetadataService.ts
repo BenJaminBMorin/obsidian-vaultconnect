@@ -1,8 +1,7 @@
-import { Plugin, TFile, setIcon } from 'obsidian';
+import { Plugin, TFile } from 'obsidian';
 import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { PresenceService } from './PresenceService';
-import { FileInfo } from '../types';
 
 /**
  * File sync event data

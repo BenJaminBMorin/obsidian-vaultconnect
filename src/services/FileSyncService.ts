@@ -810,7 +810,7 @@ export class FileSyncService {
       }
 
       default:
-        throw new Error(`Unknown operation: ${operation.operation}`);
+        throw new Error(`Unknown operation: ${String(operation.operation)}`);
     }
   }
 

@@ -390,7 +390,7 @@ export class BatchService {
         break;
         
       default:
-        throw new Error(`Unknown operation type: ${operation.type}`);
+        throw new Error(`Unknown operation type: ${String(operation.type)}`);
     }
   }
 

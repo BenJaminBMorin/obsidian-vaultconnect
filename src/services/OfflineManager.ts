@@ -186,7 +186,7 @@ export class OfflineManager {
           operation = 'rename';
           break;
         default:
-          console.warn(`OfflineManager: Unknown action type: ${action}`);
+          console.warn(`OfflineManager: Unknown action type: ${String(action)}`);
           return;
       }
 

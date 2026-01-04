@@ -283,15 +283,15 @@ export class ErrorNotificationService {
     const details: string[] = [];
 
     if (context.path) {
-      details.push(`File: ${context.path}`);
+      details.push(`File: ${String(context.path)}`);
     }
 
     if (context.operation) {
-      details.push(`Operation: ${context.operation}`);
+      details.push(`Operation: ${String(context.operation)}`);
     }
 
     if (context.source) {
-      details.push(`Source: ${context.source}`);
+      details.push(`Source: ${String(context.source)}`);
     }
 
     return details.join(' | ');

@@ -1,4 +1,4 @@
-import { requestUrl, RequestUrlParam, RequestUrlResponse } from 'obsidian';
+import { requestUrl, RequestUrlParam } from 'obsidian';
 import { AuthService } from '../services/AuthService';
 import { VaultInfo, FileInfo, FileContent, ConflictInfo, ConflictType } from '../types';
 import { API_ENDPOINTS } from '../utils/constants';

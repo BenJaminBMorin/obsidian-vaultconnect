@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, Notice, Modal, TFile, TAbstractFile, WorkspaceLeaf, Menu } from 'obsidian';
+import { App, Plugin, PluginSettingTab, Setting, Notice, Modal, TFile, TAbstractFile, Menu } from 'obsidian';
 import { io, Socket } from 'socket.io-client';
 import { SyncService, SyncMode } from './src/services/SyncService';
 import { FileSyncService } from './src/services/FileSyncService';
@@ -19,7 +19,7 @@ import { logger, LogLevel, LOG_LEVEL_NAMES, LOG_LEVEL_DESCRIPTIONS } from './src
 import { VaultService } from './src/services/VaultService';
 import { AuthService } from './src/services/AuthService';
 import { VaultInfo } from './src/types';
-import { requestUrl, RequestUrlParam } from 'obsidian';
+import { requestUrl } from 'obsidian';
 
 // Event data types
 interface SyncEventData {
@@ -1075,7 +1075,7 @@ export default class VaultSyncPlugin extends Plugin {
 	}
 
 	handleConflict(data: ConflictEventData) {
-		const { file_path, local_hash, remote_hash } = data;
+		const { file_path } = data;
 		new Notice(`Conflict detected in ${file_path}. Please resolve manually.`, 10000);
 		// TODO: Implement conflict resolution UI
 	}
@@ -1620,7 +1620,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 								modal.titleEl.setText('Authorize VaultConnect');
 								const codeEl = modal.contentEl.createDiv({ cls: 'vaultconnect-auth-modal' });
 
-								const instructionEl = codeEl.createEl('p', { text: 'Enter this code in your browser:', cls: 'vaultconnect-auth-instruction' });
+								codeEl.createEl('p', { text: 'Enter this code in your browser:', cls: 'vaultconnect-auth-instruction' });
 
 								const codeDisplay = codeEl.createDiv({ cls: 'vaultconnect-auth-code' });
 								codeDisplay.setText(deviceData.user_code);

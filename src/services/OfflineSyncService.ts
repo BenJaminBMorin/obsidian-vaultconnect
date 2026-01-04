@@ -316,7 +316,7 @@ export class OfflineSyncService {
         default:
           return {
             success: false,
-            error: `Unknown operation type: ${operation.operation}`
+            error: `Unknown operation type: ${String(operation.operation)}`
           };
       }
     } catch (error) {

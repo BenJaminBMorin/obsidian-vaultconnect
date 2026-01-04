@@ -1,6 +1,5 @@
 import { Plugin, requestUrl } from 'obsidian';
 import { EventBus, EVENTS } from '../core/EventBus';
-import { parseErrorMessage } from '../utils/helpers';
 
 export interface AuthResult {
   apiKey: string;
