@@ -36,74 +36,64 @@ export class InitialSyncProgressModal extends Modal {
     contentEl.createEl('h2', { text: 'Syncing Files...' });
 
     // Content container
-    this.contentContainer = contentEl.createDiv({ cls: 'progress-content' });
-    this.contentContainer.style.minHeight = '200px';
-    this.contentContainer.style.display = 'flex';
-    this.contentContainer.style.flexDirection = 'column';
-    this.contentContainer.style.gap = '15px';
+    this.contentContainer = contentEl.createDiv('progress-content');
+    this.contentContainer.addClass('vaultconnect-min-h-200');
+    this.contentContainer.addClass('vaultconnect-flex');
+    this.contentContainer.addClass('vaultconnect-flex-col');
+    this.contentContainer.addClass('vaultconnect-gap-md');
 
     // Operation label
-    this.operationLabel = this.contentContainer.createDiv({ cls: 'operation-label' });
-    this.operationLabel.style.fontSize = '1em';
-    this.operationLabel.style.fontWeight = '500';
-    this.operationLabel.style.color = 'var(--text-normal)';
+    this.operationLabel = this.contentContainer.createDiv('operation-label');
+    this.operationLabel.addClass('vaultconnect-font-medium');
+    this.operationLabel.addClass('vaultconnect-text-normal');
     this.operationLabel.textContent = 'Preparing...';
 
     // Current file label
-    this.currentFileLabel = this.contentContainer.createDiv({ cls: 'current-file-label' });
-    this.currentFileLabel.style.fontSize = '0.9em';
-    this.currentFileLabel.style.color = 'var(--text-muted)';
-    this.currentFileLabel.style.whiteSpace = 'nowrap';
-    this.currentFileLabel.style.overflow = 'hidden';
-    this.currentFileLabel.style.textOverflow = 'ellipsis';
+    this.currentFileLabel = this.contentContainer.createDiv('current-file-label');
+    this.currentFileLabel.addClass('vaultconnect-text-sm');
+    this.currentFileLabel.addClass('vaultconnect-text-muted');
+    this.currentFileLabel.addClass('vaultconnect-text-ellipsis');
     this.currentFileLabel.textContent = '';
 
     // Progress bar container
-    const progressBarContainer = this.contentContainer.createDiv({ cls: 'progress-bar-container' });
-    progressBarContainer.style.position = 'relative';
-    progressBarContainer.style.width = '100%';
-    progressBarContainer.style.height = '30px';
-    progressBarContainer.style.backgroundColor = 'var(--background-modifier-border)';
-    progressBarContainer.style.borderRadius = '4px';
-    progressBarContainer.style.overflow = 'hidden';
+    const progressBarContainer = this.contentContainer.createDiv('progress-bar-container');
+    progressBarContainer.addClass('vaultconnect-progress-bar');
+    progressBarContainer.addClass('vaultconnect-relative');
+    progressBarContainer.addClass('vaultconnect-w-full');
+    progressBarContainer.addClass('vaultconnect-h-30');
+    progressBarContainer.addClass('vaultconnect-rounded-md');
+    progressBarContainer.addClass('vaultconnect-overflow-hidden');
 
     // Progress bar fill
-    this.progressBarFill = progressBarContainer.createDiv({ cls: 'progress-bar-fill' });
-    this.progressBarFill.style.height = '100%';
-    this.progressBarFill.style.width = '0%';
-    this.progressBarFill.style.backgroundColor = 'var(--interactive-accent)';
-    this.progressBarFill.style.transition = 'width 0.3s ease';
+    this.progressBarFill = progressBarContainer.createDiv('progress-bar-fill');
+    this.progressBarFill.addClass('vaultconnect-progress-bar-fill');
+    this.progressBarFill.addClass('vaultconnect-h-full');
 
     // Progress percentage overlay
-    this.progressPercentage = progressBarContainer.createDiv({ cls: 'progress-percentage' });
-    this.progressPercentage.style.position = 'absolute';
-    this.progressPercentage.style.top = '50%';
-    this.progressPercentage.style.left = '50%';
-    this.progressPercentage.style.transform = 'translate(-50%, -50%)';
-    this.progressPercentage.style.fontSize = '0.9em';
-    this.progressPercentage.style.fontWeight = 'bold';
-    this.progressPercentage.style.color = 'var(--text-on-accent)';
-    this.progressPercentage.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.3)';
+    this.progressPercentage = progressBarContainer.createDiv('progress-percentage');
+    this.progressPercentage.addClass('vaultconnect-progress-percentage');
+    this.progressPercentage.addClass('vaultconnect-text-sm');
+    this.progressPercentage.addClass('vaultconnect-font-bold');
     this.progressPercentage.textContent = '0%';
 
     // File count label
-    this.fileCountLabel = this.contentContainer.createDiv({ cls: 'file-count-label' });
-    this.fileCountLabel.style.fontSize = '0.9em';
-    this.fileCountLabel.style.color = 'var(--text-muted)';
-    this.fileCountLabel.style.textAlign = 'center';
+    this.fileCountLabel = this.contentContainer.createDiv('file-count-label');
+    this.fileCountLabel.addClass('vaultconnect-text-sm');
+    this.fileCountLabel.addClass('vaultconnect-text-muted');
+    this.fileCountLabel.addClass('vaultconnect-text-center');
     this.fileCountLabel.textContent = '0 of 0 files completed';
 
     // Estimated time label
-    this.estimatedTimeLabel = this.contentContainer.createDiv({ cls: 'estimated-time-label' });
-    this.estimatedTimeLabel.style.fontSize = '0.9em';
-    this.estimatedTimeLabel.style.color = 'var(--text-muted)';
-    this.estimatedTimeLabel.style.textAlign = 'center';
+    this.estimatedTimeLabel = this.contentContainer.createDiv('estimated-time-label');
+    this.estimatedTimeLabel.addClass('vaultconnect-text-sm');
+    this.estimatedTimeLabel.addClass('vaultconnect-text-muted');
+    this.estimatedTimeLabel.addClass('vaultconnect-text-center');
     this.estimatedTimeLabel.textContent = '';
 
     // Button container
-    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-    buttonContainer.style.marginTop = '20px';
-    buttonContainer.style.textAlign = 'right';
+    const buttonContainer = contentEl.createDiv('modal-button-container');
+    buttonContainer.addClass('vaultconnect-mt-lg');
+    buttonContainer.addClass('vaultconnect-text-right');
 
     // Cancel button (shown during operation)
     this.cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
@@ -115,7 +105,7 @@ export class InitialSyncProgressModal extends Modal {
 
     // Close button (shown after completion or error, initially hidden)
     this.closeButton = buttonContainer.createEl('button', { text: 'Close' });
-    this.closeButton.style.display = 'none';
+    this.closeButton.addClass('vaultconnect-hidden');
     this.closeButton.addEventListener('click', () => {
       this.close();
     });
@@ -180,24 +170,24 @@ export class InitialSyncProgressModal extends Modal {
     const header = this.contentEl.querySelector('h2');
     if (header) {
       header.textContent = '✓ Sync Complete';
-      header.style.color = 'var(--text-success)';
+      header.addClass('vaultconnect-text-success');
     }
 
     // Update operation label
     if (this.operationLabel) {
       this.operationLabel.textContent = summary;
-      this.operationLabel.style.color = 'var(--text-success)';
+      this.operationLabel.addClass('vaultconnect-text-success');
     }
 
     // Hide current file label
     if (this.currentFileLabel) {
-      this.currentFileLabel.style.display = 'none';
+      this.currentFileLabel.addClass('vaultconnect-hidden');
     }
 
     // Set progress bar to 100% and change color
     if (this.progressBarFill) {
       this.progressBarFill.style.width = '100%';
-      this.progressBarFill.style.backgroundColor = 'var(--text-success)';
+      this.progressBarFill.addClass('vaultconnect-bg-success');
     }
 
     // Update progress percentage
@@ -207,15 +197,15 @@ export class InitialSyncProgressModal extends Modal {
 
     // Hide estimated time
     if (this.estimatedTimeLabel) {
-      this.estimatedTimeLabel.style.display = 'none';
+      this.estimatedTimeLabel.addClass('vaultconnect-hidden');
     }
 
     // Hide cancel button, show close button
     if (this.cancelButton) {
-      this.cancelButton.style.display = 'none';
+      this.cancelButton.addClass('vaultconnect-hidden');
     }
     if (this.closeButton) {
-      this.closeButton.style.display = 'inline-block';
+      this.closeButton.removeClass('vaultconnect-hidden');
       this.closeButton.addClass('mod-cta');
     }
   }
@@ -232,36 +222,36 @@ export class InitialSyncProgressModal extends Modal {
     const header = this.contentEl.querySelector('h2');
     if (header) {
       header.textContent = '✗ Sync Failed';
-      header.style.color = 'var(--text-error)';
+      header.addClass('vaultconnect-text-error');
     }
 
     // Update operation label
     if (this.operationLabel) {
       this.operationLabel.textContent = error;
-      this.operationLabel.style.color = 'var(--text-error)';
+      this.operationLabel.addClass('vaultconnect-text-error');
     }
 
     // Hide current file label
     if (this.currentFileLabel) {
-      this.currentFileLabel.style.display = 'none';
+      this.currentFileLabel.addClass('vaultconnect-hidden');
     }
 
     // Change progress bar color to error
     if (this.progressBarFill) {
-      this.progressBarFill.style.backgroundColor = 'var(--text-error)';
+      this.progressBarFill.addClass('vaultconnect-bg-error');
     }
 
     // Hide estimated time
     if (this.estimatedTimeLabel) {
-      this.estimatedTimeLabel.style.display = 'none';
+      this.estimatedTimeLabel.addClass('vaultconnect-hidden');
     }
 
     // Hide cancel button, show close button
     if (this.cancelButton) {
-      this.cancelButton.style.display = 'none';
+      this.cancelButton.addClass('vaultconnect-hidden');
     }
     if (this.closeButton) {
-      this.closeButton.style.display = 'inline-block';
+      this.closeButton.removeClass('vaultconnect-hidden');
     }
   }
 
