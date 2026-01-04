@@ -39,16 +39,18 @@ export class RecentActivityView extends ItemView {
     return 'clock';
   }
 
-  async onOpen(): Promise<void> {
+  onOpen(): Promise<void> {
     this.viewContainerEl = this.contentEl;
     this.viewContainerEl.empty();
     this.viewContainerEl.addClass('vaultsync-recent-activity-view');
 
     this.render();
+    return Promise.resolve();
   }
 
-  async onClose(): Promise<void> {
+  onClose(): Promise<void> {
     this.viewContainerEl.empty();
+    return Promise.resolve();
   }
 
   /**

@@ -32,7 +32,7 @@ export class ConflictListView extends ItemView {
   }
 
   async onOpen() {
-    await this.refresh();
+    this.refresh();
   }
 
   refresh(): void {

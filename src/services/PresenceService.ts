@@ -124,10 +124,10 @@ export class PresenceService {
     this.currentUserName = userName;
     this.lastActivity = new Date();
     this.isIdle = false;
-    
+
     // Broadcast initial presence
-    await this.broadcastPresence();
-    
+    this.broadcastPresence();
+
     // Start heartbeat
     this.startHeartbeat();
     
@@ -139,12 +139,12 @@ export class PresenceService {
    */
   async stopTracking(): Promise<void> {
     this.log('Stopping presence tracking');
-    
+
     // Broadcast offline status
     if (this.currentVaultId && this.currentUserId) {
-      await this.broadcastPresence('offline');
+      this.broadcastPresence('offline');
     }
-    
+
     // Stop heartbeat
     this.stopHeartbeat();
     
@@ -189,21 +189,21 @@ export class PresenceService {
    */
   async updateActivity(activity: UserActivity): Promise<void> {
     this.lastActivity = new Date();
-    
+
     // If was idle, mark as active again
     if (this.isIdle) {
       this.isIdle = false;
-      await this.broadcastPresence('active');
+      this.broadcastPresence('active');
     }
-    
+
     // Update current file if changed
     if (activity.filePath !== this.currentFile) {
       const oldFile = this.currentFile;
       this.currentFile = activity.filePath;
-      
+
       // Broadcast file change
-      await this.broadcastPresence();
-      
+      this.broadcastPresence();
+
       // Emit file opened/closed events
       if (oldFile) {
         this.eventBus.emit(EVENTS.FILE_CLOSED, this.currentUserId, oldFile);

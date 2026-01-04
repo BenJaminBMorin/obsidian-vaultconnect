@@ -35,7 +35,7 @@ export class DeviceAuthModal extends Modal {
     contentEl.empty();
     contentEl.addClass('vaultsync-device-auth-modal');
 
-    contentEl.createEl('h2', { text: 'Authorize Vault Connect' });
+    contentEl.createEl('h2', { text: 'Authorize vault connect' });
 
     contentEl.createEl('p', {
       text: 'To connect your Obsidian vault, authorize this device from your browser.',
@@ -133,7 +133,7 @@ export class DeviceAuthModal extends Modal {
       cls: 'instruction-step'
     });
     instructionsDiv.createEl('p', {
-      text: '4. Click "Authorize" to complete the process',
+      text: '4. Click "authorize" to complete the process',
       cls: 'instruction-step'
     });
 

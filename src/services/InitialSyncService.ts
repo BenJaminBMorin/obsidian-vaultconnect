@@ -441,10 +441,11 @@ export class InitialSyncService {
       ]);
 
       // Race between analysis and timeout
-      const [localPaths, remotePaths] = await Promise.race([
+      const result = await Promise.race([
         analysisPromise,
         timeoutPromise
       ]);
+      const [localPaths, remotePaths] = result;
 
       // Check if cancelled
       if (this.cancelRequested) {

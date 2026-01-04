@@ -54,10 +54,10 @@ export class YjsProvider {
   async initialize(vaultId: string): Promise<void> {
     this.vaultId = vaultId;
     this.log(`Initialized with vault ${vaultId}`);
-    
+
     // Load persisted documents
     if (this.persistenceEnabled) {
-      await this.loadPersistedDocuments();
+      this.loadPersistedDocuments();
     }
   }
 
@@ -132,7 +132,7 @@ export class YjsProvider {
 
     // Load persisted state if available
     if (this.persistenceEnabled) {
-      await this.loadDocumentState(filePath, doc);
+      this.loadDocumentState(filePath, doc);
     }
 
     this.log(`Created document for ${filePath}`);

@@ -216,7 +216,7 @@ export class CollaborationService {
       throw new Error(`No active collaboration for ${filePath}`);
     }
 
-    await this.yjsProvider.syncDocument(filePath);
+    this.yjsProvider.syncDocument(filePath);
   }
 
   /**

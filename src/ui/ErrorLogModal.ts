@@ -65,19 +65,19 @@ export class ErrorLogModal extends Modal {
     const filters = contentEl.createDiv('vaultsync-error-log-filters');
 
     // Type filters
-    const typeFilters = ['all', ...Object.values(ErrorType)];
+    const typeFilters: ('all' | ErrorType)[] = ['all', ...Object.values(ErrorType)];
     typeFilters.forEach(type => {
       const button = filters.createEl('button', {
         text: type === 'all' ? 'All types' : this.formatErrorType(type as ErrorType),
         cls: 'vaultsync-error-log-filter-button'
       });
 
-      if ((type === 'all' && this.currentFilter === 'all') || (type !== 'all' && type === this.currentFilter)) {
+      if (type === this.currentFilter) {
         button.addClass('active');
       }
 
       button.addEventListener('click', () => {
-        this.currentFilter = type as ErrorType | 'all';
+        this.currentFilter = type;
         this.refresh();
       });
     });
@@ -90,12 +90,12 @@ export class ErrorLogModal extends Modal {
         cls: 'vaultsync-error-log-filter-button'
       });
 
-      if ((severity === 'all' && this.currentSeverityFilter === 'all') || (severity !== 'all' && severity === this.currentSeverityFilter)) {
+      if (severity === this.currentSeverityFilter) {
         button.addClass('active');
       }
 
       button.addEventListener('click', () => {
-        this.currentSeverityFilter = severity as ErrorSeverity | 'all';
+        this.currentSeverityFilter = severity;
         this.refresh();
       });
     });

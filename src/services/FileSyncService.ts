@@ -471,9 +471,9 @@ export class FileSyncService {
         console.debug(`[Download Debug] Local hash AFTER modify: ${afterHash}`);
         console.debug(`[Download Debug] Local content length AFTER: ${afterContent.length}`);
         console.debug(`[Download Debug] Hash matches remote? ${afterHash === remoteFile.hash}`);
-        
+
         // Preserve original file timestamps to prevent sync conflicts
-        await this.preserveFileTimestamps(localFile, remoteFile.created_at, remoteFile.updated_at);
+        this.preserveFileTimestamps(localFile, remoteFile.created_at, remoteFile.updated_at);
       } else {
         // Create new file - ensure parent folders exist
         const folderPath = filePath.substring(0, filePath.lastIndexOf('/'));
@@ -506,9 +506,9 @@ export class FileSyncService {
           // Text files: use create directly
           createdFile = await this.vault.create(filePath, remoteFile.content);
         }
-        
+
         // Preserve original file timestamps to prevent sync conflicts
-        await this.preserveFileTimestamps(createdFile, remoteFile.created_at, remoteFile.updated_at);
+        this.preserveFileTimestamps(createdFile, remoteFile.created_at, remoteFile.updated_at);
       }
 
       // Update sync state

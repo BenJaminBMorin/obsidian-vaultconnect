@@ -40,19 +40,21 @@ export class ActiveUsersView extends ItemView {
     return 'users';
   }
 
-  async onOpen(): Promise<void> {
+  onOpen(): Promise<void> {
     this.viewContainerEl = this.contentEl;
     this.viewContainerEl.empty();
     this.viewContainerEl.addClass('vaultsync-active-users-view');
 
     this.render();
+    return Promise.resolve();
   }
 
-  async onClose(): Promise<void> {
+  onClose(): Promise<void> {
     this.viewContainerEl.empty();
     // Unsubscribe from all events
     this.unsubscribers.forEach(unsub => unsub());
     this.unsubscribers = [];
+    return Promise.resolve();
   }
 
   /**

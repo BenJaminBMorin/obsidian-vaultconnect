@@ -17,20 +17,20 @@ export class AuthModal extends Modal {
   }
 
   onOpen() {
-    const { contentEl } = this;
+    const { contentEl} = this;
     contentEl.empty();
 
-    contentEl.createEl('h2', { text: 'Vault Connect authentication' });
+    contentEl.createEl('h2', { text: 'Vault connect authentication' });
 
     contentEl.createEl('p', {
-      text: 'Enter your Vault Connect API key to connect your vault. You can generate an API key from your Vault Connect dashboard.',
+      text: 'Enter your vault connect API key to connect your vault. You can generate an API key from your vault connect dashboard.',
       cls: 'setting-item-description'
     });
 
     // API Key input
     new Setting(contentEl)
       .setName('API key')
-      .setDesc('Your Vault Connect API key (starts with vb_live_ or vb_test_)')
+      .setDesc('Your vault connect API key (starts with vb_live_ or vb_test_)')
       .addText(text => {
         text
           .setPlaceholder('vb_live_...')
@@ -116,7 +116,7 @@ export class AuthModal extends Modal {
       // Store the API key
       await this.authService.storeApiKey(this.apiKeyInput, expiresAt);
 
-      new Notice('Successfully authenticated with Vault Connect!');
+      new Notice('Successfully authenticated with vault connect!');
       this.close();
       this.onSuccess();
     } catch (error) {

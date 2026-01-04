@@ -902,7 +902,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   // Settings import/export
-  private async exportSettings(): Promise<void> {
+  private exportSettings(): void {
     try {
       const pluginExt = this.plugin as unknown as PluginWithServices;
 
@@ -952,12 +952,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     }
   }
 
-  private async importSettings(): Promise<void> {
+  private importSettings(): void {
     try {
       const input = document.createElement('input');
       input.type = 'file';
       input.accept = 'application/json';
-      
+
       input.onchange = async (e: Event) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (!file) return;

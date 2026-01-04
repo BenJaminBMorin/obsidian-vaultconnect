@@ -281,17 +281,17 @@ export class ErrorNotificationService {
   private formatContextDetails(context: Record<string, unknown>): string {
     const details: string[] = [];
 
-    if (context.path) {
+    if (context.path !== null && context.path !== undefined) {
       const pathValue = typeof context.path === 'string' ? context.path : String(context.path);
       details.push(`File: ${pathValue}`);
     }
 
-    if (context.operation) {
+    if (context.operation !== null && context.operation !== undefined) {
       const opValue = typeof context.operation === 'string' ? context.operation : String(context.operation);
       details.push(`Operation: ${opValue}`);
     }
 
-    if (context.source) {
+    if (context.source !== null && context.source !== undefined) {
       const sourceValue = typeof context.source === 'string' ? context.source : String(context.source);
       details.push(`Source: ${sourceValue}`);
     }

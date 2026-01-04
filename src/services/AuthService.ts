@@ -352,7 +352,7 @@ export class AuthService {
       };
 
       // Start polling
-      const intervalId = setInterval(poll, pollInterval);
+      const intervalId = setInterval(() => { void poll(); }, pollInterval);
 
       // Do first poll immediately
       void poll();

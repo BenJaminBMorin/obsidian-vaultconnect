@@ -160,13 +160,15 @@ export class OfflineQueueService {
       this.queue[index].status = 'synced';
 
       // Remove synced operations after a short delay
-      void setTimeout(async () => {
-        const idx = this.queue.findIndex(op => op.id === id);
-        if (idx !== -1 && this.queue[idx].status === 'synced') {
-          this.queue.splice(idx, 1);
-          await this.persistQueue();
-          this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
-        }
+      void setTimeout(() => {
+        void (async () => {
+          const idx = this.queue.findIndex(op => op.id === id);
+          if (idx !== -1 && this.queue[idx].status === 'synced') {
+            this.queue.splice(idx, 1);
+            await this.persistQueue();
+            this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getStats());
+          }
+        })();
       }, 5000); // Keep for 5 seconds for UI feedback
       
       await this.persistQueue();

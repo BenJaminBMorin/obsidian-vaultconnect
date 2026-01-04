@@ -182,10 +182,10 @@ export class LargeFileService {
       
       // Upload chunks
       await this.uploadChunks(session);
-      
+
       // Finalize upload
-      await this.finalizeUpload(session, fileId);
-      
+      this.finalizeUpload(session, fileId);
+
       // Update statistics
       this.stats.successfulUploads++;
       this.stats.totalBytesUploaded += session.totalSize;
