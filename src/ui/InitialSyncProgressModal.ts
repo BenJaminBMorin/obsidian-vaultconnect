@@ -136,7 +136,7 @@ export class InitialSyncProgressModal extends Modal {
     // Update progress bar
     if (this.progressBarFill) {
       const percentage = Math.min(100, Math.max(0, info.percentage));
-      this.progressBarFill.style.width = `${percentage}%`;
+      this.progressBarFill.setCssProps({ width: `${percentage}%` });
     }
 
     // Update progress percentage
@@ -186,7 +186,7 @@ export class InitialSyncProgressModal extends Modal {
 
     // Set progress bar to 100% and change color
     if (this.progressBarFill) {
-      this.progressBarFill.style.width = '100%';
+      this.progressBarFill.setCssProps({ width: '100%' });
       this.progressBarFill.addClass('vaultconnect-bg-success');
     }
 

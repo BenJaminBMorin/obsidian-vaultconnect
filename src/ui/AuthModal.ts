@@ -20,17 +20,17 @@ export class AuthModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    contentEl.createEl('h2', { text: 'VaultConnect authentication' });
+    contentEl.createEl('h2', { text: 'Vault Connect authentication' });
 
     contentEl.createEl('p', {
-      text: 'Enter your VaultConnect API key to connect your vault. You can generate an API key from your VaultConnect dashboard.',
+      text: 'Enter your Vault Connect API key to connect your vault. You can generate an API key from your Vault Connect dashboard.',
       cls: 'setting-item-description'
     });
 
     // API Key input
     new Setting(contentEl)
       .setName('API key')
-      .setDesc('Your VaultConnect API key (starts with vb_live_ or vb_test_)')
+      .setDesc('Your Vault Connect API key (starts with vb_live_ or vb_test_)')
       .addText(text => {
         text
           .setPlaceholder('vb_live_...')
@@ -116,7 +116,7 @@ export class AuthModal extends Modal {
       // Store the API key
       await this.authService.storeApiKey(this.apiKeyInput, expiresAt);
 
-      new Notice('Successfully authenticated with VaultConnect!');
+      new Notice('Successfully authenticated with Vault Connect!');
       this.close();
       this.onSuccess();
     } catch (error) {
@@ -147,7 +147,7 @@ export class AuthModal extends Modal {
     });
 
     contentEl.createEl('p', {
-      text: 'Important: The API key will only be shown once. Make sure to copy it before closing the dialog.',
+      text: 'Important: the API key will only be shown once. Make sure to copy it before closing the dialog.',
       cls: 'mod-warning'
     });
 

@@ -35,7 +35,7 @@ export class DeviceAuthModal extends Modal {
     contentEl.empty();
     contentEl.addClass('vaultsync-device-auth-modal');
 
-    contentEl.createEl('h2', { text: 'Authorize VaultConnect' });
+    contentEl.createEl('h2', { text: 'Authorize Vault Connect' });
 
     contentEl.createEl('p', {
       text: 'To connect your Obsidian vault, authorize this device from your browser.',
@@ -106,7 +106,7 @@ export class DeviceAuthModal extends Modal {
 
     // Copy button
     const copyButton = codeDisplay.createEl('button', {
-      text: '📋 Copy',
+      text: '📋 Copy code',
       cls: 'user-code-copy-btn'
     });
     copyButton.addEventListener('click', () => {
@@ -114,7 +114,7 @@ export class DeviceAuthModal extends Modal {
       new Notice('Code copied to clipboard!');
       copyButton.textContent = '✓ Copied';
       setTimeout(() => {
-        copyButton.textContent = '📋 Copy';
+        copyButton.textContent = '📋 Copy code';
       }, 2000);
     });
 

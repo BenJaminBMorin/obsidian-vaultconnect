@@ -155,7 +155,7 @@ export default class VaultSyncPlugin extends Plugin {
 		);
 
 		// Add ribbon icon with menu
-		this.ribbonIconEl = this.addRibbonIcon('sync', 'VaultConnect', (evt: MouseEvent) => {
+		this.ribbonIconEl = this.addRibbonIcon('sync', 'Vault Connect', (evt: MouseEvent) => {
 			this.showSyncMenu(evt);
 		});
 		this.updateRibbonIcon();
@@ -599,9 +599,11 @@ export default class VaultSyncPlugin extends Plugin {
 			clearTimeout(existingTimeout);
 		}
 
-		const timeout = setTimeout(async () => {
-			this.fileChangeDebounce.delete(file.path);
-			await this.syncFile(file, action);
+		const timeout = setTimeout(() => {
+			void (async () => {
+				this.fileChangeDebounce.delete(file.path);
+				await this.syncFile(file, action);
+			})();
 		}, 1000); // 1 second debounce
 
 		this.fileChangeDebounce.set(file.path, timeout);
@@ -825,9 +827,9 @@ export default class VaultSyncPlugin extends Plugin {
 				
 				// Show appropriate success message
 				if (completedInitialSync) {
-					new Notice('Initial sync complete! Connected to VaultConnect');
+					new Notice('Initial sync complete! Connected to Vault Connect');
 				} else {
-					new Notice('Connected to VaultConnect');
+					new Notice('Connected to Vault Connect');
 				}
 
 				// Subscribe to vault
@@ -899,7 +901,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		this.isConnected = false;
 		this.updateStatusBar('disconnected');
-		new Notice('Disconnected from VaultConnect');
+		new Notice('Disconnected from Vault Connect');
 	}
 
 	/**
@@ -1105,7 +1107,7 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async performSmartSync(): Promise<void> {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultConnect');
+			new Notice('Not connected to Vault Connect');
 			return;
 		}
 
@@ -1142,7 +1144,7 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async performPullAll(): Promise<void> {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultConnect');
+			new Notice('Not connected to Vault Connect');
 			return;
 		}
 
@@ -1185,7 +1187,7 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async performPushAll(): Promise<void> {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultConnect');
+			new Notice('Not connected to Vault Connect');
 			return;
 		}
 
@@ -1228,7 +1230,7 @@ export default class VaultSyncPlugin extends Plugin {
 	 */
 	async performForceSync(): Promise<void> {
 		if (!this.isConnected) {
-			new Notice('Not connected to VaultConnect');
+			new Notice('Not connected to Vault Connect');
 			return;
 		}
 
@@ -1460,17 +1462,17 @@ export default class VaultSyncPlugin extends Plugin {
 		// Add appropriate status class
 		if (this.isSyncing) {
 			this.ribbonIconEl.addClass('vaultsync-syncing');
-			this.ribbonIconEl.setAttribute('aria-label', 'VaultConnect: Syncing...');
+			this.ribbonIconEl.setAttribute('aria-label', 'Vault Connect: Syncing...');
 		} else if (this.isConnected) {
 			this.ribbonIconEl.addClass('vaultsync-connected');
 			const conflictCount = this.conflictService?.getConflictCount() || 0;
 			const label = conflictCount > 0
-				? `VaultConnect: Connected (${conflictCount} conflicts)`
-				: 'VaultConnect: Connected';
+				? `Vault Connect: Connected (${conflictCount} conflicts)`
+				: 'Vault Connect: Connected';
 			this.ribbonIconEl.setAttribute('aria-label', label);
 		} else {
 			this.ribbonIconEl.addClass('vaultsync-disconnected');
-			this.ribbonIconEl.setAttribute('aria-label', 'VaultConnect: Disconnected');
+			this.ribbonIconEl.setAttribute('aria-label', 'Vault Connect: Disconnected');
 		}
 	}
 }
@@ -1488,13 +1490,13 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('VaultConnect settings')
+			.setName('Vault Connect settings')
 			.setHeading();
 
 		// API URL
 		new Setting(containerEl)
 			.setName('API URL')
-			.setDesc('VaultConnect API server URL')
+			.setDesc('Vault Connect API server URL')
 			.addText(text => text
 				.setPlaceholder('http://localhost:3001/v1')
 				.setValue(this.plugin.settings.apiUrl)
@@ -1506,7 +1508,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		// WebSocket URL
 		new Setting(containerEl)
 			.setName('WebSocket URL')
-			.setDesc('VaultConnect WebSocket server URL')
+			.setDesc('Vault Connect WebSocket server URL')
 			.addText(text => text
 				.setPlaceholder('http://localhost:3001')
 				.setValue(this.plugin.settings.wsUrl)
@@ -1617,7 +1619,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 
 								// Show user code
 								const modal = new Modal(this.app);
-								modal.titleEl.setText('Authorize VaultConnect');
+								modal.titleEl.setText('Authorize Vault Connect');
 								const codeEl = modal.contentEl.createDiv({ cls: 'vaultconnect-auth-modal' });
 
 								codeEl.createEl('p', { text: 'Enter this code in your browser:', cls: 'vaultconnect-auth-instruction' });

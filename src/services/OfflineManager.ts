@@ -104,7 +104,7 @@ export class OfflineManager {
     await this.offlineQueue.initialize();
 
     // Initialize offline sync
-    await this.offlineSync.initialize(vaultId);
+    this.offlineSync.initialize(vaultId);
 
     this.isInitialized = true;
     console.debug('OfflineManager: Initialized');

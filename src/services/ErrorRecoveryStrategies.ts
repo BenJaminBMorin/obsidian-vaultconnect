@@ -58,7 +58,7 @@ export class WebSocketReconnectionStrategy implements ErrorRecoveryStrategy {
     try {
       // Disconnect if still connected
       if (this.wsManager.isConnected()) {
-        await this.wsManager.disconnect();
+        this.wsManager.disconnect();
       }
 
       // Wait a bit before reconnecting

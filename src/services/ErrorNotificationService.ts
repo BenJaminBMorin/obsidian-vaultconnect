@@ -166,7 +166,7 @@ export class ErrorNotificationService {
 
     while (this.notificationQueue.length > 0) {
       const { error, options } = this.notificationQueue.shift()!;
-      await this.showErrorNotification(error, options);
+      this.showErrorNotification(error, options);
       
       // Small delay between notifications
       await new Promise(resolve => setTimeout(resolve, 500));

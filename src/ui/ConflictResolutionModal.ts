@@ -127,14 +127,14 @@ export class ConflictResolutionModal extends Modal {
       nav.addClass('vaultconnect-gap-md');
       nav.addClass('vaultconnect-mt-md');
 
-      const prevButton = nav.createEl('button', { text: '← Previous' });
+      const prevButton = nav.createEl('button', { text: '← Previous conflict' });
       prevButton.disabled = this.currentConflictIndex === 0;
       prevButton.addEventListener('click', () => {
         this.currentConflictIndex--;
         this.renderConflictView();
       });
 
-      const nextButton = nav.createEl('button', { text: 'Next →' });
+      const nextButton = nav.createEl('button', { text: 'Next conflict →' });
       nextButton.disabled = this.currentConflictIndex === this.conflicts.length - 1;
       nextButton.addEventListener('click', () => {
         this.currentConflictIndex++;

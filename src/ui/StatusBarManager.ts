@@ -173,12 +173,12 @@ export class StatusBarManager {
           tooltip: 'VaultConnect: Connecting...'
         };
 
-      case StatusBarState.CONNECTED:
+      case StatusBarState.CONNECTED: {
         const crossTenantIndicator = this.getCrossTenantIndicator();
-        const crossTenantTooltip = this.isCrossTenant 
-          ? `\nCross-tenant vault (${this.vaultPermission})` 
+        const crossTenantTooltip = this.isCrossTenant
+          ? `\nCross-tenant vault (${this.vaultPermission})`
           : '';
-        
+
         if (this.lastSyncTime) {
           const timeAgo = this.getTimeAgo(this.lastSyncTime);
           return {
@@ -192,6 +192,7 @@ export class StatusBarManager {
           text: `VaultConnect${crossTenantIndicator}`,
           tooltip: `VaultConnect: Connected${crossTenantTooltip}`
         };
+      }
 
       case StatusBarState.SYNCING:
         if (this.syncProgress) {

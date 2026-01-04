@@ -103,7 +103,7 @@ export class InitialSyncWizardModal extends Modal {
         description: 'Intelligently merge files from both locations:',
         bullets: [
           'Upload files only on this device',
-          'Download files only on VaultConnect',
+          'Download files only on Vault Connect',
           'Create conflict copies for different files'
         ],
         benefits: [
@@ -112,7 +112,7 @@ export class InitialSyncWizardModal extends Modal {
         ],
         buttonText: 'Select smart merge',
         buttonClass: 'mod-cta',
-        onClick: () => this.handleSmartMerge()
+        onClick: () => void this.handleSmartMerge()
       }
     );
 
@@ -124,14 +124,14 @@ export class InitialSyncWizardModal extends Modal {
         title: 'Start fresh',
         badge: 'Warning',
         badgeColor: 'var(--text-error)',
-        description: 'Clear this device and download from VaultConnect',
+        description: 'Clear this device and download from Vault Connect',
         bullets: analysis.localFiles.length > 0 || analysis.commonFiles.length > 0
           ? [`⚠️  Will delete ${analysis.localFiles.length + analysis.commonFiles.length} local file${analysis.localFiles.length + analysis.commonFiles.length === 1 ? '' : 's'}`]
           : ['No local files will be deleted'],
         benefits: [],
         buttonText: 'Select start fresh',
         buttonClass: '',
-        onClick: () => this.handleStartFresh()
+        onClick: () => void this.handleStartFresh()
       }
     );
 
@@ -143,14 +143,14 @@ export class InitialSyncWizardModal extends Modal {
         title: 'Upload local files',
         badge: analysis.commonFiles.length > 0 ? 'Warning' : undefined,
         badgeColor: 'var(--text-error)',
-        description: 'Upload all files from this device to VaultConnect',
+        description: 'Upload all files from this device to Vault Connect',
         bullets: analysis.commonFiles.length > 0
           ? [`⚠️  Will overwrite ${analysis.commonFiles.length} remote file${analysis.commonFiles.length === 1 ? '' : 's'}`]
           : ['No remote files will be overwritten'],
         benefits: [],
         buttonText: 'Select upload local',
         buttonClass: '',
-        onClick: () => this.handleUploadLocal()
+        onClick: () => void this.handleUploadLocal()
       }
     );
   }
@@ -293,7 +293,7 @@ export class InitialSyncWizardModal extends Modal {
 
       remoteRow.createSpan({ text: '☁️' });
       remoteRow.createSpan({
-        text: `${analysis.remoteFiles.length} file${analysis.remoteFiles.length === 1 ? '' : 's'} only on VaultConnect`
+        text: `${analysis.remoteFiles.length} file${analysis.remoteFiles.length === 1 ? '' : 's'} only on Vault Connect`
       });
     }
 
@@ -388,7 +388,7 @@ export class InitialSyncWizardModal extends Modal {
           }
 
           warning.createEl('p', {
-            text: 'These files will be permanently deleted and replaced with files from VaultConnect.',
+            text: 'These files will be permanently deleted and replaced with files from Vault Connect.',
             cls: 'mod-warning'
           });
 
@@ -462,7 +462,7 @@ export class InitialSyncWizardModal extends Modal {
           warning.addClass('vaultconnect-mb-md');
 
           warning.createEl('p', {
-            text: `This will overwrite ${fileCount} file${fileCount === 1 ? '' : 's'} on VaultConnect with your local versions.`
+            text: `This will overwrite ${fileCount} file${fileCount === 1 ? '' : 's'} on Vault Connect with your local versions.`
           });
 
           warning.createEl('p', {

@@ -31,7 +31,7 @@ export class SettingsManager {
       }
 
       // Migrate settings if needed
-      const migratedData = await this.migrateSettings(data);
+      const migratedData = this.migrateSettings(data);
       
       // Merge with defaults to ensure all fields exist
       this.settings = Object.assign({}, DEFAULT_SETTINGS, migratedData);

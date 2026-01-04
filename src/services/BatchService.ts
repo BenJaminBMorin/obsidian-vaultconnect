@@ -416,8 +416,8 @@ export class BatchService {
       clearTimeout(this.batchTimer);
       this.batchTimer = null;
     }
-    
-    await this.processBatches();
+
+    this.processBatches();
     
     // Wait for all active batches to complete
     while (this.activeBatches > 0) {

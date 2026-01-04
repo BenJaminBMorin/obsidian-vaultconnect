@@ -1,6 +1,6 @@
-import { ItemView, WorkspaceLeaf, Notice } from 'obsidian';
+import { ItemView, WorkspaceLeaf } from 'obsidian';
 import { ConflictService } from '../services/ConflictService';
-import { ConflictInfo } from '../types';
+import { ConflictInfo, ConflictType } from '../types';
 import { formatRelativeTime } from '../utils/helpers';
 import { ConflictResolutionModal } from './ConflictResolutionModal';
 
@@ -144,9 +144,9 @@ export class ConflictListView extends ItemView {
     badge.addClass('vaultconnect-mb-sm');
     badge.setCssProps({ 'font-size': '0.75em' });
 
-    if (conflict.conflictType === 'content') {
+    if (conflict.conflictType === ConflictType.CONTENT) {
       badge.addClass('vaultconnect-badge--error');
-    } else if (conflict.conflictType === 'deletion') {
+    } else if (conflict.conflictType === ConflictType.DELETION) {
       badge.addClass('vaultconnect-badge--warning');
     }
 
