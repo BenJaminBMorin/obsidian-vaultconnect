@@ -151,7 +151,7 @@ export class RecentActivityView extends ItemView {
 
     // Click to open file
     entryEl.addEventListener('click', () => {
-      this.openFile(entry.filePath);
+      void this.openFile(entry.filePath);
     });
   }
 

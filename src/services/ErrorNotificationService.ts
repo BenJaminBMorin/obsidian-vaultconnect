@@ -135,7 +135,7 @@ export class ErrorNotificationService {
 
     // Report error if enabled
     if (this.config.enableErrorReporting) {
-      this.reportError(vaultSyncError);
+      void this.reportError(vaultSyncError);
     }
   }
 
@@ -151,7 +151,7 @@ export class ErrorNotificationService {
    */
   private queueNotification(error: VaultSyncError, options?: NotificationOptions): void {
     this.notificationQueue.push({ error, options });
-    this.processNotificationQueue();
+    void this.processNotificationQueue();
   }
 
   /**
@@ -383,7 +383,7 @@ export class ErrorNotificationService {
     this.showErrorNotification(error, {
       actionButton: {
         text: 'Retry now',
-        callback: retryCallback
+        callback: () => void retryCallback()
       }
     });
   }
@@ -395,7 +395,7 @@ export class ErrorNotificationService {
     this.showErrorNotification(error, {
       actionButton: {
         text: 'Log in',
-        callback: loginCallback
+        callback: () => void loginCallback()
       }
     });
   }
@@ -419,11 +419,11 @@ export class ErrorNotificationService {
           originalError: error.originalError
         }
       );
-      this.showErrorNotification(updatedError, {
+      void this.showErrorNotification(updatedError, {
         showDetails: true
       });
     } else {
-      this.showErrorNotification(error, {
+      void this.showErrorNotification(error, {
         showDetails: true
       });
     }

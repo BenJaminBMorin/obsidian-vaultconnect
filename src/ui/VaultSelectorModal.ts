@@ -133,7 +133,7 @@ export class VaultSelectorModal extends Modal {
 
     // Click handler
     item.addEventListener('click', () => {
-      this.selectVault(vault);
+      void this.selectVault(vault);
     });
 
     // Vault name
@@ -194,22 +194,24 @@ export class VaultSelectorModal extends Modal {
 
     const backButton = buttonContainer.createEl('button', { text: 'Back' });
     backButton.addEventListener('click', () => {
-      this.onOpen();
+      void this.onOpen();
     });
 
     const createButton = buttonContainer.createEl('button', {
       text: 'Create',
       cls: 'mod-cta'
     });
-    createButton.addEventListener('click', async () => {
-      await this.createVault(vaultName);
+    createButton.addEventListener('click', () => {
+      void (async () => {
+        await this.createVault(vaultName);
+      })();
     });
 
     // Handle Enter key
     contentEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        this.createVault(vaultName);
+        void this.createVault(vaultName);
       }
     });
   }

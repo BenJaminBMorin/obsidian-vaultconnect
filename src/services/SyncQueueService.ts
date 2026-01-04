@@ -144,7 +144,7 @@ export class SyncQueueService {
 
     this.isProcessing = true;
     console.debug('SyncQueueService: Started processing');
-    this.processQueue();
+    void this.processQueue();
   }
 
   /**
@@ -238,7 +238,7 @@ export class SyncQueueService {
         
         setTimeout(() => {
           operation.status = 'pending';
-          this.persistQueue();
+          void this.persistQueue();
         }, delay);
       }
 

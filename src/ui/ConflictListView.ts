@@ -72,7 +72,7 @@ export class ConflictListView extends ItemView {
     });
     refreshBtn.addClass('vaultconnect-mt-sm');
     refreshBtn.addEventListener('click', () => {
-      this.refresh();
+      void this.refresh();
     });
 
     // Content
@@ -180,7 +180,7 @@ export class ConflictListView extends ItemView {
       this.conflictService,
       () => {
         // Refresh the list after resolution
-        this.refresh();
+        void this.refresh();
       }
     );
 

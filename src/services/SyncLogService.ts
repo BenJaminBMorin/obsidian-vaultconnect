@@ -164,7 +164,7 @@ export class SyncLogService {
         error.error || error.message
       );
       this.statistics.failedSyncs++;
-      this.saveStatistics();
+      void this.saveStatistics();
     });
 
     // File events
@@ -188,7 +188,7 @@ export class SyncLogService {
           break;
       }
 
-      this.saveStatistics();
+      void this.saveStatistics();
     });
 
     // Conflict events
@@ -200,7 +200,7 @@ export class SyncLogService {
         data.path
       );
       this.statistics.conflictsDetected++;
-      this.saveStatistics();
+      void this.saveStatistics();
     });
 
     this.eventBus.on(EVENTS.CONFLICT_RESOLVED, (data: ConflictEventInfo) => {
@@ -211,7 +211,7 @@ export class SyncLogService {
         data.path
       );
       this.statistics.conflictsResolved++;
-      this.saveStatistics();
+      void this.saveStatistics();
     });
 
     // Connection events
@@ -262,7 +262,7 @@ export class SyncLogService {
     }
 
     // Save to storage (debounced)
-    this.saveLogs();
+    void this.saveLogs();
   }
 
   /**
@@ -296,7 +296,7 @@ export class SyncLogService {
       this.statistics.averageSyncDuration = Math.round(sum / this.syncDurations.length);
     }
 
-    this.saveStatistics();
+    void this.saveStatistics();
   }
 
   /**

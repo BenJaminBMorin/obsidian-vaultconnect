@@ -62,21 +62,23 @@ export class SelectiveSyncModal extends Modal {
       .setDesc('Enter a folder path or pattern to exclude (e.g., "private" or "drafts/*")')
       .addText(text => {
         text.setPlaceholder('folder/path');
-        text.inputEl.addEventListener('keypress', async (e) => {
-          if (e.key === 'Enter') {
-            const value = text.getValue().trim();
-            if (value) {
-              const validation = this.selectiveSyncService.validatePattern(value);
-              if (validation.valid) {
-                this.selectiveSyncService.addExcludedFolder(value);
-                text.setValue('');
-                this.refresh();
-                new Notice(`Added excluded folder: ${value}`);
-              } else {
-                new Notice(`Invalid pattern: ${validation.error}`, 5000);
+        text.inputEl.addEventListener('keypress', (e) => {
+          void (async () => {
+            if (e.key === 'Enter') {
+              const value = text.getValue().trim();
+              if (value) {
+                const validation = this.selectiveSyncService.validatePattern(value);
+                if (validation.valid) {
+                  this.selectiveSyncService.addExcludedFolder(value);
+                  text.setValue('');
+                  this.refresh();
+                  new Notice(`Added excluded folder: ${value}`);
+                } else {
+                  new Notice(`Invalid pattern: ${validation.error}`, 5000);
+                }
               }
             }
-          }
+          })();
         });
       })
       .addButton(button => {
@@ -120,21 +122,23 @@ export class SelectiveSyncModal extends Modal {
       .setDesc('Enter a folder path or pattern to include (e.g., "notes" or "docs/*")')
       .addText(text => {
         text.setPlaceholder('folder/path');
-        text.inputEl.addEventListener('keypress', async (e) => {
-          if (e.key === 'Enter') {
-            const value = text.getValue().trim();
-            if (value) {
-              const validation = this.selectiveSyncService.validatePattern(value);
-              if (validation.valid) {
-                this.selectiveSyncService.addIncludedFolder(value);
-                text.setValue('');
-                this.refresh();
-                new Notice(`Added included folder: ${value}`);
-              } else {
-                new Notice(`Invalid pattern: ${validation.error}`, 5000);
+        text.inputEl.addEventListener('keypress', (e) => {
+          void (async () => {
+            if (e.key === 'Enter') {
+              const value = text.getValue().trim();
+              if (value) {
+                const validation = this.selectiveSyncService.validatePattern(value);
+                if (validation.valid) {
+                  this.selectiveSyncService.addIncludedFolder(value);
+                  text.setValue('');
+                  this.refresh();
+                  new Notice(`Added included folder: ${value}`);
+                } else {
+                  new Notice(`Invalid pattern: ${validation.error}`, 5000);
+                }
               }
             }
-          }
+          })();
         });
       })
       .addButton(button => {

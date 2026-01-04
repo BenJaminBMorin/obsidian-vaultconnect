@@ -417,7 +417,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
   private openSelectiveSyncModal(): void {
     // Import dynamically to avoid circular dependencies
-    import('./SelectiveSyncModal').then(({ SelectiveSyncModal }) => {
+    void import('./SelectiveSyncModal').then(({ SelectiveSyncModal }) => {
       const pluginExt = this.plugin as unknown as PluginWithServices;
 
       // Check if plugin has syncService (for full implementation)
@@ -439,9 +439,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         ).open();
       } else {
         // Fallback: Create a temporary SelectiveSyncService for configuration
-        import('../services/SelectiveSyncService').then(({ SelectiveSyncService }) => {
-          import('../core/EventBus').then(({ EventBus }) => {
-            import('../core/StorageManager').then(({ StorageManager }) => {
+        void import('../services/SelectiveSyncService').then(({ SelectiveSyncService }) => {
+          void import('../core/EventBus').then(({ EventBus }) => {
+            void import('../core/StorageManager').then(({ StorageManager }) => {
               const eventBus = new EventBus();
               const storage = new StorageManager(this.plugin);
               const selectiveSyncService = new SelectiveSyncService(

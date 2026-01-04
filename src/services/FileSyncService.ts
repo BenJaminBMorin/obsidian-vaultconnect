@@ -853,7 +853,7 @@ export class FileSyncService {
     this.fileHashes.delete(path);
     this.lastSyncTimestamps.delete(path);
     this.syncStatus.delete(path);
-    this.saveSyncState();
+    void this.saveSyncState();
   }
 
   /**
@@ -968,7 +968,7 @@ export class FileSyncService {
       this.readOnlyFiles.clear();
       console.debug('Cleared read-only status for all files due to permission change');
     }
-    
-    this.saveSyncState();
+
+    void this.saveSyncState();
   }
 }

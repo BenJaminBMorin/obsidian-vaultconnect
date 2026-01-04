@@ -205,7 +205,7 @@ export class BatchService {
     
     this.batchTimer = setTimeout(() => {
       this.batchTimer = null;
-      this.processBatches();
+      void this.processBatches();
     }, this.config.batchDelayMs);
   }
 
@@ -228,12 +228,12 @@ export class BatchService {
         this.stats.totalBatches++;
         
         // Process batch asynchronously
-        this.executeBatch(batch).finally(() => {
+        void this.executeBatch(batch).finally(() => {
           this.activeBatches--;
-          
+
           // Continue processing if there are more operations
           if (this.operationQueue.length > 0) {
-            this.processBatches();
+            void this.processBatches();
           }
         });
       }

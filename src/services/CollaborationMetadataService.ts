@@ -249,7 +249,7 @@ export class CollaborationMetadataService {
     // Listen for sync events to update metadata
     this.eventBus.on(EVENTS.FILE_SYNCED, (data: FileSyncEventData) => {
       if (data.lastEditor) {
-        this.storeFileMetadata(data.filePath, data.lastEditor);
+        void this.storeFileMetadata(data.filePath, data.lastEditor);
       }
     });
 

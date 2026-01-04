@@ -73,11 +73,13 @@ export class OfflineSyncService {
    */
   private setupEventListeners(): void {
     // Listen for offline mode changes
-    this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, async (offline: boolean) => {
-      if (!offline) {
-        // Connection restored - sync queued operations
-        await this.syncQueuedOperations();
-      }
+    this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, (offline: boolean) => {
+      void (async () => {
+        if (!offline) {
+          // Connection restored - sync queued operations
+          await this.syncQueuedOperations();
+        }
+      })();
     });
   }
 

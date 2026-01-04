@@ -54,11 +54,11 @@ export class OfflineDetectionService {
     this.setupBrowserListeners();
 
     // Perform initial connectivity check
-    this.checkConnectivity();
+    void this.checkConnectivity();
 
     // Set up periodic connectivity checks
     this.checkInterval = setInterval(() => {
-      this.checkConnectivity();
+      void this.checkConnectivity();
     }, this.config.checkInterval);
   }
 
@@ -104,7 +104,7 @@ export class OfflineDetectionService {
    */
   private handleOnline = (): void => {
     console.debug('OfflineDetectionService: Browser online event');
-    this.checkConnectivity();
+    void this.checkConnectivity();
   };
 
   /**
@@ -210,7 +210,7 @@ export class OfflineDetectionService {
       this.setNetworkStatus(NetworkStatus.OFFLINE);
       this.enterOfflineMode();
     } else {
-      this.checkConnectivity();
+      void this.checkConnectivity();
     }
   }
 

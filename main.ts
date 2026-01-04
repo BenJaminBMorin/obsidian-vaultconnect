@@ -613,7 +613,7 @@ export default class VaultSyncPlugin extends Plugin {
 		}
 
 		// Handle rename as delete old + create new
-		this.syncFileRename(oldPath, file.path);
+		void this.syncFileRename(oldPath, file.path);
 	}
 
 	async syncFile(file: TFile, action: 'create' | 'modify' | 'delete') {
@@ -817,7 +817,8 @@ export default class VaultSyncPlugin extends Plugin {
 				reconnectionAttempts: Infinity
 			});
 
-			this.socket.on('connect', async () => {
+			this.socket.on('connect', () => {
+				void (async () => {
 				logger.debug('Connected to VaultConnect');
 				this.isConnected = true;
 				this.updateStatusBar('connected');
@@ -842,6 +843,7 @@ export default class VaultSyncPlugin extends Plugin {
 					logger.debug('[VaultConnect] Triggering reconnection sync check...');
 					await this.syncService.handleReconnection();
 				}
+				})();
 			});
 
 			this.socket.on('disconnect', () => {
@@ -855,9 +857,11 @@ export default class VaultSyncPlugin extends Plugin {
 				new Notice('Subscribed to vault sync');
 			});
 
-			this.socket.on('sync_event', async (data: SyncEventData) => {
-				logger.debug('Received sync event:', data);
-				await this.handleRemoteChange(data);
+			this.socket.on('sync_event', (data: SyncEventData) => {
+				void (async () => {
+					logger.debug('Received sync event:', data);
+					await this.handleRemoteChange(data);
+				})();
 			});
 
 			this.socket.on('conflict', (data: ConflictEventData) => {
@@ -1872,25 +1876,29 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		};
 
 		// Dropdown change handler
-		dropdown.addEventListener('change', async () => {
-			const selectedVaultId = dropdown.value;
-			if (selectedVaultId) {
-				logger.debug('[VaultConnect] Vault selected:', selectedVaultId);
-				this.plugin.settings.vaultId = selectedVaultId;
-				await this.plugin.saveSettings();
-				logger.debug('[VaultConnect] Settings saved. Current vaultId:', this.plugin.settings.vaultId);
-				new Notice(`Vault selected: ${selectedVaultId.substring(0, 8)}...\nDisconnect and reconnect to sync with this vault.`);
-			}
+		dropdown.addEventListener('change', () => {
+			void (async () => {
+				const selectedVaultId = dropdown.value;
+				if (selectedVaultId) {
+					logger.debug('[VaultConnect] Vault selected:', selectedVaultId);
+					this.plugin.settings.vaultId = selectedVaultId;
+					await this.plugin.saveSettings();
+					logger.debug('[VaultConnect] Settings saved. Current vaultId:', this.plugin.settings.vaultId);
+					new Notice(`Vault selected: ${selectedVaultId.substring(0, 8)}...\nDisconnect and reconnect to sync with this vault.`);
+				}
+			})();
 		});
 
 		// Refresh button handler
-		refreshButton.addEventListener('click', async () => {
-			await loadVaults();
+		refreshButton.addEventListener('click', () => {
+			void (async () => {
+				await loadVaults();
+			})();
 		});
 
 		// Initial load
 		if (this.plugin.settings.apiKey) {
-			loadVaults();
+			void loadVaults();
 		} else {
 			dropdown.createEl('option', { text: 'Enter API key first', value: '' });
 			dropdown.disabled = true;

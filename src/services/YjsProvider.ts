@@ -170,7 +170,7 @@ export class YjsProvider {
 
       // Persist document state
       if (this.persistenceEnabled && isSynced) {
-        this.persistDocumentState(filePath);
+        void this.persistDocumentState(filePath);
       }
 
       // Emit event

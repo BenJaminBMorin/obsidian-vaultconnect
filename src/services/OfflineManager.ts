@@ -144,11 +144,13 @@ export class OfflineManager {
    */
   private setupEventListeners(): void {
     // Listen for file changes to queue during offline mode
-    this.eventBus.on(EVENTS.FILE_SYNCED, async (event: FileSyncEvent) => {
-      if (this.offlineDetection.isOffline()) {
-        // Queue the operation
-        await this.queueFileOperation(event);
-      }
+    this.eventBus.on(EVENTS.FILE_SYNCED, (event: FileSyncEvent) => {
+      void (async () => {
+        if (this.offlineDetection.isOffline()) {
+          // Queue the operation
+          await this.queueFileOperation(event);
+        }
+      })();
     });
 
     // Listen for offline mode changes to disable real-time features

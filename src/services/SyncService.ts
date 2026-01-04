@@ -128,21 +128,25 @@ export class SyncService {
    */
   private setupEventHandlers(): void {
     // Handle file changes from watcher
-    this.eventBus.on(EVENTS.FILE_SYNCED, async (event: FileChangeEvent) => {
-      // Only auto-sync in smart sync mode with auto-sync enabled
-      if (this.config.autoSync && this.config.mode === SyncMode.SMART_SYNC) {
-        await this.handleFileChange(event);
-      } else if (this.config.mode === SyncMode.MANUAL) {
-        console.debug(`File change detected but manual mode is active: ${event.path}`);
-      }
+    this.eventBus.on(EVENTS.FILE_SYNCED, (event: FileChangeEvent) => {
+      void (async () => {
+        // Only auto-sync in smart sync mode with auto-sync enabled
+        if (this.config.autoSync && this.config.mode === SyncMode.SMART_SYNC) {
+          await this.handleFileChange(event);
+        } else if (this.config.mode === SyncMode.MANUAL) {
+          console.debug(`File change detected but manual mode is active: ${event.path}`);
+        }
+      })();
     });
 
     // Handle sync operations from queue
-    this.eventBus.on(EVENTS.SYNC_STARTED, async (operation?: QueuedOperation) => {
-      // Only process if operation is provided (from queue)
-      if (operation) {
-        await this.processSyncOperation(operation);
-      }
+    this.eventBus.on(EVENTS.SYNC_STARTED, (operation?: QueuedOperation) => {
+      void (async () => {
+        // Only process if operation is provided (from queue)
+        if (operation) {
+          await this.processSyncOperation(operation);
+        }
+      })();
     });
   }
 

@@ -49,7 +49,7 @@ export class DeviceAuthModal extends Modal {
     loadingDiv.createEl('p', { text: 'Requesting authorization code...' });
 
     // Start the authorization flow
-    this.startAuthFlow();
+    void this.startAuthFlow();
   }
 
   private async startAuthFlow() {
@@ -110,7 +110,7 @@ export class DeviceAuthModal extends Modal {
       cls: 'user-code-copy-btn'
     });
     copyButton.addEventListener('click', () => {
-      navigator.clipboard.writeText(this.userCode);
+      void navigator.clipboard.writeText(this.userCode);
       new Notice('Code copied to clipboard!');
       copyButton.textContent = '✓ Copied';
       setTimeout(() => {
@@ -180,7 +180,7 @@ export class DeviceAuthModal extends Modal {
       cls: 'mod-cta'
     });
     retryBtn.addEventListener('click', () => {
-      this.onOpen();
+      void this.onOpen();
     });
 
     const closeBtn = buttonContainer.createEl('button', {

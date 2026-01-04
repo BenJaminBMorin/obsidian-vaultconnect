@@ -242,7 +242,7 @@ export class ConflictResolutionModal extends Modal {
       keepLocalBtn.addClass('vaultconnect-btn-disabled');
     } else {
       keepLocalBtn.addEventListener('click', () => {
-        this.resolveConflict(conflict, ResolutionStrategy.KEEP_LOCAL);
+        void this.resolveConflict(conflict, ResolutionStrategy.KEEP_LOCAL);
       });
     }
 
@@ -252,7 +252,7 @@ export class ConflictResolutionModal extends Modal {
       cls: 'mod-cta'
     });
     keepRemoteBtn.addEventListener('click', () => {
-      this.resolveConflict(conflict, ResolutionStrategy.KEEP_REMOTE);
+      void this.resolveConflict(conflict, ResolutionStrategy.KEEP_REMOTE);
     });
 
     // Keep Both button
@@ -260,7 +260,7 @@ export class ConflictResolutionModal extends Modal {
       text: 'Keep both'
     });
     keepBothBtn.addEventListener('click', () => {
-      this.resolveConflict(conflict, ResolutionStrategy.KEEP_BOTH);
+      void this.resolveConflict(conflict, ResolutionStrategy.KEEP_BOTH);
     });
 
     // Merge Manually button
@@ -355,7 +355,7 @@ export class ConflictResolutionModal extends Modal {
       cls: 'mod-cta'
     });
     saveButton.addEventListener('click', () => {
-      this.resolveConflict(conflict, ResolutionStrategy.MERGE_MANUAL, mergedContent);
+      void this.resolveConflict(conflict, ResolutionStrategy.MERGE_MANUAL, mergedContent);
     });
   }
 

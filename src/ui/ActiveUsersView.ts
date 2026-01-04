@@ -139,7 +139,7 @@ export class ActiveUsersView extends ItemView {
       // Make file clickable
       currentFile.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.openFile(user.currentFile!);
+        void this.openFile(user.currentFile!);
       });
     } else {
       const noFile = userItem.createDiv('vaultconnect-no-file');

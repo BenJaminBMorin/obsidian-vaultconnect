@@ -36,7 +36,7 @@ export class ReconnectionService {
     const unsubConnectionChanged = this.eventBus.on(
       EVENTS.CONNECTION_CHANGED,
       (state: ConnectionState, data?: unknown) => {
-        this.handleConnectionStateChange(state, data);
+        void this.handleConnectionStateChange(state, data);
       }
     );
 

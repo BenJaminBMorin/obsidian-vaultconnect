@@ -328,7 +328,7 @@ export class PresenceService {
    * Cleanup
    */
   destroy(): void {
-    this.stopTracking();
+    void this.stopTracking();
     this.activityListeners.forEach(unsubscribe => unsubscribe());
     this.activityListeners = [];
   }
@@ -381,8 +381,8 @@ export class PresenceService {
     };
 
     this.activeUsers.set(user_id, user);
-    this.saveActiveUsersCache();
-    
+    void this.saveActiveUsersCache();
+
     this.log(`User joined: ${user_name}`);
     this.eventBus.emit(EVENTS.USER_JOINED, user);
   }
@@ -403,10 +403,10 @@ export class PresenceService {
         this.fileViewers.delete(filePath);
       }
     });
-    
-    this.saveActiveUsersCache();
-    this.saveFileViewersCache();
-    
+
+    void this.saveActiveUsersCache();
+    void this.saveFileViewersCache();
+
     this.log(`User left: ${user_id}`);
     this.eventBus.emit(EVENTS.USER_LEFT, user_id);
   }
@@ -470,12 +470,12 @@ export class PresenceService {
           }
           this.fileViewers.get(current_file)!.add(user_id);
         }
-        
-        this.saveFileViewersCache();
+
+        void this.saveFileViewersCache();
       }
     }
-    
-    this.saveActiveUsersCache();
+
+    void this.saveActiveUsersCache();
     
     this.log(`Presence updated for user: ${user_name}`, { status, current_file });
     
@@ -495,7 +495,7 @@ export class PresenceService {
     this.stopHeartbeat();
     
     this.heartbeatInterval = setInterval(() => {
-      this.broadcastPresence();
+      void this.broadcastPresence();
     }, PRESENCE_HEARTBEAT_MS);
     
     this.log('Heartbeat started');
@@ -523,7 +523,7 @@ export class PresenceService {
       
       if (timeSinceActivity >= IDLE_TIMEOUT_MS && !this.isIdle) {
         this.isIdle = true;
-        this.broadcastPresence('away');
+        void this.broadcastPresence('away');
         this.log('User is now idle');
       }
     }, 60000); // Check every minute
@@ -549,13 +549,13 @@ export class PresenceService {
     // Track file open events
     const unsubscribeFileOpen = this.plugin.app.workspace.on('file-open', (file: TFile | null) => {
       if (file) {
-        this.updateActivity({
+        void this.updateActivity({
           type: 'editing',
           filePath: file.path,
           timestamp: new Date()
         });
       } else {
-        this.updateActivity({
+        void this.updateActivity({
           type: 'viewing',
           filePath: null,
           timestamp: new Date()
@@ -572,7 +572,7 @@ export class PresenceService {
       this.lastActivity = new Date();
       if (this.isIdle) {
         this.isIdle = false;
-        this.broadcastPresence('active');
+        void this.broadcastPresence('active');
       }
     });
     

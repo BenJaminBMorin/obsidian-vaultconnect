@@ -207,7 +207,7 @@ export class AuthService {
       if (this.isTokenExpired()) {
         console.debug('API key has expired');
         this.eventBus.emit(EVENTS.AUTH_TOKEN_EXPIRED);
-        this.clearApiKey();
+        void this.clearApiKey();
       } else if (this.isTokenExpiringSoon()) {
         const days = this.getDaysUntilExpiration();
         console.debug(`API key expires in ${days} days`);
@@ -356,7 +356,7 @@ export class AuthService {
       const intervalId = setInterval(poll, pollInterval);
 
       // Do first poll immediately
-      poll();
+      void poll();
     });
   }
 

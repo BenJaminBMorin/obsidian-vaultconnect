@@ -70,14 +70,14 @@ export class AuthModal extends Modal {
       cls: 'mod-cta'
     });
     loginButton.addEventListener('click', () => {
-      this.handleLogin();
+      void this.handleLogin();
     });
 
     // Handle Enter key
     contentEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        this.handleLogin();
+        void this.handleLogin();
       }
     });
 
