@@ -250,21 +250,21 @@ export class SyncLogModal extends Modal {
 
     // Details (collapsible)
     if (log.details) {
-      const detailsToggle = entry.createDiv({ cls: 'log-entry-details-toggle' });
+      const detailsToggle = entry.createDiv('log-entry-details-toggle');
       detailsToggle.setText('Show details ▼');
-      
-      const detailsContent = entry.createDiv({ cls: 'log-entry-details' });
-      detailsContent.style.display = 'none';
+
+      const detailsContent = entry.createDiv('log-entry-details');
+      detailsContent.addClass('vaultconnect-hidden');
       detailsContent.createEl('pre', {
         text: JSON.stringify(log.details, null, 2)
       });
 
       detailsToggle.onclick = () => {
-        if (detailsContent.style.display === 'none') {
-          detailsContent.style.display = 'block';
+        if (detailsContent.hasClass('vaultconnect-hidden')) {
+          detailsContent.removeClass('vaultconnect-hidden');
           detailsToggle.setText('Hide details ▲');
         } else {
-          detailsContent.style.display = 'none';
+          detailsContent.addClass('vaultconnect-hidden');
           detailsToggle.setText('Show details ▼');
         }
       };

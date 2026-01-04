@@ -39,8 +39,8 @@ export class AuthModal extends Modal {
             this.apiKeyInput = value.trim();
           });
         text.inputEl.type = 'password';
-        text.inputEl.style.width = '100%';
-        
+        text.inputEl.addClass('vaultconnect-w-full');
+
         // Focus on input
         setTimeout(() => text.inputEl.focus(), 100);
       });
@@ -52,11 +52,11 @@ export class AuthModal extends Modal {
     });
 
     // Buttons
-    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'flex-end';
-    buttonContainer.style.gap = '10px';
-    buttonContainer.style.marginTop = '20px';
+    const buttonContainer = contentEl.createDiv('modal-button-container');
+    buttonContainer.addClass('vaultconnect-flex');
+    buttonContainer.addClass('vaultconnect-justify-end');
+    buttonContainer.addClass('vaultconnect-gap-md');
+    buttonContainer.addClass('vaultconnect-mt-lg');
 
     // Cancel button
     const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
@@ -82,9 +82,9 @@ export class AuthModal extends Modal {
     });
 
     // Help link
-    const helpContainer = contentEl.createDiv({ cls: 'setting-item-description' });
-    helpContainer.style.marginTop = '20px';
-    helpContainer.style.textAlign = 'center';
+    const helpContainer = contentEl.createDiv('setting-item-description');
+    helpContainer.addClass('vaultconnect-mt-lg');
+    helpContainer.addClass('vaultconnect-text-center');
     
     const helpLink = helpContainer.createEl('a', {
       text: 'How to get an API key?',
@@ -152,8 +152,8 @@ export class AuthModal extends Modal {
     });
 
     // Back button
-    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-    buttonContainer.style.marginTop = '20px';
+    const buttonContainer = contentEl.createDiv('modal-button-container');
+    buttonContainer.addClass('vaultconnect-mt-lg');
     
     const backButton = buttonContainer.createEl('button', {
       text: 'Back',

@@ -133,7 +133,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           .setDesc(expirationText)
           .then(setting => {
             if (isExpiringSoon) {
-              setting.descEl.style.color = 'var(--text-error)';
+              setting.descEl.addClass('vaultconnect-text-error');
             }
           });
       }
@@ -656,7 +656,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       .addText(text => {
         text.setValue(this.plugin.settings.deviceId);
         text.inputEl.disabled = true;
-        text.inputEl.style.opacity = '0.6';
+        text.inputEl.addClass('vaultconnect-input-disabled');
       });
 
     // Initial Sync State Reset
@@ -816,15 +816,15 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       .onChange(async (value) => {
         const num = parseInt(value);
         if (isNaN(num)) {
-          text.inputEl.style.borderColor = 'var(--text-error)';
+          text.inputEl.addClass('vaultconnect-input-error');
           return;
         }
-        
+
         const success = await onChange(num);
         if (success) {
-          text.inputEl.style.borderColor = '';
+          text.inputEl.removeClass('vaultconnect-input-error');
         } else {
-          text.inputEl.style.borderColor = 'var(--text-error)';
+          text.inputEl.addClass('vaultconnect-input-error');
           new Notice(errorMessage);
         }
       });
@@ -840,19 +840,19 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       .setValue(initialValue)
       .onChange(async (value) => {
         const trimmed = value.trim();
-        
+
         // Basic URL validation
         if (trimmed && !this.isValidUrl(trimmed)) {
-          text.inputEl.style.borderColor = 'var(--text-error)';
+          text.inputEl.addClass('vaultconnect-input-error');
           new Notice('Invalid URL format');
           return;
         }
-        
+
         const success = await onChange(trimmed);
         if (success) {
-          text.inputEl.style.borderColor = '';
+          text.inputEl.removeClass('vaultconnect-input-error');
         } else {
-          text.inputEl.style.borderColor = 'var(--text-error)';
+          text.inputEl.addClass('vaultconnect-input-error');
         }
       });
   }
