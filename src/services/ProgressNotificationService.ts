@@ -290,7 +290,7 @@ export class ProgressNotificationService {
    * Handle conflict detected
    */
   private handleConflictDetected(data: ConflictData): void {
-    const { path, conflictId } = data;
+    const { path } = data;
     const message = `⚠️ Conflict detected: ${this.truncateFilePath(path)}\nClick "View Conflicts" to resolve`;
     this.showNotification(message, this.config.notificationDuration * 2);
   }

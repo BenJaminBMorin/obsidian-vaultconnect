@@ -1,8 +1,7 @@
 import { TFile, Vault } from 'obsidian';
 import { APIClient } from '../api/APIClient';
-import { EventBus, EVENTS } from '../core/EventBus';
+import { EventBus } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
-import { FileChangeEvent } from './FileWatcherService';
 import { QueuedOperation } from './SyncQueueService';
 import { LargeFileService } from './LargeFileService';
 import { logger } from '../utils/logger';
@@ -205,8 +204,6 @@ export class FileSyncService {
       };
     }
 
-    const startTime = Date.now();
-
     try {
       // Update status
       this.updateSyncStatus(file.path, 'syncing');
@@ -257,7 +254,7 @@ export class FileSyncService {
           try {
             const remoteFile = await this.apiClient.getFileByPath(this.vaultId, file.path);
             fileId = remoteFile.file_id;
-          } catch (error) {
+          } catch {
             // File doesn't exist, will be created
             fileId = undefined;
           }
@@ -415,9 +412,6 @@ export class FileSyncService {
     updatedAt: string
   ): void {
     try {
-      // Get the vault's base path and construct full file path
-      const adapter = this.vault.adapter;
-      // @ts-ignore - basePath exists on FileSystemAdapter
       // Note: Obsidian's API doesn't provide a way to set file timestamps.
       // The file's mtime will be updated when we write to it.
       // Timestamp preservation is handled at the metadata level instead.

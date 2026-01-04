@@ -3,7 +3,6 @@ import {
   PluginError,
   ErrorType
 } from '../utils/errors';
-import { ConflictInfo } from '../types';
 import { AuthService } from './AuthService';
 import { WebSocketManager } from '../core/WebSocketManager';
 import { StorageManager } from '../core/StorageManager';

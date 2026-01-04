@@ -1,4 +1,4 @@
-import { App, Modal, Setting, Notice, TFile } from 'obsidian';
+import { App, Modal, Setting, Notice } from 'obsidian';
 import { SelectiveSyncService, SyncScopeStats } from '../services/SelectiveSyncService';
 
 /**

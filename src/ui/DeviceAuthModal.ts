@@ -1,4 +1,4 @@
-import { App, Modal, Notice, Setting } from 'obsidian';
+import { App, Modal, Notice } from 'obsidian';
 import { AuthService } from '../services/AuthService';
 import { logger } from '../utils/logger';
 

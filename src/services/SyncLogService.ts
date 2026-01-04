@@ -1,7 +1,6 @@
 import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { SyncResult } from './SyncService';
-import { ErrorEventData, ConflictEventData } from '../types';
 
 /**
  * Sync log event data interfaces

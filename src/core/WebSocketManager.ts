@@ -485,7 +485,7 @@ export class WebSocketManager {
           const vaultId = this.subscription?.vaultId;
           await this.connect(apiKey, vaultId);
 
-        } catch (error) {
+        } catch {
           this.log(`Reconnection attempt ${this.reconnectAttempts} failed`);
           // Will schedule another attempt via handleDisconnection
         }

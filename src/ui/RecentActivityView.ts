@@ -60,11 +60,11 @@ export class RecentActivityView extends ItemView {
     // Create header
     const header = this.viewContainerEl.createDiv('vaultconnect-activity-header');
 
-    const headerTitle = header.createEl('h4', { text: 'Recent activity' });
+    header.createEl('h4', { text: 'Recent activity' });
 
     // Time filter dropdown
     const filterContainer = header.createDiv('activity-filter');
-    const filterLabel = filterContainer.createSpan({
+    filterContainer.createSpan({
       text: 'Last ',
       cls: 'vaultconnect-filter-label'
     });

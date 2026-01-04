@@ -5,8 +5,7 @@ import {
   ErrorType,
   ErrorSeverity,
   ErrorLogger,
-  ErrorClassifier,
-  getUserMessage
+  ErrorClassifier
 } from '../utils/errors';
 import { EventBus, EVENTS } from '../core/EventBus';
 

@@ -188,7 +188,7 @@ export class CompressionService {
           ? `${result.compressionRatio.toFixed(1)}% compression achieved`
           : 'Compression ratio too low'
       };
-    } catch (error) {
+    } catch {
       return {
         shouldCompress: false,
         estimatedRatio: 0,

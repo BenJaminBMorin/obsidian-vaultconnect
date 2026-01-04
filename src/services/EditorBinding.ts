@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { yCollab, yUndoManagerKeymap } from 'y-codemirror.next';
+import { yCollab } from 'y-codemirror.next';
 import { EditorView } from '@codemirror/view';
 import { Extension } from '@codemirror/state';
 import { Awareness } from 'y-protocols/awareness';
@@ -72,7 +72,6 @@ export class EditorBinding {
       const yjsText = yjsDoc.getText('content');
 
       // Get awareness
-      const awarenessStates = this.collaborationService.getAwarenessStates(filePath);
       const awareness = new Awareness(yjsDoc);
 
       // Get the active editor view

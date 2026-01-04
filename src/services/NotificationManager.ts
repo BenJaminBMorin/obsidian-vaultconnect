@@ -1,5 +1,5 @@
 import { Notice, Plugin } from 'obsidian';
-import { EventBus, EVENTS } from '../core/EventBus';
+import { EventBus } from '../core/EventBus';
 import { PresenceService } from './PresenceService';
 import { ActiveUser } from '../types';
 import { PluginSettings } from '../types';

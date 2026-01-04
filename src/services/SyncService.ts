@@ -4,7 +4,7 @@ import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { FileWatcherService, FileChangeEvent } from './FileWatcherService';
 import { SyncQueueService, QueuedOperation } from './SyncQueueService';
-import { FileSyncService, FileSyncResult } from './FileSyncService';
+import { FileSyncService } from './FileSyncService';
 import { SelectiveSyncService } from './SelectiveSyncService';
 import { FileInfo, ConflictInfo, ConflictType } from '../types';
 

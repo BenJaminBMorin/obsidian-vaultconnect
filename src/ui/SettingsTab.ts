@@ -2,7 +2,6 @@ import { App, PluginSettingTab, Setting, Notice, TextComponent } from 'obsidian'
 import VaultSyncPlugin from '../../main';
 import { DeviceAuthModal } from './DeviceAuthModal';
 import { showConfirmationModal } from './ConfirmationModal';
-import { formatRelativeTime } from '../utils/helpers';
 import { SyncMode, PluginSettings } from '../types';
 import { SyncService } from '../services/SyncService';
 import { InitialSyncService } from '../services/InitialSyncService';

@@ -1,4 +1,4 @@
-import { Modal, App, Setting } from 'obsidian';
+import { Modal, App } from 'obsidian';
 import { ErrorNotificationService } from '../services/ErrorNotificationService';
 import { PluginError, ErrorType, ErrorSeverity } from '../utils/errors';
 

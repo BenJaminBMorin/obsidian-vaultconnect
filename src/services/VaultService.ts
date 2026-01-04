@@ -81,7 +81,7 @@ export class VaultService {
               permission: accessInfo.permission,
               owner_tenant_id: accessInfo.owner_tenant_id
             };
-          } catch (error) {
+          } catch {
             // If access check fails, assume owned vault
             return {
               ...vault,

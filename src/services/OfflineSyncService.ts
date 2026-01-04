@@ -4,7 +4,7 @@ import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { OfflineQueueService, OfflineOperation } from './OfflineQueueService';
 import { FileSyncService } from './FileSyncService';
-import { FileInfo, FileContent, ConflictInfo, ConflictType } from '../types';
+import { FileContent, ConflictInfo, ConflictType } from '../types';
 
 /**
  * Reconnection sync result

@@ -671,7 +671,7 @@ export class InitialSyncService {
             } as ProgressInfo);
 
             // Download file using FileSyncService with retry
-            const result = await this.retryWithBackoff(
+            await this.retryWithBackoff(
               async () => {
                 const downloadResult = await this.fileSync.downloadFile(filePath);
                 if (!downloadResult.success) {
@@ -821,7 +821,7 @@ export class InitialSyncService {
               // For common files, we need to update, so use regular upload
               // Use skipSaveState=true to avoid disk I/O contention during batch upload
               const isLocalOnly = analysis.localFiles.includes(filePath);
-              const result = await this.retryWithBackoff(
+              await this.retryWithBackoff(
                 async () => {
                   const uploadResult = await this.fileSync.uploadFile(file, isLocalOnly, true);
                   if (!uploadResult.success) {
@@ -985,7 +985,7 @@ export class InitialSyncService {
               // Upload file using FileSyncService with retry
               // Use forceCreate=true since we know these are local-only files (don't exist remotely)
               // Use skipSaveState=true to avoid disk I/O contention during batch upload
-              const result = await this.retryWithBackoff(
+              await this.retryWithBackoff(
                 async () => {
                   const uploadResult = await this.fileSync.uploadFile(file, true, true);
                   if (!uploadResult.success) {
@@ -1056,7 +1056,7 @@ export class InitialSyncService {
             } as ProgressInfo);
 
             // Download file using FileSyncService with retry
-            const result = await this.retryWithBackoff(
+            await this.retryWithBackoff(
               async () => {
                 const downloadResult = await this.fileSync.downloadFile(filePath);
                 if (!downloadResult.success) {
@@ -1170,7 +1170,7 @@ export class InitialSyncService {
             });
 
             // Download remote version as main file with retry
-            const result = await this.retryWithBackoff(
+            await this.retryWithBackoff(
               async () => {
                 const downloadResult = await this.fileSync.downloadFile(filePath);
                 if (!downloadResult.success) {

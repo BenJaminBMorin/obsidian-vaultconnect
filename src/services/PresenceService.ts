@@ -4,7 +4,6 @@ import { WebSocketManager } from '../core/WebSocketManager';
 import { StorageManager } from '../core/StorageManager';
 import { ActiveUser, PresenceState } from '../types';
 import { WS_EVENTS, PRESENCE_HEARTBEAT_MS, IDLE_TIMEOUT_MS } from '../utils/constants';
-import { parseErrorMessage } from '../utils/helpers';
 
 /**
  * WebSocket presence event data interfaces

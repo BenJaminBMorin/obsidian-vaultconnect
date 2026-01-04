@@ -1,5 +1,5 @@
 import { ItemView, WorkspaceLeaf } from 'obsidian';
-import { EventBus, EVENTS } from '../core/EventBus';
+import { EventBus } from '../core/EventBus';
 import { PresenceService } from '../services/PresenceService';
 import { ActiveUser } from '../types';
 
@@ -103,7 +103,7 @@ export class ActiveUsersView extends ItemView {
 
     // Avatar or status indicator
     if (user.userAvatar) {
-      const img = userHeader.createEl('img', {
+      userHeader.createEl('img', {
         cls: 'vaultconnect-user-avatar',
         attr: { src: user.userAvatar }
       });

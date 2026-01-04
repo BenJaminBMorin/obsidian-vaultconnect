@@ -2,8 +2,8 @@ import { APIClient } from '../api/APIClient';
 import { EventBus, EVENTS } from '../core/EventBus';
 import { SmartRetryService } from './SmartRetryService';
 import { CompressionService } from './CompressionService';
-import { UploadPersistenceService, PersistedUploadState } from './UploadPersistenceService';
-import { Vault, TFile } from 'obsidian';
+import { UploadPersistenceService } from './UploadPersistenceService';
+import { Vault } from 'obsidian';
 
 /**
  * Chunk information
@@ -247,12 +247,11 @@ export class LargeFileService {
    */
   private createChunks(content: string): ChunkInfo[] {
     const chunks: ChunkInfo[] = [];
-    const totalSize = new Blob([content]).size;
     const chunkSize = this.config.chunkSize;
-    
+
     let start = 0;
     let index = 0;
-    
+
     while (start < content.length) {
       const end = Math.min(start + chunkSize, content.length);
       const chunkContent = content.substring(start, end);
@@ -570,8 +569,8 @@ export class LargeFileService {
    */
   getActiveUploads(): UploadProgress[] {
     const uploads: UploadProgress[] = [];
-    
-    for (const [uploadId, _] of this.activeSessions) {
+
+    for (const [uploadId] of this.activeSessions) {
       const progress = this.getUploadProgress(uploadId);
       if (progress) {
         uploads.push(progress);
