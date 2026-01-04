@@ -68,7 +68,7 @@ export class ErrorLogModal extends Modal {
     const typeFilters: ('all' | ErrorType)[] = ['all', ...Object.values(ErrorType)];
     typeFilters.forEach(type => {
       const button = filters.createEl('button', {
-        text: type === 'all' ? 'All types' : this.formatErrorType(type as ErrorType),
+        text: type === 'all' ? 'All types' : this.formatErrorType(type),
         cls: 'vaultsync-error-log-filter-button'
       });
 

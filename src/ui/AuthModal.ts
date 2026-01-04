@@ -30,7 +30,7 @@ export class AuthModal extends Modal {
     // API Key input
     new Setting(contentEl)
       .setName('API key')
-      .setDesc('Your vault connect API key (starts with vb_live_ or vb_test_)')
+      .setDesc('your vault connect API key (starts with vb_live_ or vb_test_)')
       .addText(text => {
         text
           .setPlaceholder('vb_live_...')

@@ -106,15 +106,15 @@ export class DeviceAuthModal extends Modal {
 
     // Copy button
     const copyButton = codeDisplay.createEl('button', {
-      text: '📋 Copy code',
+      text: '📋 copy code',
       cls: 'user-code-copy-btn'
     });
     copyButton.addEventListener('click', () => {
       void navigator.clipboard.writeText(this.userCode);
       new Notice('Code copied to clipboard!');
-      copyButton.textContent = '✓ Copied';
+      copyButton.textContent = '✓ copied';
       setTimeout(() => {
-        copyButton.textContent = '📋 Copy code';
+        copyButton.textContent = '📋 copy code';
       }, 2000);
     });
 

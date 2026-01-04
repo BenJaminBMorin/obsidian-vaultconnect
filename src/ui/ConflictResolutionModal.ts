@@ -104,7 +104,7 @@ export class ConflictResolutionModal extends Modal {
       });
 
       const warningTitle = warningBanner.createEl('div', {
-        text: '🔗 Cross-tenant vault conflict'
+        text: '🔗 cross-tenant vault conflict'
       });
       warningTitle.addClass('vaultconnect-font-semibold');
       warningTitle.addClass('vaultconnect-mb-sm');
@@ -114,9 +114,9 @@ export class ConflictResolutionModal extends Modal {
       warningText.setCssProps({ 'line-height': '1.4' });
 
       if (permission === 'read') {
-        warningText.textContent = '⚠️ This vault is shared with read-only access. The remote version will be used automatically to prevent sync conflicts.';
+        warningText.textContent = '⚠️ this vault is shared with read-only access. The remote version will be used automatically to prevent sync conflicts.';
       } else {
-        warningText.textContent = '💡 For cross-tenant vaults, it\'s recommended to keep the remote version as the source of truth to avoid sync conflicts with the vault owner.';
+        warningText.textContent = '💡 for cross-tenant vaults, it\'s recommended to keep the remote version as the source of truth to avoid sync conflicts with the vault owner.';
       }
     }
 
@@ -127,7 +127,7 @@ export class ConflictResolutionModal extends Modal {
       nav.addClass('vaultconnect-gap-md');
       nav.addClass('vaultconnect-mt-md');
 
-      const prevButton = nav.createEl('button', { text: '← Previous conflict' });
+      const prevButton = nav.createEl('button', { text: '← previous conflict' });
       prevButton.disabled = this.currentConflictIndex === 0;
       prevButton.addEventListener('click', () => {
         this.currentConflictIndex--;

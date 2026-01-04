@@ -79,11 +79,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     } else {
       const infoEl = containerEl.createDiv({ cls: 'vaultsync-auth-required' });
       infoEl.createEl('p', {
-        text: '🔒 Please authenticate to access additional settings.',
+        text: '🔒 please authenticate to access additional settings.',
         cls: 'setting-item-description'
       });
       infoEl.createEl('p', {
-        text: 'Click the login button above to connect your vault connect account.',
+        text: 'click the login button above to connect your vault connect account.',
         cls: 'setting-item-description'
       });
     }
@@ -210,19 +210,19 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           });
 
           if (vault.permission === 'read') {
-            descEl.setText('⚠️ This vault is shared from another tenant with read-only access. You can download and view files, but uploads are disabled to prevent sync conflicts.');
+            descEl.setText('⚠️ this vault is shared from another tenant with read-only access. You can download and view files, but uploads are disabled to prevent sync conflicts.');
           } else if (vault.permission === 'write') {
-            descEl.setText('✅ This vault is shared from another tenant with write access. You can download, view, and upload files.');
+            descEl.setText('✅ this vault is shared from another tenant with write access. You can download, view, and upload files.');
           } else {
-            descEl.setText('✅ You have full admin access to this cross-tenant vault.');
+            descEl.setText('✅ you have full admin access to this cross-tenant vault.');
           }
         } else {
           statusEl.createEl('div', {
-            text: '✅ Owned vault',
+            text: '✅ owned vault',
             cls: 'vaultsync-owned-vault-badge'
           });
           statusEl.createEl('p', {
-            text: 'This vault is owned by your tenant. You have full access.',
+            text: 'this vault is owned by your tenant. You have full access.',
             cls: 'setting-item-description'
           });
         }
@@ -603,7 +603,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Chunk size
     new Setting(containerEl)
       .setName('Chunk size')
-      .setDesc('Size of file chunks for large file uploads (in MB, 1-10)')
+      .setDesc('size of file chunks for large file uploads (in MB, 1-10)')
       .addText(text => {
         const chunkSizeMB = Math.round(this.plugin.settings.chunkSize / 1048576);
         this.addNumberValidation(text,
@@ -648,14 +648,14 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Warning message
     const warningEl = containerEl.createDiv({ cls: 'vaultsync-warning' });
     warningEl.createEl('p', {
-      text: '⚠️ Changing these settings may affect plugin functionality. Only modify if you know what you\'re doing.',
+      text: '⚠️ changing these settings may affect plugin functionality. Only modify if you know what you\'re doing.',
       cls: 'setting-item-description'
     });
 
     // API Base URL
     new Setting(containerEl)
       .setName('API base url')
-      .setDesc('Vault connect API server url (requires reconnection)')
+      .setDesc('vault connect API server url (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.apiBaseURL,
@@ -671,7 +671,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // WebSocket Base URL
     new Setting(containerEl)
       .setName('WebSocket base url')
-      .setDesc('Vault connect WebSocket server url (requires reconnection)')
+      .setDesc('vault connect WebSocket server url (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.wsBaseURL,

@@ -116,9 +116,9 @@ export class PresenceService {
   /**
    * Start presence tracking for a vault
    */
-  async startTracking(vaultId: string, userId: string, userName: string): Promise<void> {
+  startTracking(vaultId: string, userId: string, userName: string): void {
     this.log(`Starting presence tracking for vault ${vaultId}`);
-    
+
     this.currentVaultId = vaultId;
     this.currentUserId = userId;
     this.currentUserName = userName;
@@ -130,14 +130,14 @@ export class PresenceService {
 
     // Start heartbeat
     this.startHeartbeat();
-    
+
     this.log('Presence tracking started');
   }
 
   /**
    * Stop presence tracking
    */
-  async stopTracking(): Promise<void> {
+  stopTracking(): void {
     this.log('Stopping presence tracking');
 
     // Broadcast offline status
@@ -147,10 +147,10 @@ export class PresenceService {
 
     // Stop heartbeat
     this.stopHeartbeat();
-    
+
     // Stop idle check
     this.stopIdleCheck();
-    
+
     // Clear state
     this.currentVaultId = null;
     this.currentUserId = null;
@@ -158,7 +158,7 @@ export class PresenceService {
     this.currentFile = null;
     this.activeUsers.clear();
     this.fileViewers.clear();
-    
+
     this.log('Presence tracking stopped');
   }
 
@@ -187,7 +187,7 @@ export class PresenceService {
   /**
    * Update user activity
    */
-  async updateActivity(activity: UserActivity): Promise<void> {
+  updateActivity(activity: UserActivity): void {
     this.lastActivity = new Date();
 
     // If was idle, mark as active again
@@ -212,10 +212,10 @@ export class PresenceService {
         this.eventBus.emit(EVENTS.FILE_OPENED, this.currentUserId, activity.filePath);
       }
     }
-    
+
     // Emit activity event
     this.eventBus.emit(EVENTS.USER_ACTIVITY, this.currentUserId, activity);
-    
+
     this.log('Activity updated', activity);
   }
 

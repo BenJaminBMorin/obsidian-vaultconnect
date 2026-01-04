@@ -31,7 +31,7 @@ export class ConflictListView extends ItemView {
     return 'alert-triangle';
   }
 
-  async onOpen() {
+  async onOpen(): Promise<void> {
     this.refresh();
   }
 

@@ -436,7 +436,7 @@ export class InitialSyncService {
       // Fetch local and remote files in parallel
       logger.debug('[InitialSync] Fetching local and remote files in parallel...');
       const analysisPromise = Promise.all([
-        this.scanLocalFiles(),
+        Promise.resolve(this.scanLocalFiles()),
         this.fetchRemoteFiles(vaultId)
       ]);
 

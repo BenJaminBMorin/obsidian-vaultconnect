@@ -260,7 +260,7 @@ export class InitialSyncWizardModal extends Modal {
     summaryContainer.addClass('vaultconnect-mb-lg');
 
     // Title
-    const title = summaryContainer.createEl('h3', { text: '📊 File analysis' });
+    const title = summaryContainer.createEl('h3', { text: '📊 file analysis' });
     title.addClass('vaultconnect-m-0');
     title.addClass('vaultconnect-mb-md');
 
@@ -359,7 +359,7 @@ export class InitialSyncWizardModal extends Modal {
 
         if (option === InitialSyncOption.START_FRESH) {
           // Start Fresh confirmation - requires typing "DELETE"
-          contentEl.createEl('h2', { text: '⚠️  Confirm: start fresh' });
+          contentEl.createEl('h2', { text: '⚠️  confirm: start fresh' });
 
           const warning = contentEl.createDiv();
           warning.addClass('vaultconnect-bg-error');
@@ -397,7 +397,7 @@ export class InitialSyncWizardModal extends Modal {
           inputContainer.addClass('vaultconnect-mb-md');
 
           inputContainer.createEl('p', {
-            text: 'Type DELETE to confirm:',
+            text: 'type DELETE to confirm:',
             cls: 'setting-item-name'
           });
 
@@ -452,7 +452,7 @@ export class InitialSyncWizardModal extends Modal {
 
         } else if (option === InitialSyncOption.UPLOAD_LOCAL) {
           // Upload Local confirmation - simpler warning
-          contentEl.createEl('h2', { text: '⚠️  Confirm: upload local files' });
+          contentEl.createEl('h2', { text: '⚠️  confirm: upload local files' });
 
           const warning = contentEl.createDiv();
           warning.addClass('vaultconnect-bg-error');

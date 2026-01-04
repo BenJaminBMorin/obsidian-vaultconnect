@@ -169,7 +169,7 @@ export class InitialSyncProgressModal extends Modal {
     // Update header
     const header = this.contentEl.querySelector('h2');
     if (header) {
-      header.textContent = '✓ Sync complete';
+      header.textContent = '✓ sync complete';
       header.addClass('vaultconnect-text-success');
     }
 
@@ -221,7 +221,7 @@ export class InitialSyncProgressModal extends Modal {
     // Update header
     const header = this.contentEl.querySelector('h2');
     if (header) {
-      header.textContent = '✗ Sync failed';
+      header.textContent = '✗ sync failed';
       header.addClass('vaultconnect-text-error');
     }
 

@@ -51,7 +51,7 @@ export class YjsProvider {
   /**
    * Initialize provider with vault ID
    */
-  async initialize(vaultId: string): Promise<void> {
+  initialize(vaultId: string): void {
     this.vaultId = vaultId;
     this.log(`Initialized with vault ${vaultId}`);
 

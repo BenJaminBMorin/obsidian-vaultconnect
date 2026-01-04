@@ -238,7 +238,7 @@ export class OfflineDetectionService {
   /**
    * Manual connectivity check
    */
-  async checkNow(): Promise<NetworkStatus> {
+  checkNow(): NetworkStatus {
     this.checkConnectivity();
     return this.networkStatus;
   }

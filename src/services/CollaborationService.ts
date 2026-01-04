@@ -211,7 +211,7 @@ export class CollaborationService {
   /**
    * Sync Yjs document manually
    */
-  async syncYjsDoc(filePath: string): Promise<void> {
+  syncYjsDoc(filePath: string): void {
     if (!this.activeFiles.has(filePath)) {
       throw new Error(`No active collaboration for ${filePath}`);
     }
