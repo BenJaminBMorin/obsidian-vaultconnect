@@ -481,7 +481,7 @@ export class CollaborationUI {
   /**
    * Log message (if debug mode enabled)
    */
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.debugMode) {
       if (data !== undefined) {
         console.debug(`[CollaborationUI] ${message}`, data);

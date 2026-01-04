@@ -6,7 +6,7 @@ describe('AuthService', () => {
   let authService: AuthService;
   let mockPlugin: Plugin;
   let eventBus: EventBus;
-  let mockData: any;
+  let mockData: Record<string, unknown>;
 
   beforeEach(() => {
     mockData = {};
@@ -16,7 +16,7 @@ describe('AuthService', () => {
         mockData = data;
         return Promise.resolve();
       })
-    } as any;
+    } as Partial<Plugin> as Plugin;
     
     eventBus = new EventBus();
     authService = new AuthService(mockPlugin, eventBus);

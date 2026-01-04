@@ -1,6 +1,6 @@
 import { requestUrl, RequestUrlParam, RequestUrlResponse } from 'obsidian';
 import { AuthService } from '../services/AuthService';
-import { VaultInfo, FileInfo, FileContent, ConflictInfo } from '../types';
+import { VaultInfo, FileInfo, FileContent, ConflictInfo, ConflictType } from '../types';
 import { API_ENDPOINTS } from '../utils/constants';
 import { retryWithBackoff, parseErrorMessage } from '../utils/helpers';
 import { logger } from '../utils/logger';
@@ -39,6 +39,62 @@ export interface ChunkUploadResponse {
   totalChunks: number;
   isComplete: boolean;
   file?: FileInfo;
+}
+
+// API Response interfaces for type safety
+interface VaultAPIResponse {
+  vault_id: string;
+  name: string;
+  file_count: number;
+  total_size_bytes: number;
+  created_at: string;
+  updated_at: string;
+  is_cross_tenant?: boolean;
+  permission?: 'read' | 'write' | 'admin';
+  owner_tenant_id?: string;
+}
+
+interface VaultAccessAPIResponse {
+  vault_id: string;
+  is_cross_tenant: boolean;
+  permission: 'read' | 'write' | 'admin';
+  owner_tenant_id: string;
+}
+
+interface FileAPIResponse {
+  file_id: string;
+  vault_id: string;
+  path: string;
+  size_bytes: number;
+  hash: string;
+  created_at: string;
+  updated_at: string;
+  last_editor?: string;
+}
+
+interface FileContentAPIResponse {
+  file_id: string;
+  path: string;
+  content: string;
+  hash: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ConflictAPIResponse {
+  id: string;
+  path: string;
+  local_content: string;
+  remote_content: string;
+  local_modified: string;
+  remote_modified: string;
+  conflict_type: string;
+  auto_resolvable: boolean;
+}
+
+interface BatchUpdateError {
+  path: string;
+  error: string;
 }
 
 /**
@@ -125,10 +181,10 @@ export class APIClient {
    * List all vaults
    */
   async listVaults(): Promise<VaultInfo[]> {
-    const response = await this.requestWithRetry<{ vaults: any[] }>(
+    const response = await this.requestWithRetry<{ vaults: VaultAPIResponse[] }>(
       API_ENDPOINTS.VAULTS
     );
-    
+
     return response.vaults.map(v => ({
       vault_id: v.vault_id,
       name: v.name,
@@ -143,10 +199,10 @@ export class APIClient {
    * Get vault by ID
    */
   async getVault(vaultId: string): Promise<VaultInfo> {
-    const response = await this.requestWithRetry<any>(
+    const response = await this.requestWithRetry<VaultAPIResponse>(
       API_ENDPOINTS.VAULT(vaultId)
     );
-    
+
     return {
       vault_id: response.vault_id,
       name: response.name,
@@ -169,10 +225,10 @@ export class APIClient {
     permission: 'read' | 'write' | 'admin';
     owner_tenant_id: string;
   }> {
-    const response = await this.requestWithRetry<any>(
+    const response = await this.requestWithRetry<VaultAccessAPIResponse>(
       `/vaults/${vaultId}/access`
     );
-    
+
     return {
       vault_id: response.vault_id,
       is_cross_tenant: response.is_cross_tenant,
@@ -185,14 +241,14 @@ export class APIClient {
    * Create a new vault
    */
   async createVault(name: string): Promise<VaultInfo> {
-    const response = await this.request<any>(
+    const response = await this.request<VaultAPIResponse>(
       API_ENDPOINTS.VAULTS,
       {
         method: 'POST',
         body: JSON.stringify({ name })
       }
     );
-    
+
     return {
       vault_id: response.vault_id,
       name: response.name,
@@ -209,7 +265,7 @@ export class APIClient {
    * List all files in a vault
    */
   async listFiles(vaultId: string): Promise<FileInfo[]> {
-    const response = await this.requestWithRetry<{ files: any[] }>(
+    const response = await this.requestWithRetry<{ files: FileAPIResponse[] }>(
       API_ENDPOINTS.FILES(vaultId)
     );
 
@@ -220,8 +276,7 @@ export class APIClient {
       size_bytes: f.size_bytes,
       hash: f.hash,
       created_at: new Date(f.created_at),
-      updated_at: new Date(f.updated_at),
-      last_editor: f.last_editor
+      updated_at: new Date(f.updated_at)
     }));
   }
 
@@ -231,7 +286,7 @@ export class APIClient {
    */
   async getChangedFiles(vaultId: string, since: Date): Promise<FileInfo[]> {
     const sinceISO = since.toISOString();
-    const response = await this.requestWithRetry<{ files: any[] }>(
+    const response = await this.requestWithRetry<{ files: FileAPIResponse[] }>(
       `${API_ENDPOINTS.FILES(vaultId)}/changes?since=${encodeURIComponent(sinceISO)}`
     );
 
@@ -242,8 +297,7 @@ export class APIClient {
       size_bytes: f.size_bytes,
       hash: f.hash,
       created_at: new Date(f.created_at),
-      updated_at: new Date(f.updated_at),
-      last_editor: f.last_editor
+      updated_at: new Date(f.updated_at)
     }));
   }
 
@@ -254,10 +308,10 @@ export class APIClient {
   async getFileByPath(vaultId: string, filePath: string): Promise<FileContent> {
     try {
       // Use direct request without retry for 404s
-      const response = await this.request<any>(
+      const response = await this.request<FileContentAPIResponse>(
         API_ENDPOINTS.FILE_CONTENT(vaultId, filePath)
       );
-      
+
       return {
         file_id: response.file_id,
         path: response.path,
@@ -272,12 +326,12 @@ export class APIClient {
         throw error;
       }
       // For other errors, retry
-      const response = await this.requestWithRetry<any>(
+      const response = await this.requestWithRetry<FileContentAPIResponse>(
         API_ENDPOINTS.FILE_CONTENT(vaultId, filePath),
         {},
         2 // Only 2 retries for non-404 errors
       );
-      
+
       return {
         file_id: response.file_id,
         path: response.path,
@@ -293,14 +347,14 @@ export class APIClient {
    * Create a new file
    */
   async createFile(vaultId: string, request: CreateFileRequest): Promise<FileInfo> {
-    const response = await this.request<any>(
+    const response = await this.request<FileAPIResponse>(
       API_ENDPOINTS.FILES(vaultId),
       {
         method: 'POST',
         body: JSON.stringify(request)
       }
     );
-    
+
     return {
       file_id: response.file_id,
       vault_id: response.vault_id,
@@ -320,14 +374,14 @@ export class APIClient {
     fileId: string,
     request: UpdateFileRequest
   ): Promise<FileInfo> {
-    const response = await this.request<any>(
+    const response = await this.request<FileAPIResponse>(
       API_ENDPOINTS.FILE(vaultId, fileId),
       {
         method: 'PUT',
         body: JSON.stringify(request)
       }
     );
-    
+
     return {
       file_id: response.file_id,
       vault_id: response.vault_id,
@@ -479,11 +533,11 @@ export class APIClient {
       content: string;
       operation: 'create' | 'update';
     }>
-  ): Promise<{ success: number; failed: number; errors: any[] }> {
+  ): Promise<{ success: number; failed: number; errors: BatchUpdateError[] }> {
     const results = {
       success: 0,
       failed: 0,
-      errors: [] as any[]
+      errors: [] as BatchUpdateError[]
     };
 
     // Process in batches of 5
@@ -527,10 +581,10 @@ export class APIClient {
    * Get conflicts for a vault
    */
   async getConflicts(vaultId: string): Promise<ConflictInfo[]> {
-    const response = await this.requestWithRetry<{ conflicts: any[] }>(
+    const response = await this.requestWithRetry<{ conflicts: ConflictAPIResponse[] }>(
       API_ENDPOINTS.CONFLICTS(vaultId)
     );
-    
+
     return response.conflicts.map(c => ({
       id: c.id,
       path: c.path,
@@ -538,7 +592,7 @@ export class APIClient {
       remoteContent: c.remote_content,
       localModified: new Date(c.local_modified),
       remoteModified: new Date(c.remote_modified),
-      conflictType: c.conflict_type,
+      conflictType: c.conflict_type as ConflictType,
       autoResolvable: c.auto_resolvable
     }));
   }

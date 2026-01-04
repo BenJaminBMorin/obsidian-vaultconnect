@@ -1,14 +1,32 @@
 // Mock Obsidian API for testing
 
+export interface App {
+  workspace: unknown;
+  vault: Vault;
+  [key: string]: unknown;
+}
+
+export interface PluginManifest {
+  id: string;
+  name: string;
+  version: string;
+  [key: string]: unknown;
+}
+
 export class Plugin {
-  app: any;
-  manifest: any;
-  
-  async loadData(): Promise<any> {
+  app: App;
+  manifest: PluginManifest;
+
+  constructor() {
+    this.app = { workspace: {}, vault: new Vault() };
+    this.manifest = { id: 'test-plugin', name: 'Test Plugin', version: '1.0.0' };
+  }
+
+  async loadData(): Promise<Record<string, unknown>> {
     return {};
   }
-  
-  async saveData(data: any): Promise<void> {
+
+  async saveData(data: Record<string, unknown>): Promise<void> {
     // Mock implementation
   }
 }
@@ -74,34 +92,34 @@ export class Notice {
 }
 
 export class Modal {
-  app: any;
-  
-  constructor(app: any) {
+  app: App;
+
+  constructor(app: App) {
     this.app = app;
   }
-  
+
   open(): void {
     // Mock implementation
   }
-  
+
   close(): void {
     // Mock implementation
   }
 }
 
 export class PluginSettingTab {
-  app: any;
+  app: App;
   plugin: Plugin;
-  
-  constructor(app: any, plugin: Plugin) {
+
+  constructor(app: App, plugin: Plugin) {
     this.app = app;
     this.plugin = plugin;
   }
-  
+
   display(): void {
     // Mock implementation
   }
-  
+
   hide(): void {
     // Mock implementation
   }

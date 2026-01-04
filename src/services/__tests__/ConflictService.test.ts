@@ -20,7 +20,7 @@ describe('ConflictService', () => {
       delete: jest.fn(),
       getAbstractFileByPath: jest.fn(),
       getMarkdownFiles: jest.fn()
-    } as any;
+    } as jest.Mocked<Vault>;
 
     mockApiClient = {
       listFiles: jest.fn(),
@@ -29,12 +29,12 @@ describe('ConflictService', () => {
       createFile: jest.fn(),
       deleteFile: jest.fn(),
       fileExists: jest.fn()
-    } as any;
+    } as jest.Mocked<APIClient>;
 
     mockStorage = {
       get: jest.fn(),
       set: jest.fn()
-    } as any;
+    } as jest.Mocked<StorageManager>;
 
     eventBus = new EventBus();
     conflictService = new ConflictService(mockVault, mockApiClient, eventBus, mockStorage);
@@ -216,8 +216,8 @@ describe('ConflictService', () => {
         hash: 'hash',
         updated_at: new Date()
       });
-      mockApiClient.updateFile.mockResolvedValue({} as any);
-      
+      mockApiClient.updateFile.mockResolvedValue(undefined);
+
       await conflictService.resolveConflict('conflict-1', {
         strategy: ResolutionStrategy.KEEP_LOCAL
       });
@@ -340,8 +340,8 @@ describe('ConflictService', () => {
         hash: 'hash',
         updated_at: new Date()
       });
-      mockApiClient.updateFile.mockResolvedValue({} as any);
-      
+      mockApiClient.updateFile.mockResolvedValue(undefined);
+
       await conflictService.resolveConflict('conflict-1', {
         strategy: ResolutionStrategy.MERGE_MANUAL,
         mergedContent

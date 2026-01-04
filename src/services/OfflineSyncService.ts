@@ -4,6 +4,7 @@ import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { OfflineQueueService, OfflineOperation } from './OfflineQueueService';
 import { FileSyncService } from './FileSyncService';
+import { FileInfo, FileContent, ConflictInfo, ConflictType } from '../types';
 
 /**
  * Reconnection sync result
@@ -264,10 +265,10 @@ export class OfflineSyncService {
   /**
    * Store conflict information
    */
-  private async storeConflict(operation: OfflineOperation, remoteFile: any): Promise<void> {
+  private async storeConflict(operation: OfflineOperation, remoteFile: FileContent): Promise<void> {
     try {
-      const conflicts = await this.storage.get<any[]>('conflicts') || [];
-      
+      const conflicts = await this.storage.get<ConflictInfo[]>('conflicts') || [];
+
       conflicts.push({
         id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: operation.path,
@@ -275,10 +276,8 @@ export class OfflineSyncService {
         remoteContent: remoteFile.content || '',
         localModified: new Date(operation.timestamp),
         remoteModified: new Date(remoteFile.updated_at),
-        conflictType: 'content',
-        autoResolvable: false,
-        timestamp: Date.now(),
-        source: 'offline-sync'
+        conflictType: ConflictType.CONTENT,
+        autoResolvable: false
       });
 
       await this.storage.set('conflicts', conflicts);

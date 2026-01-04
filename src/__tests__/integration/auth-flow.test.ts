@@ -28,7 +28,7 @@ describe.skip('Integration: Authentication Flow', () => {
     mockPlugin = {
       loadData: jest.fn().mockResolvedValue({}),
       saveData: jest.fn().mockResolvedValue(undefined)
-    } as any;
+    } as Partial<Plugin> as Plugin;
 
     eventBus = new EventBus();
     authService = new AuthService(mockPlugin, eventBus);

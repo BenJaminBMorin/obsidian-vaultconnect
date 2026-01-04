@@ -36,13 +36,13 @@ export interface PluginError {
   type: ErrorType;
   message: string;
   userMessage: string;
-  details?: any;
+  details?: unknown;
   originalError?: Error;
   recoverable: boolean;
   retryable: boolean;
   severity: ErrorSeverity;
   timestamp: Date;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 /**
@@ -64,7 +64,7 @@ export class VaultSyncError extends Error {
   public readonly retryable: boolean;
   public readonly severity: ErrorSeverity;
   public readonly timestamp: Date;
-  public readonly context?: Record<string, any>;
+  public readonly context?: Record<string, unknown>;
   public readonly originalError?: Error;
 
   constructor(
@@ -75,7 +75,7 @@ export class VaultSyncError extends Error {
       recoverable?: boolean;
       retryable?: boolean;
       severity?: ErrorSeverity;
-      context?: Record<string, any>;
+      context?: Record<string, unknown>;
       originalError?: Error;
     } = {}
   ) {
@@ -116,7 +116,7 @@ export class VaultSyncError extends Error {
  * Network error
  */
 export class NetworkError extends VaultSyncError {
-  constructor(message: string, originalError?: Error, context?: Record<string, any>) {
+  constructor(message: string, originalError?: Error, context?: Record<string, unknown>) {
     super(
       ErrorType.NETWORK_ERROR,
       message,
@@ -137,7 +137,7 @@ export class NetworkError extends VaultSyncError {
  * Authentication error
  */
 export class AuthenticationError extends VaultSyncError {
-  constructor(message: string, originalError?: Error, context?: Record<string, any>) {
+  constructor(message: string, originalError?: Error, context?: Record<string, unknown>) {
     super(
       ErrorType.AUTH_ERROR,
       message,
@@ -158,7 +158,7 @@ export class AuthenticationError extends VaultSyncError {
  * Sync error
  */
 export class SyncError extends VaultSyncError {
-  constructor(message: string, userMessage: string, originalError?: Error, context?: Record<string, any>) {
+  constructor(message: string, userMessage: string, originalError?: Error, context?: Record<string, unknown>) {
     super(
       ErrorType.SYNC_ERROR,
       message,
@@ -179,7 +179,7 @@ export class SyncError extends VaultSyncError {
  * Conflict error
  */
 export class ConflictError extends VaultSyncError {
-  constructor(message: string, originalError?: Error, context?: Record<string, any>) {
+  constructor(message: string, originalError?: Error, context?: Record<string, unknown>) {
     super(
       ErrorType.CONFLICT_ERROR,
       message,
@@ -200,7 +200,7 @@ export class ConflictError extends VaultSyncError {
  * Storage error
  */
 export class StorageError extends VaultSyncError {
-  constructor(message: string, originalError?: Error, context?: Record<string, any>) {
+  constructor(message: string, originalError?: Error, context?: Record<string, unknown>) {
     super(
       ErrorType.STORAGE_ERROR,
       message,
@@ -221,7 +221,7 @@ export class StorageError extends VaultSyncError {
  * Validation error
  */
 export class ValidationError extends VaultSyncError {
-  constructor(message: string, userMessage: string, context?: Record<string, any>) {
+  constructor(message: string, userMessage: string, context?: Record<string, unknown>) {
     super(
       ErrorType.VALIDATION_ERROR,
       message,
@@ -241,7 +241,7 @@ export class ValidationError extends VaultSyncError {
  * WebSocket error
  */
 export class WebSocketError extends VaultSyncError {
-  constructor(message: string, originalError?: Error, context?: Record<string, any>) {
+  constructor(message: string, originalError?: Error, context?: Record<string, unknown>) {
     super(
       ErrorType.WEBSOCKET_ERROR,
       message,
@@ -262,7 +262,7 @@ export class WebSocketError extends VaultSyncError {
  * Collaboration error
  */
 export class CollaborationError extends VaultSyncError {
-  constructor(message: string, userMessage: string, originalError?: Error, context?: Record<string, any>) {
+  constructor(message: string, userMessage: string, originalError?: Error, context?: Record<string, unknown>) {
     super(
       ErrorType.COLLABORATION_ERROR,
       message,
@@ -283,7 +283,7 @@ export class CollaborationError extends VaultSyncError {
  * File error
  */
 export class FileError extends VaultSyncError {
-  constructor(message: string, userMessage: string, originalError?: Error, context?: Record<string, any>) {
+  constructor(message: string, userMessage: string, originalError?: Error, context?: Record<string, unknown>) {
     super(
       ErrorType.FILE_ERROR,
       message,
@@ -305,9 +305,16 @@ export class FileError extends VaultSyncError {
  */
 export class ErrorClassifier {
   /**
+   * Convert unknown error to Error | undefined
+   */
+  private static toError(error: unknown): Error | undefined {
+    return error instanceof Error ? error : undefined;
+  }
+
+  /**
    * Classify an error
    */
-  static classify(error: any, context?: Record<string, any>): VaultSyncError {
+  static classify(error: unknown, context?: Record<string, unknown>): VaultSyncError {
     // Already a VaultSyncError
     if (error instanceof VaultSyncError) {
       return error;
@@ -315,6 +322,7 @@ export class ErrorClassifier {
 
     const message = this.extractMessage(error);
     const lowerMessage = message.toLowerCase();
+    const originalError = this.toError(error);
 
     // Network errors
     if (
@@ -325,7 +333,7 @@ export class ErrorClassifier {
       lowerMessage.includes('econnrefused') ||
       lowerMessage.includes('enotfound')
     ) {
-      return new NetworkError(message, error, context);
+      return new NetworkError(message, originalError, context);
     }
 
     // Authentication errors
@@ -337,7 +345,7 @@ export class ErrorClassifier {
       lowerMessage.includes('token') ||
       lowerMessage.includes('api key')
     ) {
-      return new AuthenticationError(message, error, context);
+      return new AuthenticationError(message, originalError, context);
     }
 
     // Conflict errors
@@ -345,7 +353,7 @@ export class ErrorClassifier {
       lowerMessage.includes('conflict') ||
       lowerMessage.includes('409')
     ) {
-      return new ConflictError(message, error, context);
+      return new ConflictError(message, originalError, context);
     }
 
     // Storage errors
@@ -355,7 +363,7 @@ export class ErrorClassifier {
       lowerMessage.includes('enospc') ||
       lowerMessage.includes('quota')
     ) {
-      return new StorageError(message, error, context);
+      return new StorageError(message, originalError, context);
     }
 
     // WebSocket errors
@@ -364,7 +372,7 @@ export class ErrorClassifier {
       lowerMessage.includes('ws://') ||
       lowerMessage.includes('wss://')
     ) {
-      return new WebSocketError(message, error, context);
+      return new WebSocketError(message, originalError, context);
     }
 
     // File errors
@@ -376,7 +384,7 @@ export class ErrorClassifier {
       return new FileError(
         message,
         'File operation failed. Please check file permissions.',
-        error,
+        originalError,
         context
       );
     }
@@ -385,7 +393,7 @@ export class ErrorClassifier {
     return new SyncError(
       message,
       'An unexpected error occurred. Please try again.',
-      error,
+      originalError,
       context
     );
   }
@@ -393,7 +401,7 @@ export class ErrorClassifier {
   /**
    * Extract error message
    */
-  private static extractMessage(error: any): string {
+  private static extractMessage(error: unknown): string {
     if (typeof error === 'string') {
       return error;
     }
@@ -402,12 +410,15 @@ export class ErrorClassifier {
       return error.message;
     }
 
-    if (error?.message) {
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
       return error.message;
     }
 
-    if (error?.error?.message) {
-      return error.error.message;
+    if (error && typeof error === 'object' && 'error' in error) {
+      const nestedError = (error as { error: unknown }).error;
+      if (nestedError && typeof nestedError === 'object' && 'message' in nestedError && typeof nestedError.message === 'string') {
+        return nestedError.message;
+      }
     }
 
     return 'Unknown error occurred';
@@ -486,7 +497,7 @@ export class ErrorLogger {
   /**
    * Get log method based on severity
    */
-  private static getLogMethod(severity: ErrorSeverity): (...args: any[]) => void {
+  private static getLogMethod(severity: ErrorSeverity): typeof console.log {
     switch (severity) {
       case ErrorSeverity.CRITICAL:
       case ErrorSeverity.HIGH:
@@ -576,7 +587,7 @@ export async function retryWithBackoff<T>(
   initialDelayMs: number = 1000,
   maxDelayMs: number = 10000
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -598,7 +609,7 @@ export async function retryWithBackoff<T>(
 /**
  * Check if error is retryable
  */
-export function isRetryableError(error: any): boolean {
+export function isRetryableError(error: unknown): boolean {
   if (error instanceof VaultSyncError) {
     return error.retryable;
   }
@@ -610,7 +621,7 @@ export function isRetryableError(error: any): boolean {
 /**
  * Check if error is recoverable
  */
-export function isRecoverableError(error: any): boolean {
+export function isRecoverableError(error: unknown): boolean {
   if (error instanceof VaultSyncError) {
     return error.recoverable;
   }
@@ -622,7 +633,7 @@ export function isRecoverableError(error: any): boolean {
 /**
  * Get user-friendly error message
  */
-export function getUserMessage(error: any): string {
+export function getUserMessage(error: unknown): string {
   if (error instanceof VaultSyncError) {
     return error.userMessage;
   }

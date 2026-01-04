@@ -46,24 +46,24 @@ export class Logger {
   /**
    * Format log message with prefix and timestamp
    */
-  private format(level: string, ...args: any[]): any[] {
-    const parts: any[] = []
-    
+  private format(level: string, ...args: unknown[]): unknown[] {
+    const parts: unknown[] = []
+
     if (this.config.enableTimestamps) {
       const timestamp = new Date().toISOString().split('T')[1].slice(0, -1)
       parts.push(`[${timestamp}]`)
     }
-    
+
     parts.push(`${this.config.prefix}[${level}]`)
     parts.push(...args)
-    
+
     return parts
   }
 
   /**
    * Log error messages (always shown unless NONE)
    */
-  error(...args: any[]): void {
+  error(...args: unknown[]): void {
     if (this.config.level >= LogLevel.ERROR) {
       console.error(...this.format('ERROR', ...args))
     }
@@ -72,7 +72,7 @@ export class Logger {
   /**
    * Log warning messages
    */
-  warn(...args: any[]): void {
+  warn(...args: unknown[]): void {
     if (this.config.level >= LogLevel.WARN) {
       console.warn(...this.format('WARN', ...args))
     }
@@ -81,7 +81,7 @@ export class Logger {
   /**
    * Log info messages (default level)
    */
-  info(...args: any[]): void {
+  info(...args: unknown[]): void {
     if (this.config.level >= LogLevel.INFO) {
       console.debug(...this.format('INFO', ...args))
     }
@@ -90,7 +90,7 @@ export class Logger {
   /**
    * Log debug messages (verbose)
    */
-  debug(...args: any[]): void {
+  debug(...args: unknown[]): void {
     if (this.config.level >= LogLevel.DEBUG) {
       console.debug(...this.format('DEBUG', ...args))
     }
@@ -99,7 +99,7 @@ export class Logger {
   /**
    * Log trace messages (very verbose)
    */
-  trace(...args: any[]): void {
+  trace(...args: unknown[]): void {
     if (this.config.level >= LogLevel.TRACE) {
       console.debug(...this.format('TRACE', ...args))
     }
@@ -108,7 +108,7 @@ export class Logger {
   /**
    * Log HTTP requests (special case for 404s)
    */
-  http(method: string, url: string, status: number, ...args: any[]): void {
+  http(method: string, url: string, status: number, ...args: unknown[]): void {
     // 404s are expected for file existence checks - only log at DEBUG level
     if (status === 404) {
       this.debug(`${method} ${url} ${status}`, ...args)

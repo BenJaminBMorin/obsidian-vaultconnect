@@ -1,6 +1,7 @@
 import { SelectiveSyncService } from '../SelectiveSyncService';
 import { EventBus } from '../../core/EventBus';
 import { StorageManager } from '../../core/StorageManager';
+import { TFile } from 'obsidian';
 
 // Mock TFile for testing
 class MockTFile {
@@ -14,7 +15,7 @@ describe('SelectiveSyncService', () => {
 
   beforeEach(() => {
     eventBus = new EventBus();
-    storage = {} as StorageManager; // Mock storage
+    storage = {} as jest.Mocked<StorageManager>; // Mock storage
     service = new SelectiveSyncService(
       eventBus,
       storage,
@@ -27,17 +28,17 @@ describe('SelectiveSyncService', () => {
 
   describe('Default Exclusions', () => {
     it('should exclude .obsidian folder by default', () => {
-      const file = new MockTFile('.obsidian/config.json') as any;
+      const file = new MockTFile('.obsidian/config.json') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(false);
     });
 
     it('should exclude .trash folder by default', () => {
-      const file = new MockTFile('.trash/deleted.md') as any;
+      const file = new MockTFile('.trash/deleted.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(false);
     });
 
     it('should sync regular files by default', () => {
-      const file = new MockTFile('notes/file.md') as any;
+      const file = new MockTFile('notes/file.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(true);
     });
   });
@@ -48,22 +49,22 @@ describe('SelectiveSyncService', () => {
     });
 
     it('should exclude files in excluded folders', () => {
-      const file = new MockTFile('private/secret.md') as any;
+      const file = new MockTFile('private/secret.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(false);
     });
 
     it('should exclude files in nested excluded folders', () => {
-      const file = new MockTFile('private/nested/secret.md') as any;
+      const file = new MockTFile('private/nested/secret.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(false);
     });
 
     it('should sync files not in excluded folders', () => {
-      const file = new MockTFile('public/file.md') as any;
+      const file = new MockTFile('public/file.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(true);
     });
 
     it('should maintain default exclusions', () => {
-      const file = new MockTFile('.obsidian/config.json') as any;
+      const file = new MockTFile('.obsidian/config.json') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(false);
     });
   });
@@ -74,17 +75,17 @@ describe('SelectiveSyncService', () => {
     });
 
     it('should sync files in included folders', () => {
-      const file = new MockTFile('notes/file.md') as any;
+      const file = new MockTFile('notes/file.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(true);
     });
 
     it('should not sync files outside included folders', () => {
-      const file = new MockTFile('other/file.md') as any;
+      const file = new MockTFile('other/file.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(false);
     });
 
     it('should sync nested files in included folders', () => {
-      const file = new MockTFile('notes/nested/file.md') as any;
+      const file = new MockTFile('notes/nested/file.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(true);
     });
   });
@@ -96,12 +97,12 @@ describe('SelectiveSyncService', () => {
     });
 
     it('should exclude files even if in included folder', () => {
-      const file = new MockTFile('notes/private/secret.md') as any;
+      const file = new MockTFile('notes/private/secret.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(false);
     });
 
     it('should sync files in included folder but not excluded', () => {
-      const file = new MockTFile('notes/public/file.md') as any;
+      const file = new MockTFile('notes/public/file.md') as unknown as TFile;
       expect(service.shouldSyncFile(file)).toBe(true);
     });
   });
@@ -110,8 +111,8 @@ describe('SelectiveSyncService', () => {
     it('should match wildcard patterns', () => {
       service.setExcludedFolders(['*/temp']);
       
-      const file1 = new MockTFile('project1/temp/file.md') as any;
-      const file2 = new MockTFile('project2/temp/file.md') as any;
+      const file1 = new MockTFile('project1/temp/file.md') as unknown as TFile;
+      const file2 = new MockTFile('project2/temp/file.md') as unknown as TFile;
       
       expect(service.shouldSyncFile(file1)).toBe(false);
       expect(service.shouldSyncFile(file2)).toBe(false);
@@ -120,8 +121,8 @@ describe('SelectiveSyncService', () => {
     it('should match exact folder names', () => {
       service.setExcludedFolders(['temp']);
       
-      const file1 = new MockTFile('temp/file.md') as any;
-      const file2 = new MockTFile('temporary/file.md') as any;
+      const file1 = new MockTFile('temp/file.md') as unknown as TFile;
+      const file2 = new MockTFile('temporary/file.md') as unknown as TFile;
       
       expect(service.shouldSyncFile(file1)).toBe(false);
       expect(service.shouldSyncFile(file2)).toBe(true);
@@ -191,7 +192,7 @@ describe('SelectiveSyncService', () => {
         new MockTFile('notes/file2.md'),
         new MockTFile('private/secret.md'),
         new MockTFile('.obsidian/config.json')
-      ] as any[];
+      ] as unknown as TFile[];
 
       const stats = service.getSyncScopePreview(files);
       

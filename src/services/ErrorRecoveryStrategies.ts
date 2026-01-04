@@ -3,9 +3,21 @@ import {
   PluginError,
   ErrorType
 } from '../utils/errors';
+import { ConflictInfo } from '../types';
 import { AuthService } from './AuthService';
 import { WebSocketManager } from '../core/WebSocketManager';
 import { StorageManager } from '../core/StorageManager';
+
+/**
+ * Sync log entry
+ */
+interface SyncLogEntry {
+  timestamp: number;
+  operation: string;
+  path?: string;
+  status: 'success' | 'failure';
+  [key: string]: unknown;
+}
 
 /**
  * Network reconnection strategy
@@ -126,16 +138,13 @@ export class StorageCleanupStrategy implements ErrorRecoveryStrategy {
       this.storage.clearFileCache();
 
       // Clear old sync logs (keep last 50)
-      const logs = await this.storage.get<any[]>('syncLogs') || [];
+      const logs = await this.storage.get<SyncLogEntry[]>('syncLogs') || [];
       if (logs.length > 50) {
         await this.storage.set('syncLogs', logs.slice(0, 50));
       }
 
-      // Clear resolved conflicts
-      const conflicts = this.storage.getConflicts();
-      const unresolvedConflicts = conflicts.filter((c: any) => !c.resolved);
+      // Clear all conflicts (they will be re-detected if still present)
       this.storage.clearConflicts();
-      unresolvedConflicts.forEach((c: any) => this.storage.addConflict(c));
 
       await this.storage.save();
       return true;

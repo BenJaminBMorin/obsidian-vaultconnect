@@ -7,7 +7,7 @@ export interface PerformanceMetric {
   name: string;
   duration: number;
   timestamp: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PerformanceReport {
@@ -37,7 +37,7 @@ export class PerformanceMonitor {
   /**
    * End timing an operation and record the metric
    */
-  endTimer(name: string, metadata?: Record<string, any>): number {
+  endTimer(name: string, metadata?: Record<string, unknown>): number {
     const startTime = this.timers.get(name);
     if (!startTime) {
       console.warn(`No timer found for: ${name}`);
@@ -63,7 +63,7 @@ export class PerformanceMonitor {
   async measure<T>(
     name: string,
     operation: () => Promise<T>,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<T> {
     this.startTimer(name);
     try {
@@ -82,7 +82,7 @@ export class PerformanceMonitor {
   measureSync<T>(
     name: string,
     operation: () => T,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): T {
     this.startTimer(name);
     try {
@@ -246,11 +246,12 @@ export class PerformanceMonitor {
 export const performanceMonitor = new PerformanceMonitor();
 
 // Helper decorator for measuring method performance
-export function measurePerformance(target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+export function measurePerformance(target: unknown, propertyKey: string, descriptor: PropertyDescriptor) {
   const originalMethod = descriptor.value;
 
-  descriptor.value = async function (...args: any[]) {
-    const name = `${target.constructor.name}.${propertyKey}`;
+  descriptor.value = async function (...args: unknown[]) {
+    const targetObj = target as { constructor: { name: string } };
+    const name = `${targetObj.constructor.name}.${propertyKey}`;
     return performanceMonitor.measure(name, () => originalMethod.apply(this, args));
   };
 

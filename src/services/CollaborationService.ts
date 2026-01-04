@@ -277,7 +277,7 @@ export class CollaborationService {
     const collaborators: CollaboratorInfo[] = [];
     const states = awareness.getStates();
 
-    states.forEach((state: any, clientId: number) => {
+    states.forEach((state: AwarenessState, clientId: number) => {
       // Skip local user
       if (clientId === awareness.clientID) {
         return;
@@ -323,7 +323,7 @@ export class CollaborationService {
   /**
    * Subscribe to remote change events
    */
-  onRemoteChange(callback: (filePath: string, changes: Y.YEvent<any>[]) => void): () => void {
+  onRemoteChange(callback: (filePath: string, changes: Y.YEvent<Y.Text>[]) => void): () => void {
     return this.eventBus.on(EVENTS.REMOTE_CHANGE, callback);
   }
 
@@ -357,7 +357,7 @@ export class CollaborationService {
    */
   private setupAwarenessHandlers(awareness: Awareness, filePath: string): void {
     // Handle awareness changes
-    awareness.on('change', (changes: any) => {
+    awareness.on('change', (changes: { added: number[]; updated: number[]; removed: number[] }) => {
       this.log(`Awareness changed for ${filePath}`, changes);
 
       // Process added clients
@@ -372,7 +372,7 @@ export class CollaborationService {
       changes.updated.forEach((clientId: number) => {
         const state = awareness.getStates().get(clientId);
         if (state && state.user) {
-          this.handleAwarenessUpdate(clientId, state, filePath);
+          this.handleAwarenessUpdate(clientId, state as AwarenessState, filePath);
         }
       });
 
@@ -392,7 +392,7 @@ export class CollaborationService {
   /**
    * Handle collaborator joined
    */
-  private handleCollaboratorJoined(user: any, filePath: string): void {
+  private handleCollaboratorJoined(user: AwarenessState['user'], filePath: string): void {
     // Skip local user
     if (user.id === this.userId) {
       return;
@@ -419,7 +419,7 @@ export class CollaborationService {
   /**
    * Handle awareness update (cursor, selection, typing)
    */
-  private handleAwarenessUpdate(clientId: number, state: any, filePath: string): void {
+  private handleAwarenessUpdate(clientId: number, state: AwarenessState, filePath: string): void {
     // Skip local user
     if (state.user?.id === this.userId) {
       return;
@@ -505,7 +505,7 @@ export class CollaborationService {
   /**
    * Log message (if debug mode enabled)
    */
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.debugMode) {
       if (data !== undefined) {
         console.debug(`[CollaborationService] ${message}`, data);

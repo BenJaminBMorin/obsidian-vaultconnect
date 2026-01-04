@@ -108,16 +108,17 @@ export class SettingsManager {
   /**
    * Migrate settings from older versions
    */
-  private async migrateSettings(data: any): Promise<any> {
-    const version = data._version || 0;
-    
+  private async migrateSettings(data: unknown): Promise<Record<string, unknown>> {
+    const dataObj = data as Record<string, unknown>;
+    const version = (dataObj._version as number) || 0;
+
     if (version === this.SETTINGS_VERSION) {
-      return data;
+      return dataObj;
     }
 
     console.debug(`Migrating settings from version ${version} to ${this.SETTINGS_VERSION}`);
-    
-    let migratedData = { ...data };
+
+    let migratedData = { ...dataObj };
 
     // Migration from version 0 (initial) to version 1
     if (version < 1) {
@@ -136,8 +137,8 @@ export class SettingsManager {
    * Migrate from version 0 to version 1
    * Handles old main.ts settings structure
    */
-  private migrateV0ToV1(data: any): any {
-    const migrated: any = {};
+  private migrateV0ToV1(data: Record<string, unknown>): Record<string, unknown> {
+    const migrated: Record<string, unknown> = {};
 
     // Map old field names to new ones
     if (data.apiUrl) {
@@ -315,32 +316,34 @@ export class SettingsManager {
   /**
    * Validate imported settings structure
    */
-  private validateImportedSettings(settings: any): boolean {
+  private validateImportedSettings(settings: unknown): boolean {
     if (typeof settings !== 'object' || settings === null) {
       return false;
     }
-    
+
+    const settingsObj = settings as Record<string, unknown>;
+
     // Validate sync mode if present
-    if (settings.syncMode && !['smart_sync', 'pull_all', 'push_all', 'manual'].includes(settings.syncMode)) {
+    if (settingsObj.syncMode && !['smart_sync', 'pull_all', 'push_all', 'manual'].includes(settingsObj.syncMode as string)) {
       return false;
     }
-    
+
     // Validate arrays if present
-    if (settings.includedFolders && !Array.isArray(settings.includedFolders)) {
+    if (settingsObj.includedFolders && !Array.isArray(settingsObj.includedFolders)) {
       return false;
     }
-    if (settings.excludedFolders && !Array.isArray(settings.excludedFolders)) {
+    if (settingsObj.excludedFolders && !Array.isArray(settingsObj.excludedFolders)) {
       return false;
     }
-    
+
     // Validate numbers if present
-    if (settings.syncInterval !== undefined && (typeof settings.syncInterval !== 'number' || settings.syncInterval <= 0)) {
+    if (settingsObj.syncInterval !== undefined && (typeof settingsObj.syncInterval !== 'number' || settingsObj.syncInterval <= 0)) {
       return false;
     }
-    if (settings.maxConcurrentUploads !== undefined && (typeof settings.maxConcurrentUploads !== 'number' || settings.maxConcurrentUploads < 1)) {
+    if (settingsObj.maxConcurrentUploads !== undefined && (typeof settingsObj.maxConcurrentUploads !== 'number' || settingsObj.maxConcurrentUploads < 1)) {
       return false;
     }
-    
+
     return true;
   }
 }

@@ -4,6 +4,20 @@ import { DeviceAuthModal } from './DeviceAuthModal';
 import { showConfirmationModal } from './ConfirmationModal';
 import { formatRelativeTime } from '../utils/helpers';
 import { SyncMode, PluginSettings } from '../types';
+import { SyncService } from '../services/SyncService';
+import { InitialSyncService } from '../services/InitialSyncService';
+import { InitialSyncState } from '../types/initial-sync.types';
+import { SettingsManager } from '../core/SettingsManager';
+import { CacheService } from '../services/CacheService';
+
+/**
+ * Plugin extension interface for accessing internal services
+ */
+interface PluginWithServices {
+  syncService?: SyncService | null;
+  settingsManager?: SettingsManager | null;
+  cacheService?: CacheService | null;
+}
 
 /**
  * Settings Tab for VaultSync Plugin
@@ -50,6 +64,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     this.displayAuthSection(containerEl);
 
     // Only show other settings if authenticated
+    if (!this.plugin.authService) {
+      return;
+    }
+
     const authState = this.plugin.authService.getAuthState();
     if (authState.isAuthenticated) {
       this.displayVaultSection(containerEl);
@@ -75,6 +93,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   private displayAuthSection(containerEl: HTMLElement): void {
     new Setting(containerEl).setName('Authentication').setHeading();
 
+    if (!this.plugin.authService) {
+      return;
+    }
+
     const authState = this.plugin.authService.getAuthState();
 
     // Connection status
@@ -87,26 +109,30 @@ export class VaultSyncSettingTab extends PluginSettingTab {
             .setButtonText('Logout')
             .setWarning()
             .onClick(async () => {
-              await this.plugin.authService.clearApiKey();
-              new Notice('Logged out successfully');
-              this.display(); // Refresh settings
+              if (this.plugin.authService) {
+                await this.plugin.authService.clearApiKey();
+                new Notice('Logged out successfully');
+                this.display(); // Refresh settings
+              }
             });
         } else {
           button
             .setButtonText('Login')
             .setCta()
             .onClick(() => {
-              new DeviceAuthModal(
-                this.app,
-                this.plugin.authService,
-                this.plugin.settings.apiBaseURL,
-                () => {
-                  this.display(); // Refresh settings after login
-                },
-                () => {
-                  // Cancelled
-                }
-              ).open();
+              if (this.plugin.authService) {
+                new DeviceAuthModal(
+                  this.app,
+                  this.plugin.authService,
+                  this.plugin.settings.apiBaseURL,
+                  () => {
+                    this.display(); // Refresh settings after login
+                  },
+                  () => {
+                    // Cancelled
+                  }
+                ).open();
+              }
             });
         }
       });
@@ -338,10 +364,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
               .map(f => f.trim())
               .filter(f => f.length > 0);
             await this.plugin.saveSettings();
-            
+
             // Update sync service if available
-            if ((this.plugin as any).syncService) {
-              (this.plugin as any).syncService.setExcludedFolders(this.plugin.settings.excludedFolders);
+            const pluginExt = this.plugin as unknown as PluginWithServices;
+            if (pluginExt.syncService) {
+              pluginExt.syncService.setExcludedFolders(this.plugin.settings.excludedFolders);
             }
           });
         text.inputEl.rows = 3;
@@ -366,10 +393,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
               .map(f => f.trim())
               .filter(f => f.length > 0);
             await this.plugin.saveSettings();
-            
+
             // Update sync service if available
-            if ((this.plugin as any).syncService) {
-              (this.plugin as any).syncService.setIncludedFolders(this.plugin.settings.includedFolders);
+            const pluginExt = this.plugin as unknown as PluginWithServices;
+            if (pluginExt.syncService) {
+              pluginExt.syncService.setIncludedFolders(this.plugin.settings.includedFolders);
             }
           });
         text.inputEl.rows = 3;
@@ -390,9 +418,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   private openSelectiveSyncModal(): void {
     // Import dynamically to avoid circular dependencies
     import('./SelectiveSyncModal').then(({ SelectiveSyncModal }) => {
+      const pluginExt = this.plugin as unknown as PluginWithServices;
+
       // Check if plugin has syncService (for full implementation)
-      if ((this.plugin as any).syncService) {
-        const selectiveSyncService = (this.plugin as any).syncService.getSelectiveSyncService();
+      if (pluginExt.syncService) {
+        const selectiveSyncService = pluginExt.syncService.getSelectiveSyncService();
         new SelectiveSyncModal(
           this.app,
           selectiveSyncService,
@@ -420,7 +450,8 @@ export class VaultSyncSettingTab extends PluginSettingTab {
                 {
                   includedFolders: this.plugin.settings.includedFolders,
                   excludedFolders: this.plugin.settings.excludedFolders
-                }
+                },
+                this.app.vault.configDir
               );
               
               new SelectiveSyncModal(
@@ -597,10 +628,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.cacheEnabled = value;
             await this.plugin.saveSettings();
-            
-            if (!value && (this.plugin as any).cacheService) {
+
+            const pluginExt = this.plugin as unknown as PluginWithServices;
+            if (!value && pluginExt.cacheService) {
               // Clear cache when disabled
-              await (this.plugin as any).cacheService.clearAll();
+              await pluginExt.cacheService.clearAll();
               new Notice('Cache cleared');
             }
           });
@@ -679,37 +711,37 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
   private displayInitialSyncReset(containerEl: HTMLElement): void {
     const vaultId = this.plugin.settings.selectedVaultId;
-    
+
     if (!vaultId) {
       // No vault selected, don't show the reset option
       return;
     }
 
     // Get initial sync service
-    const initialSyncService = (this.plugin as any).initialSyncService;
-    
+    const initialSyncService = this.plugin.initialSyncService;
+
     if (!initialSyncService) {
       // Service not available
       return;
     }
 
     // Get sync state asynchronously and update UI
-    initialSyncService.getSyncState(vaultId).then((syncState: any) => {
+    initialSyncService.getSyncState(vaultId).then((syncState: InitialSyncState | null) => {
       let description = 'Reset initial sync state for troubleshooting';
-      
+
       if (syncState && syncState.completed) {
         // Format the completion date
-        const completedDate = new Date(syncState.completedAt);
+        const completedDate = syncState.completedAt ? new Date(syncState.completedAt) : new Date();
         const dateStr = completedDate.toLocaleDateString();
         const timeStr = completedDate.toLocaleTimeString();
-        
+
         // Get option label
         const optionLabels: Record<string, string> = {
           'start-fresh': 'Start Fresh',
           'upload-local': 'Upload Local',
           'smart-merge': 'Smart Merge'
         };
-        const optionLabel = optionLabels[syncState.chosenOption] || syncState.chosenOption;
+        const optionLabel = syncState.chosenOption ? (optionLabels[syncState.chosenOption] || syncState.chosenOption) : 'Unknown';
         
         description = `Completed on ${dateStr} at ${timeStr} using "${optionLabel}" option. Reset to run initial sync wizard again.`;
       } else {
@@ -746,9 +778,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     });
   }
 
-  private async resetInitialSyncState(vaultId: string, initialSyncService: any): Promise<void> {
+  private async resetInitialSyncState(vaultId: string, initialSyncService: InitialSyncService): Promise<void> {
     // Get current sync state for confirmation message
-    let syncState: any = null;
+    let syncState: InitialSyncState | null = null;
     try {
       syncState = await initialSyncService.getSyncState(vaultId);
     } catch (error) {
@@ -764,11 +796,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         'upload-local': 'Upload Local',
         'smart-merge': 'Smart Merge'
       };
-      const optionLabel = optionLabels[syncState.chosenOption] || syncState.chosenOption;
-      
+      const optionLabel = syncState.chosenOption ? (optionLabels[syncState.chosenOption] || syncState.chosenOption) : 'Unknown';
+
       confirmMessage += `Current state:\n`;
       confirmMessage += `- Option: ${optionLabel}\n`;
-      confirmMessage += `- Completed: ${new Date(syncState.completedAt).toLocaleString()}\n`;
+      confirmMessage += `- Completed: ${syncState.completedAt ? new Date(syncState.completedAt).toLocaleString() : 'Unknown'}\n`;
       confirmMessage += `- Files processed: ${syncState.fileCounts.localOnly + syncState.fileCounts.remoteOnly + syncState.fileCounts.both}\n\n`;
     }
     
@@ -869,11 +901,13 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   // Settings import/export
   private async exportSettings(): Promise<void> {
     try {
+      const pluginExt = this.plugin as unknown as PluginWithServices;
+
       // Use SettingsManager if available, otherwise fallback to manual export
       let json: string;
-      
-      if ((this.plugin as any).settingsManager) {
-        json = (this.plugin as any).settingsManager.exportSettings();
+
+      if (pluginExt.settingsManager) {
+        json = pluginExt.settingsManager.exportSettings();
       } else {
         // Fallback: Create a sanitized copy of settings
         const exportData: Partial<PluginSettings> = {
@@ -926,10 +960,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         if (!file) return;
         
         const text = await file.text();
-        
+
+        const pluginExt = this.plugin as unknown as PluginWithServices;
+
         // Use SettingsManager if available
-        if ((this.plugin as any).settingsManager) {
-          const success = await (this.plugin as any).settingsManager.importSettings(text);
+        if (pluginExt.settingsManager) {
+          const success = await pluginExt.settingsManager.importSettings(text);
           if (success) {
             this.display(); // Refresh UI
             new Notice('Settings imported successfully');
@@ -959,26 +995,28 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     }
   }
 
-  private validateImportedSettings(settings: any): boolean {
+  private validateImportedSettings(settings: unknown): boolean {
     if (typeof settings !== 'object' || settings === null) {
       return false;
     }
-    
-    if (settings.syncMode && !Object.values(SyncMode).includes(settings.syncMode)) {
+
+    const settingsObj = settings as Record<string, unknown>;
+
+    if (settingsObj.syncMode && !Object.values(SyncMode).includes(settingsObj.syncMode as SyncMode)) {
       return false;
     }
-    
-    if (settings.includedFolders && !Array.isArray(settings.includedFolders)) {
+
+    if (settingsObj.includedFolders && !Array.isArray(settingsObj.includedFolders)) {
       return false;
     }
-    if (settings.excludedFolders && !Array.isArray(settings.excludedFolders)) {
+    if (settingsObj.excludedFolders && !Array.isArray(settingsObj.excludedFolders)) {
       return false;
     }
-    
-    if (settings.syncInterval !== undefined && (typeof settings.syncInterval !== 'number' || settings.syncInterval <= 0)) {
+
+    if (settingsObj.syncInterval !== undefined && (typeof settingsObj.syncInterval !== 'number' || settingsObj.syncInterval <= 0)) {
       return false;
     }
-    if (settings.maxConcurrentUploads !== undefined && (typeof settings.maxConcurrentUploads !== 'number' || settings.maxConcurrentUploads < 1)) {
+    if (settingsObj.maxConcurrentUploads !== undefined && (typeof settingsObj.maxConcurrentUploads !== 'number' || settingsObj.maxConcurrentUploads < 1)) {
       return false;
     }
     
@@ -993,11 +1031,13 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     );
 
     if (!confirmed) return;
-    
+
     try {
+      const pluginExt = this.plugin as unknown as PluginWithServices;
+
       // Use SettingsManager if available
-      if ((this.plugin as any).settingsManager) {
-        await (this.plugin as any).settingsManager.resetSettings();
+      if (pluginExt.settingsManager) {
+        await pluginExt.settingsManager.resetSettings();
       } else {
         // Fallback: Manual reset
         const { DEFAULT_SETTINGS } = await import('../utils/constants');

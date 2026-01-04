@@ -2,6 +2,7 @@ import { App, Modal, Notice } from 'obsidian';
 import { InitialSyncService } from '../services/InitialSyncService';
 import { FileAnalysis, InitialSyncOption, ProgressInfo } from '../types/initial-sync.types';
 import { InitialSyncProgressModal } from './InitialSyncProgressModal';
+import { EventBus } from '../core/EventBus';
 
 /**
  * Options for the Initial Sync Wizard Modal
@@ -21,7 +22,7 @@ export interface InitialSyncWizardOptions {
 
 /**
  * Initial Sync Wizard Modal
- * 
+ *
  * Displays file analysis and presents three sync options to the user:
  * - Smart Merge (recommended)
  * - Start Fresh
@@ -31,13 +32,13 @@ export class InitialSyncWizardModal extends Modal {
   private options: InitialSyncWizardOptions;
   private initialSyncService: InitialSyncService;
   private progressModal: InitialSyncProgressModal | null = null;
-  private eventBus: any; // EventBus instance
+  private eventBus: EventBus;
 
   constructor(
     app: App,
     options: InitialSyncWizardOptions,
     initialSyncService: InitialSyncService,
-    eventBus: any
+    eventBus: EventBus
   ) {
     super(app);
     this.options = options;

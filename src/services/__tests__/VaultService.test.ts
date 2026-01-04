@@ -11,7 +11,7 @@ describe('VaultService', () => {
   let mockApiClient: jest.Mocked<APIClient>;
   let mockStorage: jest.Mocked<StorageManager>;
   let eventBus: EventBus;
-  let mockData: any;
+  let mockData: Record<string, unknown>;
 
   const mockVault: VaultInfo = {
     vault_id: 'vault-123',
@@ -30,13 +30,13 @@ describe('VaultService', () => {
         mockData = data;
         return Promise.resolve();
       })
-    } as any;
+    } as Partial<Plugin> as Plugin;
 
     mockApiClient = {
       listVaults: jest.fn(),
       getVault: jest.fn(),
       createVault: jest.fn()
-    } as any;
+    } as jest.Mocked<APIClient>;
 
     mockStorage = {
       getVaultCache: jest.fn(),
@@ -44,7 +44,7 @@ describe('VaultService', () => {
       clearVaultCache: jest.fn(),
       getLastSyncTimestamp: jest.fn(),
       save: jest.fn().mockResolvedValue(undefined)
-    } as any;
+    } as jest.Mocked<StorageManager>;
 
     eventBus = new EventBus();
     vaultService = new VaultService(mockPlugin, mockApiClient, mockStorage, eventBus);

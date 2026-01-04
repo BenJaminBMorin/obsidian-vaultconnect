@@ -21,14 +21,14 @@ describe('PresenceService', () => {
           offref: jest.fn()
         }
       }
-    } as any;
+    } as Partial<Plugin> as Plugin;
 
     eventBus = new EventBus();
 
     mockWsManager = {
       send: jest.fn(),
       on: jest.fn()
-    } as any;
+    } as jest.Mocked<WebSocketManager>;
 
     mockStorage = {
       getActiveUsers: jest.fn().mockReturnValue({}),
@@ -36,7 +36,7 @@ describe('PresenceService', () => {
       setActiveUsers: jest.fn(),
       setFileViewers: jest.fn(),
       save: jest.fn().mockResolvedValue(undefined)
-    } as any;
+    } as jest.Mocked<StorageManager>;
 
     presenceService = new PresenceService(
       mockPlugin,

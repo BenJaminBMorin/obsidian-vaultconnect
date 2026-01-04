@@ -4,6 +4,19 @@ import { StorageManager } from '../core/StorageManager';
 import { PresenceService } from './PresenceService';
 import { FileInfo } from '../types';
 
+/**
+ * File sync event data
+ */
+interface FileSyncEventData {
+  filePath: string;
+  lastEditor?: {
+    userId: string;
+    userName: string;
+    userAvatar?: string;
+  };
+  [key: string]: unknown;
+}
+
 export interface FileMetadata {
   filePath: string;
   lastEditor: {
@@ -234,7 +247,7 @@ export class CollaborationMetadataService {
     );
 
     // Listen for sync events to update metadata
-    this.eventBus.on(EVENTS.FILE_SYNCED, (data: any) => {
+    this.eventBus.on(EVENTS.FILE_SYNCED, (data: FileSyncEventData) => {
       if (data.lastEditor) {
         this.storeFileMetadata(data.filePath, data.lastEditor);
       }
@@ -428,7 +441,7 @@ export class CollaborationMetadataService {
   /**
    * Log message (if debug mode enabled)
    */
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.debugMode) {
       if (data !== undefined) {
         console.debug(`[CollaborationMetadataService] ${message}`, data);

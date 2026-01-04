@@ -6,6 +6,7 @@ import { FileWatcherService, FileChangeEvent } from './FileWatcherService';
 import { SyncQueueService, QueuedOperation } from './SyncQueueService';
 import { FileSyncService, FileSyncResult } from './FileSyncService';
 import { SelectiveSyncService } from './SelectiveSyncService';
+import { FileInfo } from '../types';
 
 /**
  * Sync mode
@@ -526,7 +527,7 @@ export class SyncService {
   /**
    * Handle conflict by creating a conflict record
    */
-  private async handleConflict(localFile: TFile, remoteFile: any): Promise<void> {
+  private async handleConflict(localFile: TFile, remoteFile: FileInfo): Promise<void> {
     try {
       const localContent = await this.vault.read(localFile);
       const remoteContent = await this.apiClient.getFileByPath(this.vaultId!, localFile.path);

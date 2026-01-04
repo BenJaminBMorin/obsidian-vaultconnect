@@ -13,7 +13,7 @@ export enum ConnectionState {
 
 export interface WebSocketMessage {
   event: string;
-  data?: any;
+  data?: unknown;
   timestamp?: number;
 }
 
@@ -227,7 +227,7 @@ export class WebSocketManager {
   /**
    * Send message to server
    */
-  send(event: string, data?: any): void {
+  send(event: string, data?: unknown): void {
     const message: WebSocketMessage = {
       event,
       data,
@@ -253,14 +253,14 @@ export class WebSocketManager {
   /**
    * Subscribe to WebSocket events
    */
-  on(event: string, handler: (data: any) => void): () => void {
+  on(event: string, handler: (data: unknown) => void): () => void {
     return this.eventBus.on(`ws:${event}`, handler);
   }
 
   /**
    * Unsubscribe from WebSocket events
    */
-  off(event: string, handler: (data: any) => void): void {
+  off(event: string, handler: (data: unknown) => void): void {
     this.eventBus.off(`ws:${event}`, handler);
   }
 
@@ -592,14 +592,14 @@ export class WebSocketManager {
   /**
    * Wait for specific event
    */
-  private waitForEvent(event: string, timeout: number = 5000): Promise<any> {
+  private waitForEvent(event: string, timeout: number = 5000): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.off(event, handler);
         reject(new Error(`Timeout waiting for event: ${event}`));
       }, timeout);
 
-      const handler = (data: any) => {
+      const handler = (data: unknown) => {
         clearTimeout(timer);
         this.off(event, handler);
         resolve(data);
@@ -612,7 +612,7 @@ export class WebSocketManager {
   /**
    * Set connection state and emit event
    */
-  private setConnectionState(state: ConnectionState, data?: any): void {
+  private setConnectionState(state: ConnectionState, data?: unknown): void {
     this.connectionState = state;
     this.eventBus.emit(EVENTS.CONNECTION_CHANGED, state, data);
     this.log(`Connection state: ${state}`);
@@ -621,7 +621,7 @@ export class WebSocketManager {
   /**
    * Log message (if debug mode enabled)
    */
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.debugMode) {
       if (data !== undefined) {
         console.debug(`[WebSocketManager] ${message}`, data);

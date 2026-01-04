@@ -42,7 +42,7 @@ export function generateUserColor(userId: string): string {
 /**
  * Debounce function
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -140,10 +140,20 @@ export function sanitizeFilePath(path: string): string {
 /**
  * Parse error message
  */
-export function parseErrorMessage(error: any): string {
+export function parseErrorMessage(error: unknown): string {
   if (typeof error === 'string') return error;
-  if (error?.message) return error.message;
-  if (error?.error?.message) return error.error.message;
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object' && 'message' in error) {
+    const msg = (error as Record<string, unknown>).message;
+    if (typeof msg === 'string') return msg;
+  }
+  if (error && typeof error === 'object' && 'error' in error) {
+    const nestedError = (error as Record<string, unknown>).error;
+    if (nestedError && typeof nestedError === 'object' && 'message' in nestedError) {
+      const msg = (nestedError as Record<string, unknown>).message;
+      if (typeof msg === 'string') return msg;
+    }
+  }
   return 'An unknown error occurred';
 }
 
@@ -162,21 +172,21 @@ export async function retryWithBackoff<T>(
   maxAttempts: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: any;
-  
+  let lastError: unknown;
+
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error;
-      
+
       if (attempt < maxAttempts - 1) {
         const delay = getBackoffDelay(attempt, baseDelay);
         await sleep(delay);
       }
     }
   }
-  
+
   throw lastError;
 }
 

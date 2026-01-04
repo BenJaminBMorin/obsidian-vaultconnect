@@ -7,6 +7,7 @@ import { App, MarkdownView, TFile } from 'obsidian';
 import { EventBus, EVENTS } from '../core/EventBus';
 import { CollaborationService } from './CollaborationService';
 import { parseErrorMessage } from '../utils/helpers';
+import { AwarenessState } from '../types';
 
 export interface EditorBindingInfo {
   filePath: string;
@@ -328,9 +329,9 @@ export class EditorBinding {
     });
 
     // Listen for awareness changes
-    binding.awareness.on('change', (changes: any) => {
+    binding.awareness.on('change', (changes: { added: number[]; updated: number[]; removed: number[] }) => {
       this.log(`Awareness changed for ${binding.filePath}`, changes);
-      
+
       // Process awareness updates
       this.handleAwarenessChanges(binding, changes);
     });
@@ -339,11 +340,11 @@ export class EditorBinding {
   /**
    * Handle awareness changes
    */
-  private handleAwarenessChanges(binding: EditorBindingInfo, changes: any): void {
+  private handleAwarenessChanges(binding: EditorBindingInfo, changes: { added: number[]; updated: number[]; removed: number[] }): void {
     // Process added/updated/removed clients
     const states = binding.awareness.getStates();
-    
-    states.forEach((state: any, clientId: number) => {
+
+    states.forEach((state: AwarenessState, clientId: number) => {
       // Skip local client
       if (clientId === binding.awareness.clientID) {
         return;
@@ -366,7 +367,7 @@ export class EditorBinding {
   private getEditorView(file: TFile): EditorView | null {
     // Get active markdown view
     const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-    
+
     if (!activeView || activeView.file?.path !== file.path) {
       return null;
     }
@@ -379,15 +380,16 @@ export class EditorBinding {
 
     // Access CodeMirror 6 view
     // Note: This uses Obsidian's internal API which may change
-    const cm = (editor as any).cm as EditorView;
-    
+    const editorWithCm = editor as { cm?: EditorView };
+    const cm = editorWithCm.cm;
+
     return cm || null;
   }
 
   /**
    * Log message (if debug mode enabled)
    */
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.debugMode) {
       if (data !== undefined) {
         console.debug(`[EditorBinding] ${message}`, data);

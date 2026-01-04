@@ -2,7 +2,7 @@
  * Event Bus for plugin-wide event communication
  */
 
-type EventCallback = (...args: any[]) => void;
+type EventCallback = (...args: unknown[]) => void;
 
 export class EventBus {
   private events: Map<string, Set<EventCallback>> = new Map();
@@ -25,7 +25,7 @@ export class EventBus {
    * Subscribe to an event (one-time)
    */
   once(event: string, callback: EventCallback): () => void {
-    const wrappedCallback = (...args: any[]) => {
+    const wrappedCallback = (...args: unknown[]) => {
       callback(...args);
       this.off(event, wrappedCallback);
     };
@@ -49,7 +49,7 @@ export class EventBus {
   /**
    * Emit an event
    */
-  emit(event: string, ...args: any[]): void {
+  emit(event: string, ...args: unknown[]): void {
     const callbacks = this.events.get(event);
     if (callbacks) {
       callbacks.forEach(callback => {

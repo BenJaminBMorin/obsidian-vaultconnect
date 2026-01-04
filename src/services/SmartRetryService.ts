@@ -117,8 +117,9 @@ export class SmartRetryService {
   /**
    * Check if error is retryable
    */
-  isRetryableError(error: any): boolean {
-    const message = error?.message || String(error);
+  isRetryableError(error: unknown): boolean {
+    const errorObj = error as { message?: string };
+    const message = errorObj?.message || String(error);
     const lowerMessage = message.toLowerCase();
     
     // Non-retryable errors

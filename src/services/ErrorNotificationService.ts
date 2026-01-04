@@ -11,6 +11,13 @@ import {
 import { EventBus, EVENTS } from '../core/EventBus';
 
 /**
+ * Type extension for Notice with internal noticeEl property
+ */
+type NoticeWithElement = Notice & {
+  noticeEl?: HTMLElement;
+};
+
+/**
  * Error event data for handlers
  */
 interface ErrorData {
@@ -183,7 +190,8 @@ export class ErrorNotificationService {
 
     // Add action button if provided
     if (options?.actionButton) {
-      const noticeEl = (notice as any).noticeEl;
+      const noticeWithEl = notice as NoticeWithElement;
+      const noticeEl = noticeWithEl.noticeEl;
       if (noticeEl) {
         const button = noticeEl.createEl('button', {
           text: options.actionButton.text,
@@ -202,10 +210,11 @@ export class ErrorNotificationService {
    */
   private showConflictNotification(data: { path: string; conflictId: string }): void {
     const message = `⚠️ Conflict detected in "${data.path}". Click to resolve.`;
-    
+
     const notice = new Notice(message, 10000);
-    const noticeEl = (notice as any).noticeEl;
-    
+    const noticeWithEl = notice as NoticeWithElement;
+    const noticeEl = noticeWithEl.noticeEl;
+
     if (noticeEl) {
       const button = noticeEl.createEl('button', {
         text: 'Resolve Conflict',

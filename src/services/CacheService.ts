@@ -268,7 +268,7 @@ export class CacheService {
   /**
    * Check if cache entry is expired
    */
-  private isExpired(entry: CacheEntry<any>): boolean {
+  private isExpired(entry: CacheEntry<unknown>): boolean {
     return Date.now() >= entry.expiresAt;
   }
 

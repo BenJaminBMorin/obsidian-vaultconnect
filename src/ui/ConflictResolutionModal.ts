@@ -3,6 +3,12 @@ import { ConflictService } from '../services/ConflictService';
 import { ConflictInfo, ResolutionStrategy } from '../types';
 import { formatRelativeTime } from '../utils/helpers';
 
+// Type extension to access private properties of ConflictService
+interface ConflictServiceExtended {
+  isCrossTenant?: boolean;
+  vaultPermission?: 'read' | 'write' | 'admin';
+}
+
 /**
  * Conflict Resolution Modal
  * Displays conflicts and allows users to resolve them
@@ -81,8 +87,9 @@ export class ConflictResolutionModal extends Modal {
     info.textContent = `Conflict ${this.currentConflictIndex + 1} of ${this.conflicts.length} • Type: ${conflict.conflictType}`;
 
     // Cross-tenant warning banner
-    const isCrossTenant = (this.conflictService as any).isCrossTenant;
-    const permission = (this.conflictService as any).vaultPermission;
+    const serviceExt = this.conflictService as unknown as ConflictServiceExtended;
+    const isCrossTenant = serviceExt.isCrossTenant;
+    const permission = serviceExt.vaultPermission;
 
     if (isCrossTenant) {
       const warningBanner = contentEl.createDiv();
@@ -212,8 +219,9 @@ export class ConflictResolutionModal extends Modal {
     buttonContainer.addClass('vaultconnect-gap-md');
 
     // Check cross-tenant status
-    const isCrossTenant = (this.conflictService as any).isCrossTenant;
-    const permission = (this.conflictService as any).vaultPermission;
+    const serviceExt = this.conflictService as unknown as ConflictServiceExtended;
+    const isCrossTenant = serviceExt.isCrossTenant;
+    const permission = serviceExt.vaultPermission;
     const isReadOnly = isCrossTenant && permission === 'read';
 
     // Resolution options

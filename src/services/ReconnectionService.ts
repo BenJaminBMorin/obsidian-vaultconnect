@@ -35,25 +35,25 @@ export class ReconnectionService {
     // Listen for connection state changes
     const unsubConnectionChanged = this.eventBus.on(
       EVENTS.CONNECTION_CHANGED,
-      (state: ConnectionState, data?: any) => {
+      (state: ConnectionState, data?: unknown) => {
         this.handleConnectionStateChange(state, data);
       }
     );
-    
+
     this.unsubscribers.push(unsubConnectionChanged);
   }
 
   /**
    * Handle connection state changes
    */
-  private async handleConnectionStateChange(state: ConnectionState, data?: any): Promise<void> {
+  private async handleConnectionStateChange(state: ConnectionState, data?: unknown): Promise<void> {
     switch (state) {
       case ConnectionState.DISCONNECTED:
         this.handleDisconnection();
         break;
         
       case ConnectionState.RECONNECTING:
-        this.handleReconnecting(data);
+        this.handleReconnecting(typeof data === 'number' ? data : undefined);
         break;
         
       case ConnectionState.CONNECTED:
@@ -125,7 +125,7 @@ export class ReconnectionService {
   /**
    * Handle connection error
    */
-  private handleConnectionError(error?: any): void {
+  private handleConnectionError(error?: unknown): void {
     console.error('[ReconnectionService] Connection error:', error);
   }
 

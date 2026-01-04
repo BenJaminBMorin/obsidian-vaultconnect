@@ -586,31 +586,39 @@ export class PresenceService {
   /**
    * Save active users to cache
    */
-  private saveActiveUsersCache(): void {
-    const usersObj: Record<string, ActiveUser> = {};
-    this.activeUsers.forEach((user, userId) => {
-      usersObj[userId] = user;
-    });
-    this.storage.setActiveUsers(usersObj);
-    this.storage.save();
+  private async saveActiveUsersCache(): Promise<void> {
+    try {
+      const usersObj: Record<string, ActiveUser> = {};
+      this.activeUsers.forEach((user, userId) => {
+        usersObj[userId] = user;
+      });
+      this.storage.setActiveUsers(usersObj);
+      await this.storage.save();
+    } catch (error) {
+      this.log('Failed to save active users cache', error);
+    }
   }
 
   /**
    * Save file viewers to cache
    */
-  private saveFileViewersCache(): void {
-    const viewersObj: Record<string, string[]> = {};
-    this.fileViewers.forEach((viewers, filePath) => {
-      viewersObj[filePath] = Array.from(viewers);
-    });
-    this.storage.setFileViewers(viewersObj);
-    this.storage.save();
+  private async saveFileViewersCache(): Promise<void> {
+    try {
+      const viewersObj: Record<string, string[]> = {};
+      this.fileViewers.forEach((viewers, filePath) => {
+        viewersObj[filePath] = Array.from(viewers);
+      });
+      this.storage.setFileViewers(viewersObj);
+      await this.storage.save();
+    } catch (error) {
+      this.log('Failed to save file viewers cache', error);
+    }
   }
 
   /**
    * Log message (if debug mode enabled)
    */
-  private log(message: string, data?: any): void {
+  private log(message: string, data?: unknown): void {
     if (this.debugMode) {
       if (data !== undefined) {
         console.debug(`[PresenceService] ${message}`, data);

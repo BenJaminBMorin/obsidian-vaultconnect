@@ -121,7 +121,7 @@ export default class VaultSyncPlugin extends Plugin {
 	private conflictService: ConflictService | null = null;
 	private syncLogService: SyncLogService | null = null;
 	initialSyncService: InitialSyncService | null = null; // Public for SettingsTab access
-	authService: any = null; // Public for SettingsTab access
+	authService: AuthService | null = null; // Public for SettingsTab access
 	
 	// Upload progress tracking
 	private uploadProgressModal: UploadProgressModal | null = null;
@@ -183,35 +183,9 @@ export default class VaultSyncPlugin extends Plugin {
 		// Initialize core services
 		this.eventBus = new EventBus();
 		this.storage = new StorageManager(this);
-		
-		// Initialize auth service (simple wrapper for API key storage)
-		this.authService = {
-			getApiKey: async () => this.settings.apiKey,
-			setApiKey: async (key: string) => {
-				this.settings.apiKey = key;
-				await this.saveSettings();
-			},
-			clearApiKey: async () => {
-				this.settings.apiKey = '';
-				await this.saveSettings();
-			},
-			getAuthState: () => ({
-				isAuthenticated: !!this.settings.apiKey,
-				apiKey: this.settings.apiKey,
-				expiresAt: this.settings.apiKeyExpires
-			}),
-			getDaysUntilExpiration: () => {
-				if (!this.settings.apiKeyExpires) return null;
-				const now = new Date();
-				const expires = new Date(this.settings.apiKeyExpires);
-				const diff = expires.getTime() - now.getTime();
-				return Math.ceil(diff / (1000 * 60 * 60 * 24));
-			},
-			isTokenExpiringSoon: () => {
-				const days = this.authService?.getDaysUntilExpiration();
-				return days !== null && days <= 7;
-			}
-		};
+
+		// Initialize auth service
+		this.authService = new AuthService(this, this.eventBus);
 		
 		this.apiClient = new APIClient(this.authService as any, this.settings.apiUrl);
 

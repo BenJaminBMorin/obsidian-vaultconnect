@@ -8,6 +8,16 @@ import { OfflineSyncService } from './OfflineSyncService';
 import { FileSyncService } from './FileSyncService';
 
 /**
+ * File sync event data
+ */
+interface FileSyncEvent {
+  path: string;
+  action: 'create' | 'modify' | 'delete' | 'rename';
+  content?: string;
+  oldPath?: string;
+}
+
+/**
  * Offline manager configuration
  */
 export interface OfflineManagerConfig {
@@ -134,7 +144,7 @@ export class OfflineManager {
    */
   private setupEventListeners(): void {
     // Listen for file changes to queue during offline mode
-    this.eventBus.on(EVENTS.FILE_SYNCED, async (event: any) => {
+    this.eventBus.on(EVENTS.FILE_SYNCED, async (event: FileSyncEvent) => {
       if (this.offlineDetection.isOffline()) {
         // Queue the operation
         await this.queueFileOperation(event);
@@ -154,7 +164,7 @@ export class OfflineManager {
   /**
    * Queue file operation during offline mode
    */
-  private async queueFileOperation(event: any): Promise<void> {
+  private async queueFileOperation(event: FileSyncEvent): Promise<void> {
     try {
       const { path, action, content, oldPath } = event;
       
