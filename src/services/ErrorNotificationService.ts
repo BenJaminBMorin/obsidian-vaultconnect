@@ -283,15 +283,18 @@ export class ErrorNotificationService {
     const details: string[] = [];
 
     if (context.path) {
-      details.push(`File: ${String(context.path)}`);
+      const pathValue = typeof context.path === 'string' ? context.path : String(context.path);
+      details.push(`File: ${pathValue}`);
     }
 
     if (context.operation) {
-      details.push(`Operation: ${String(context.operation)}`);
+      const opValue = typeof context.operation === 'string' ? context.operation : String(context.operation);
+      details.push(`Operation: ${opValue}`);
     }
 
     if (context.source) {
-      details.push(`Source: ${String(context.source)}`);
+      const sourceValue = typeof context.source === 'string' ? context.source : String(context.source);
+      details.push(`Source: ${sourceValue}`);
     }
 
     return details.join(' | ');

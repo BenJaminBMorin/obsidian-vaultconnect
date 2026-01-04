@@ -1490,7 +1490,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Vault Connect settings')
+			.setName('Vault Connect')
 			.setHeading();
 
 		// API URL
@@ -1686,7 +1686,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 												throw new Error(error.error_description || 'Authorization failed');
 											}
 											// Still pending, continue polling
-											setTimeout(poll, pollInterval);
+											void setTimeout(poll, pollInterval);
 										}
 									} catch (err) {
 										modal.close();
@@ -1695,7 +1695,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 								};
 
 								// Start polling
-								setTimeout(poll, pollInterval);
+								void setTimeout(poll, pollInterval);
 
 							} catch (err) {
 								new Notice('Failed to start authorization: ' + err.message);

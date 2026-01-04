@@ -119,7 +119,7 @@ export class OfflineDetectionService {
   /**
    * Check network connectivity
    */
-  private async checkConnectivity(): Promise<void> {
+  private checkConnectivity(): void {
     // Quick check: browser navigator.onLine
     if (!navigator.onLine) {
       this.setNetworkStatus(NetworkStatus.OFFLINE);

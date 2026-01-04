@@ -268,14 +268,14 @@ export class YjsProvider {
   /**
    * Sync document manually
    */
-  async syncDocument(filePath: string): Promise<void> {
+  syncDocument(filePath: string): void {
     const docInfo = this.documents.get(filePath);
     if (!docInfo) {
       throw new Error(`Document not found: ${filePath}`);
     }
 
     this.log(`Manually syncing document ${filePath}`);
-    
+
     // Force sync by reconnecting provider
     docInfo.provider.disconnect();
     docInfo.provider.connect();
@@ -339,7 +339,7 @@ export class YjsProvider {
   /**
    * Load document state from storage
    */
-  private async loadDocumentState(filePath: string, doc: Y.Doc): Promise<void> {
+  private loadDocumentState(filePath: string, doc: Y.Doc): void {
     try {
       const state = this.storageManager.getYjsDocument(filePath);
 
@@ -361,7 +361,7 @@ export class YjsProvider {
   /**
    * Load all persisted documents
    */
-  private async loadPersistedDocuments(): Promise<void> {
+  private loadPersistedDocuments(): void {
     if (!this.vaultId) {
       return;
     }

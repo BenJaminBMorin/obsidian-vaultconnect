@@ -63,28 +63,26 @@ export class SelectiveSyncModal extends Modal {
       .addText(text => {
         text.setPlaceholder('folder/path');
         text.inputEl.addEventListener('keypress', (e) => {
-          void (async () => {
-            if (e.key === 'Enter') {
-              const value = text.getValue().trim();
-              if (value) {
-                const validation = this.selectiveSyncService.validatePattern(value);
-                if (validation.valid) {
-                  this.selectiveSyncService.addExcludedFolder(value);
-                  text.setValue('');
-                  this.refresh();
-                  new Notice(`Added excluded folder: ${value}`);
-                } else {
-                  new Notice(`Invalid pattern: ${validation.error}`, 5000);
-                }
+          if (e.key === 'Enter') {
+            const value = text.getValue().trim();
+            if (value) {
+              const validation = this.selectiveSyncService.validatePattern(value);
+              if (validation.valid) {
+                this.selectiveSyncService.addExcludedFolder(value);
+                text.setValue('');
+                this.refresh();
+                new Notice(`Added excluded folder: ${value}`);
+              } else {
+                new Notice(`Invalid pattern: ${validation.error}`, 5000);
               }
             }
-          })();
+          }
         });
       })
       .addButton(button => {
         button
           .setButtonText('Add')
-          .onClick(async () => {
+          .onClick(() => {
             const input = containerEl.querySelector('input[placeholder="folder/path"]') as HTMLInputElement;
             const value = input?.value.trim();
             if (value) {
@@ -123,28 +121,26 @@ export class SelectiveSyncModal extends Modal {
       .addText(text => {
         text.setPlaceholder('folder/path');
         text.inputEl.addEventListener('keypress', (e) => {
-          void (async () => {
-            if (e.key === 'Enter') {
-              const value = text.getValue().trim();
-              if (value) {
-                const validation = this.selectiveSyncService.validatePattern(value);
-                if (validation.valid) {
-                  this.selectiveSyncService.addIncludedFolder(value);
-                  text.setValue('');
-                  this.refresh();
-                  new Notice(`Added included folder: ${value}`);
-                } else {
-                  new Notice(`Invalid pattern: ${validation.error}`, 5000);
-                }
+          if (e.key === 'Enter') {
+            const value = text.getValue().trim();
+            if (value) {
+              const validation = this.selectiveSyncService.validatePattern(value);
+              if (validation.valid) {
+                this.selectiveSyncService.addIncludedFolder(value);
+                text.setValue('');
+                this.refresh();
+                new Notice(`Added included folder: ${value}`);
+              } else {
+                new Notice(`Invalid pattern: ${validation.error}`, 5000);
               }
             }
-          })();
+          }
         });
       })
       .addButton(button => {
         button
           .setButtonText('Add')
-          .onClick(async () => {
+          .onClick(() => {
             const input = containerEl.querySelectorAll('input[placeholder="folder/path"]')[1] as HTMLInputElement;
             const value = input?.value.trim();
             if (value) {

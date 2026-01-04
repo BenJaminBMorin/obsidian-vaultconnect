@@ -469,25 +469,27 @@ export class WebSocketManager {
     this.log(`Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`);
     
     this.setConnectionState(ConnectionState.RECONNECTING, this.reconnectAttempts);
-    
-    this.reconnectTimeout = setTimeout(async () => {
-      this.reconnectTimeout = null;
-      
-      try {
-        const apiKey = await this.authService.getApiKey();
-        if (!apiKey) {
-          this.log('Cannot reconnect: No API key');
-          this.autoReconnect = false;
-          return;
+
+    this.reconnectTimeout = setTimeout(() => {
+      void (async () => {
+        this.reconnectTimeout = null;
+
+        try {
+          const apiKey = await this.authService.getApiKey();
+          if (!apiKey) {
+            this.log('Cannot reconnect: No API key');
+            this.autoReconnect = false;
+            return;
+          }
+
+          const vaultId = this.subscription?.vaultId;
+          await this.connect(apiKey, vaultId);
+
+        } catch (error) {
+          this.log(`Reconnection attempt ${this.reconnectAttempts} failed`);
+          // Will schedule another attempt via handleDisconnection
         }
-        
-        const vaultId = this.subscription?.vaultId;
-        await this.connect(apiKey, vaultId);
-        
-      } catch (error) {
-        this.log(`Reconnection attempt ${this.reconnectAttempts} failed`);
-        // Will schedule another attempt via handleDisconnection
-      }
+      })();
     }, delay);
   }
 

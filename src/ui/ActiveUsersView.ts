@@ -44,7 +44,7 @@ export class ActiveUsersView extends ItemView {
     this.viewContainerEl = this.contentEl;
     this.viewContainerEl.empty();
     this.viewContainerEl.addClass('vaultsync-active-users-view');
-    
+
     this.render();
   }
 

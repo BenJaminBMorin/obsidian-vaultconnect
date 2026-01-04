@@ -29,7 +29,7 @@ export class ConflictResolutionModal extends Modal {
     this.onResolved = onResolved;
   }
 
-  async onOpen() {
+  onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass('vaultsync-conflict-modal');

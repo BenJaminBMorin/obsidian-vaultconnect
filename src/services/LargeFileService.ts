@@ -443,7 +443,7 @@ export class LargeFileService {
   /**
    * Finalize upload by combining chunks
    */
-  private async finalizeUpload(session: UploadSession, fileId?: string): Promise<void> {
+  private finalizeUpload(session: UploadSession, fileId?: string): void {
     // The backend automatically combines chunks when the last chunk is uploaded
     // No additional finalization needed
     console.debug(`Finalized chunked upload for ${session.filePath}`);

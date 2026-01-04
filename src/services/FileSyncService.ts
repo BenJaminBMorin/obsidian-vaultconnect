@@ -409,11 +409,11 @@ export class FileSyncService {
    * Preserve file timestamps to prevent sync conflicts
    * Sets the file's mtime and ctime to match the server's timestamps
    */
-  private async preserveFileTimestamps(
+  private preserveFileTimestamps(
     file: TFile,
     createdAt: string,
     updatedAt: string
-  ): Promise<void> {
+  ): void {
     try {
       // Get the vault's base path and construct full file path
       const adapter = this.vault.adapter;

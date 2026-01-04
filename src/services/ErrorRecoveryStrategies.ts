@@ -168,11 +168,11 @@ export class FilePermissionStrategy implements ErrorRecoveryStrategy {
     );
   }
 
-  async recover(error: PluginError): Promise<boolean> {
+  recover(error: PluginError): Promise<boolean> {
     // In Obsidian, we can't actually fix file permissions
     // But we can suggest the user check them
     console.warn('File permission error detected. Please check file permissions.');
-    return false;
+    return Promise.resolve(false);
   }
 }
 
@@ -189,10 +189,10 @@ export class ConflictAutoResolveStrategy implements ErrorRecoveryStrategy {
     );
   }
 
-  async recover(error: PluginError): Promise<boolean> {
+  recover(error: PluginError): Promise<boolean> {
     // This would need access to the ConflictService
     // For now, we just return false as conflicts should be manually resolved
-    return false;
+    return Promise.resolve(false);
   }
 }
 
@@ -206,10 +206,10 @@ export class SyncQueueRetryStrategy implements ErrorRecoveryStrategy {
     return error.type === ErrorType.SYNC_ERROR && error.retryable;
   }
 
-  async recover(error: PluginError): Promise<boolean> {
+  recover(error: PluginError): Promise<boolean> {
     // The sync queue service handles retries automatically
     // This strategy just confirms that retry is possible
-    return true;
+    return Promise.resolve(true);
   }
 }
 

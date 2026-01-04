@@ -166,7 +166,7 @@ export class PresenceService {
   /**
    * Broadcast user presence
    */
-  async broadcastPresence(status?: 'active' | 'away' | 'offline'): Promise<void> {
+  broadcastPresence(status?: 'active' | 'away' | 'offline'): void {
     if (!this.currentVaultId || !this.currentUserId) {
       return;
     }
@@ -180,7 +180,7 @@ export class PresenceService {
     };
 
     this.log('Broadcasting presence', presenceState);
-    
+
     // Send via WebSocket
     this.wsManager.send(WS_EVENTS.PRESENCE_UPDATE, presenceState);
   }

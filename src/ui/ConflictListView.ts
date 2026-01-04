@@ -35,7 +35,7 @@ export class ConflictListView extends ItemView {
     await this.refresh();
   }
 
-  async refresh() {
+  refresh(): void {
     this.conflicts = this.conflictService.getConflicts();
     this.render();
   }

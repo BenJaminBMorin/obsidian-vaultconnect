@@ -158,9 +158,9 @@ export class OfflineQueueService {
     const index = this.queue.findIndex(op => op.id === id);
     if (index !== -1) {
       this.queue[index].status = 'synced';
-      
+
       // Remove synced operations after a short delay
-      setTimeout(async () => {
+      void setTimeout(async () => {
         const idx = this.queue.findIndex(op => op.id === id);
         if (idx !== -1 && this.queue[idx].status === 'synced') {
           this.queue.splice(idx, 1);

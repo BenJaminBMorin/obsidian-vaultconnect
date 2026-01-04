@@ -46,19 +46,19 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     actionsEl.createEl('button', {
       text: 'Export settings',
       cls: 'mod-cta'
-    }).addEventListener('click', () => this.exportSettings());
-    
+    }).addEventListener('click', () => void this.exportSettings());
+
     // Import settings button
     actionsEl.createEl('button', {
       text: 'Import settings',
       cls: 'mod-cta'
-    }).addEventListener('click', () => this.importSettings());
-    
+    }).addEventListener('click', () => void this.importSettings());
+
     // Reset settings button
     actionsEl.createEl('button', {
       text: 'Reset to defaults',
       cls: 'mod-warning'
-    }).addEventListener('click', () => this.resetSettings());
+    }).addEventListener('click', () => void this.resetSettings());
 
     // Authentication Section
     this.displayAuthSection(containerEl);
@@ -185,7 +185,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       .addButton(button => {
         button
           .setButtonText('Browse')
-          .onClick(async () => {
+          .onClick(() => {
             // TODO: Implement vault browser
             new Notice('Vault browser coming soon!');
           });
@@ -426,15 +426,17 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         new SelectiveSyncModal(
           this.app,
           selectiveSyncService,
-          async () => {
-            // Save settings when modal closes
-            const config = selectiveSyncService.getConfig();
-            this.plugin.settings.includedFolders = config.includedFolders;
-            this.plugin.settings.excludedFolders = config.excludedFolders;
-            await this.plugin.saveSettings();
-            
-            // Refresh settings display
-            this.display();
+          () => {
+            void (async () => {
+              // Save settings when modal closes
+              const config = selectiveSyncService.getConfig();
+              this.plugin.settings.includedFolders = config.includedFolders;
+              this.plugin.settings.excludedFolders = config.excludedFolders;
+              await this.plugin.saveSettings();
+
+              // Refresh settings display
+              this.display();
+            })();
           }
         ).open();
       } else {
@@ -457,15 +459,17 @@ export class VaultSyncSettingTab extends PluginSettingTab {
               new SelectiveSyncModal(
                 this.app,
                 selectiveSyncService,
-                async () => {
-                  // Save settings when modal closes
-                  const config = selectiveSyncService.getConfig();
-                  this.plugin.settings.includedFolders = config.includedFolders;
-                  this.plugin.settings.excludedFolders = config.excludedFolders;
-                  await this.plugin.saveSettings();
-                  
-                  // Refresh settings display
-                  this.display();
+                () => {
+                  void (async () => {
+                    // Save settings when modal closes
+                    const config = selectiveSyncService.getConfig();
+                    this.plugin.settings.includedFolders = config.includedFolders;
+                    this.plugin.settings.excludedFolders = config.excludedFolders;
+                    await this.plugin.saveSettings();
+
+                    // Refresh settings display
+                    this.display();
+                  })();
                 }
               ).open();
             });

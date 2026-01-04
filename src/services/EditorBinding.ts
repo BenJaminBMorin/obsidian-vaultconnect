@@ -322,8 +322,8 @@ export class EditorBinding {
   private setupChangeListeners(binding: EditorBindingInfo): void {
     // Listen for Yjs text changes
     binding.yjsText.observe((event) => {
-      this.log(`Yjs text changed for ${binding.filePath}`, event);
-      
+      this.log(`Yjs text changed for ${binding.filePath}: ${binding.yjsText.toString()}`, event);
+
       // Emit remote change event
       this.eventBus.emit(EVENTS.REMOTE_CHANGE, binding.filePath, [event]);
     });

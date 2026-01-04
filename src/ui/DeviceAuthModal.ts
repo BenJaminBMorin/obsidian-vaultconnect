@@ -30,7 +30,7 @@ export class DeviceAuthModal extends Modal {
     this.onCancel = onCancel;
   }
 
-  async onOpen() {
+  onOpen(): void {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass('vaultsync-device-auth-modal');

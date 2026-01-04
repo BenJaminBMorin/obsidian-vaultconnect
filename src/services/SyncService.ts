@@ -180,7 +180,7 @@ export class SyncService {
   /**
    * Start sync service
    */
-  async start(): Promise<void> {
+  start(): void {
     if (this.isRunning) {
       console.warn('SyncService is already running');
       return;
@@ -983,28 +983,30 @@ export class SyncService {
     // Check every 2 minutes for near-live sync performance
     const intervalMs = 2 * 60 * 1000;
 
-    this.periodicSyncInterval = window.setInterval(async () => {
-      if (!this.isRunning || !this.vaultId) {
-        return;
-      }
+    this.periodicSyncInterval = window.setInterval(() => {
+      void (async () => {
+        if (!this.isRunning || !this.vaultId) {
+          return;
+        }
 
-      const now = Date.now();
-      const timeSinceLastCheck = now - this.lastSyncCheck;
+        const now = Date.now();
+        const timeSinceLastCheck = now - this.lastSyncCheck;
 
-      // Only run if it's been at least 90 seconds since last check
-      // (to avoid overlapping checks)
-      if (timeSinceLastCheck < 90 * 1000) {
-        return;
-      }
+        // Only run if it's been at least 90 seconds since last check
+        // (to avoid overlapping checks)
+        if (timeSinceLastCheck < 90 * 1000) {
+          return;
+        }
 
-      console.debug('[SyncService] Running periodic sync check...');
-      this.lastSyncCheck = now;
+        console.debug('[SyncService] Running periodic sync check...');
+        this.lastSyncCheck = now;
 
-      try {
-        await this.performSyncCheck();
-      } catch (error) {
-        console.error('[SyncService] Periodic sync check failed:', error);
-      }
+        try {
+          await this.performSyncCheck();
+        } catch (error) {
+          console.error('[SyncService] Periodic sync check failed:', error);
+        }
+      })();
     }, intervalMs);
 
     console.debug('[SyncService] Periodic sync check started (every 2 minutes)');

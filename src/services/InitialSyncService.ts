@@ -284,11 +284,11 @@ export class InitialSyncService {
 
   /**
    * Scan local vault for all files
-   * 
+   *
    * @returns Array of file paths relative to vault root
    * @private
    */
-  private async scanLocalFiles(): Promise<string[]> {
+  private scanLocalFiles(): string[] {
     logger.debug('[InitialSync] Scanning local files...');
 
     try {
