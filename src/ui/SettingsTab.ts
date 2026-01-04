@@ -36,7 +36,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     containerEl.empty();
 
     new Setting(containerEl)
-      .setName('VaultConnect settings')
+      .setName('VaultConnect')
       .setHeading();
 
     // Settings actions
@@ -241,7 +241,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displaySyncSection(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName('Sync settings').setHeading();
+    new Setting(containerEl).setName('Sync').setHeading();
 
     // Sync mode with detailed descriptions
     const syncModeDesc = containerEl.createDiv({ cls: 'vaultsync-sync-mode-desc' });

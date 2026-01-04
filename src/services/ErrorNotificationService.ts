@@ -135,7 +135,7 @@ export class ErrorNotificationService {
 
     // Report error if enabled
     if (this.config.enableErrorReporting) {
-      void this.reportError(vaultSyncError);
+      this.reportError(vaultSyncError);
     }
   }
 
@@ -319,7 +319,7 @@ export class ErrorNotificationService {
    * Log error details to console
    */
   private logErrorDetails(error: VaultSyncError): void {
-    console.group(`🔴 VaultSync Error: ${error.type}`);
+    console.debug(`🔴 VaultSync Error: ${error.type}`);
     console.error('Message:', error.message);
     console.error('User Message:', error.userMessage);
     console.error('Severity:', error.severity);
@@ -337,14 +337,12 @@ export class ErrorNotificationService {
         console.error('Stack Trace:', error.originalError.stack);
       }
     }
-
-    console.groupEnd();
   }
 
   /**
    * Report error (optional feature for telemetry)
    */
-  private async reportError(error: VaultSyncError): Promise<void> {
+  private reportError(error: VaultSyncError): void {
     // This is a placeholder for optional error reporting
     // In a real implementation, this would send error data to a telemetry service
     // Only with explicit user consent
