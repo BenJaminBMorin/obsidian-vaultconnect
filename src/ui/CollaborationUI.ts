@@ -346,27 +346,15 @@ export class CollaborationUI {
   private createCursorWidget(cursor: RemoteCursor): HTMLElement {
     const widget = document.createElement('div');
     widget.className = 'collab-cursor';
-    widget.style.position = 'absolute';
-    widget.style.width = '2px';
-    widget.style.height = '1.2em';
-    widget.style.backgroundColor = cursor.color;
-    widget.style.zIndex = '1000';
-    widget.style.pointerEvents = 'none';
+    widget.classList.add('vaultconnect-collab-cursor');
+    widget.style.backgroundColor = cursor.color; // Dynamic color
 
     // Add user name label
     const label = document.createElement('div');
     label.className = 'collab-cursor-label';
+    label.classList.add('vaultconnect-collab-cursor-label');
     label.textContent = cursor.userName;
-    label.style.position = 'absolute';
-    label.style.top = '-20px';
-    label.style.left = '0';
-    label.style.backgroundColor = cursor.color;
-    label.style.color = '#fff';
-    label.style.padding = '2px 6px';
-    label.style.borderRadius = '3px';
-    label.style.fontSize = '11px';
-    label.style.whiteSpace = 'nowrap';
-    label.style.pointerEvents = 'none';
+    label.style.backgroundColor = cursor.color; // Dynamic color
 
     widget.appendChild(label);
 
@@ -404,11 +392,8 @@ export class CollaborationUI {
   private createSelectionWidget(selection: RemoteSelection): HTMLElement {
     const widget = document.createElement('div');
     widget.className = 'collab-selection';
-    widget.style.position = 'absolute';
-    widget.style.backgroundColor = selection.color;
-    widget.style.opacity = '0.3';
-    widget.style.zIndex = '999';
-    widget.style.pointerEvents = 'none';
+    widget.classList.add('vaultconnect-collab-selection');
+    widget.style.backgroundColor = selection.color; // Dynamic color
 
     return widget;
   }
@@ -450,13 +435,8 @@ export class CollaborationUI {
   private createTypingIndicator(userName: string, color: string): HTMLElement {
     const indicator = document.createElement('div');
     indicator.className = 'collab-typing-indicator';
-    indicator.style.display = 'inline-block';
-    indicator.style.marginLeft = '10px';
-    indicator.style.padding = '2px 8px';
-    indicator.style.backgroundColor = color;
-    indicator.style.color = '#fff';
-    indicator.style.borderRadius = '3px';
-    indicator.style.fontSize = '11px';
+    indicator.classList.add('vaultconnect-collab-typing-indicator');
+    indicator.style.backgroundColor = color; // Dynamic color
     indicator.textContent = `${userName} is typing...`;
 
     return indicator;
@@ -468,14 +448,7 @@ export class CollaborationUI {
   private createPresenceIndicator(collaborators: string[]): HTMLElement {
     const indicator = document.createElement('div');
     indicator.className = 'collab-presence-indicator';
-    indicator.style.display = 'inline-block';
-    indicator.style.marginLeft = '5px';
-    indicator.style.padding = '2px 6px';
-    indicator.style.backgroundColor = '#4ECDC4';
-    indicator.style.color = '#fff';
-    indicator.style.borderRadius = '50%';
-    indicator.style.fontSize = '10px';
-    indicator.style.fontWeight = 'bold';
+    indicator.classList.add('vaultconnect-collab-presence-indicator');
     indicator.textContent = collaborators.length.toString();
     indicator.title = `${collaborators.join(', ')} viewing this file`;
 
