@@ -54,9 +54,9 @@ export class InitialSyncWizardModal extends Modal {
     contentEl.createEl('h2', { text: 'Initial Sync Setup' });
 
     // Introduction
-    const intro = contentEl.createDiv({ cls: 'initial-sync-intro' });
-    intro.style.marginBottom = '20px';
-    intro.style.color = 'var(--text-muted)';
+    const intro = contentEl.createDiv();
+    intro.addClass('vaultconnect-text-muted');
+    intro.addClass('vaultconnect-mb-lg');
     intro.textContent = `This is your first time connecting to "${this.options.vaultName}". Let's set up how to handle your existing files.`;
 
     // Render file analysis summary
@@ -66,9 +66,7 @@ export class InitialSyncWizardModal extends Modal {
     this.renderOptions(contentEl);
 
     // Cancel button
-    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-    buttonContainer.style.marginTop = '20px';
-    buttonContainer.style.textAlign = 'right';
+    const buttonContainer = contentEl.createDiv('vaultconnect-modal-footer');
 
     const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
     cancelButton.addEventListener('click', () => {
@@ -84,12 +82,12 @@ export class InitialSyncWizardModal extends Modal {
    * @private
    */
   private renderOptions(container: HTMLElement): void {
-    const optionsContainer = container.createDiv({ cls: 'initial-sync-options' });
-    optionsContainer.style.marginBottom = '20px';
+    const optionsContainer = container.createDiv();
+    optionsContainer.addClass('vaultconnect-section');
 
     // Title
     const title = optionsContainer.createEl('h3', { text: 'Choose how to proceed:' });
-    title.style.marginBottom = '15px';
+    title.addClass('vaultconnect-section__title');
 
     const { analysis } = this.options;
 
@@ -176,87 +174,77 @@ export class InitialSyncWizardModal extends Modal {
       onClick: () => void;
     }
   ): void {
-    const card = container.createDiv({ cls: 'sync-option-card' });
-    card.style.marginBottom = '15px';
-    card.style.padding = '15px';
-    card.style.border = '1px solid var(--background-modifier-border)';
-    card.style.borderRadius = '6px';
-    card.style.backgroundColor = 'var(--background-primary)';
-    card.style.transition = 'border-color 0.2s, box-shadow 0.2s';
-
-    // Hover effect
-    card.addEventListener('mouseenter', () => {
-      card.style.borderColor = 'var(--interactive-accent)';
-      card.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-    });
-    card.addEventListener('mouseleave', () => {
-      card.style.borderColor = 'var(--background-modifier-border)';
-      card.style.boxShadow = 'none';
-    });
+    const card = container.createDiv('vaultconnect-card');
+    card.addClass('vaultconnect-mb-md');
+    card.addClass('vaultconnect-p-lg');
 
     // Header with icon, title, and badge
-    const header = card.createDiv({ cls: 'option-header' });
-    header.style.display = 'flex';
-    header.style.alignItems = 'center';
-    header.style.gap = '10px';
-    header.style.marginBottom = '10px';
+    const header = card.createDiv();
+    header.addClass('vaultconnect-flex');
+    header.addClass('vaultconnect-items-center');
+    header.addClass('vaultconnect-gap-md');
+    header.addClass('vaultconnect-mb-md');
 
     const icon = header.createSpan({ text: config.icon });
-    icon.style.fontSize = '1.5em';
+    icon.addClass('vaultconnect-text-xl');
 
     const titleEl = header.createEl('h4', { text: config.title });
-    titleEl.style.margin = '0';
-    titleEl.style.flex = '1';
+    titleEl.addClass('vaultconnect-m-0');
+    titleEl.addClass('vaultconnect-flex-1');
 
     if (config.badge) {
       const badge = header.createSpan({ text: config.badge });
-      badge.style.padding = '2px 8px';
-      badge.style.borderRadius = '4px';
-      badge.style.fontSize = '0.75em';
-      badge.style.fontWeight = 'bold';
-      badge.style.color = 'white';
-      badge.style.backgroundColor = config.badgeColor || 'var(--text-muted)';
+      badge.addClass('vaultconnect-badge');
+      if (config.badgeColor && config.badgeColor.includes('error')) {
+        badge.addClass('vaultconnect-badge--error');
+      } else if (config.badgeColor && config.badgeColor.includes('accent')) {
+        badge.addClass('vaultconnect-badge--info');
+      }
+      // For custom badge colors, use setCssProps
+      if (config.badgeColor && !config.badgeColor.includes('error') && !config.badgeColor.includes('accent')) {
+        badge.setCssProps({ 'background-color': config.badgeColor, 'color': 'white' });
+      }
     }
 
     // Description
     const desc = card.createDiv({ text: config.description });
-    desc.style.marginBottom = '10px';
-    desc.style.color = 'var(--text-muted)';
+    desc.addClass('vaultconnect-text-muted');
+    desc.addClass('vaultconnect-mb-md');
 
     // Bullets
     if (config.bullets.length > 0) {
       const bulletList = card.createEl('ul');
-      bulletList.style.marginLeft = '20px';
-      bulletList.style.marginBottom = '10px';
-      bulletList.style.fontSize = '0.9em';
+      bulletList.addClass('vaultconnect-text-sm');
+      bulletList.addClass('vaultconnect-mb-md');
+      bulletList.setCssProps({ 'margin-left': '20px' });
 
       config.bullets.forEach(bullet => {
         const li = bulletList.createEl('li', { text: bullet });
         if (bullet.includes('⚠️')) {
-          li.style.color = 'var(--text-error)';
+          li.addClass('vaultconnect-text-error');
         }
       });
     }
 
     // Benefits
     if (config.benefits.length > 0) {
-      const benefitsContainer = card.createDiv({ cls: 'benefits' });
-      benefitsContainer.style.marginBottom = '10px';
-      benefitsContainer.style.fontSize = '0.9em';
-      benefitsContainer.style.color = 'var(--text-success)';
+      const benefitsContainer = card.createDiv();
+      benefitsContainer.addClass('vaultconnect-text-sm');
+      benefitsContainer.addClass('vaultconnect-text-success');
+      benefitsContainer.addClass('vaultconnect-mb-md');
 
       config.benefits.forEach(benefit => {
         const benefitEl = benefitsContainer.createDiv({ text: benefit });
-        benefitEl.style.marginBottom = '4px';
+        benefitEl.addClass('vaultconnect-mb-xs');
       });
     }
 
     // Button
-    const button = card.createEl('button', { 
+    const button = card.createEl('button', {
       text: config.buttonText,
-      cls: config.buttonClass 
+      cls: config.buttonClass
     });
-    button.style.width = '100%';
+    button.addClass('vaultconnect-w-full');
     button.addEventListener('click', config.onClick);
   }
 
@@ -267,93 +255,84 @@ export class InitialSyncWizardModal extends Modal {
    * @private
    */
   private renderAnalysisSummary(container: HTMLElement): void {
-    const summaryContainer = container.createDiv({ cls: 'initial-sync-summary' });
-    summaryContainer.style.marginBottom = '20px';
-    summaryContainer.style.padding = '15px';
-    summaryContainer.style.border = '1px solid var(--background-modifier-border)';
-    summaryContainer.style.borderRadius = '6px';
-    summaryContainer.style.backgroundColor = 'var(--background-secondary)';
+    const summaryContainer = container.createDiv('vaultconnect-section__content');
+    summaryContainer.addClass('vaultconnect-mb-lg');
 
     // Title
     const title = summaryContainer.createEl('h3', { text: '📊 File Analysis' });
-    title.style.marginTop = '0';
-    title.style.marginBottom = '12px';
-    title.style.fontSize = '1em';
+    title.addClass('vaultconnect-m-0');
+    title.addClass('vaultconnect-mb-md');
 
     // File counts
-    const countsContainer = summaryContainer.createDiv({ cls: 'file-counts' });
-    countsContainer.style.display = 'flex';
-    countsContainer.style.flexDirection = 'column';
-    countsContainer.style.gap = '8px';
+    const countsContainer = summaryContainer.createDiv();
+    countsContainer.addClass('vaultconnect-flex-col');
+    countsContainer.addClass('vaultconnect-gap-sm');
 
     const { analysis } = this.options;
 
     // Files only on device
     if (analysis.localFiles.length > 0) {
-      const localRow = countsContainer.createDiv({ cls: 'count-row' });
-      localRow.style.display = 'flex';
-      localRow.style.alignItems = 'center';
-      localRow.style.gap = '8px';
-      
-      const icon = localRow.createSpan({ text: '📱' });
-      const text = localRow.createSpan({ 
-        text: `${analysis.localFiles.length} file${analysis.localFiles.length === 1 ? '' : 's'} only on this device` 
+      const localRow = countsContainer.createDiv();
+      localRow.addClass('vaultconnect-flex');
+      localRow.addClass('vaultconnect-items-center');
+      localRow.addClass('vaultconnect-gap-sm');
+
+      localRow.createSpan({ text: '📱' });
+      localRow.createSpan({
+        text: `${analysis.localFiles.length} file${analysis.localFiles.length === 1 ? '' : 's'} only on this device`
       });
-      text.style.color = 'var(--text-normal)';
     }
 
     // Files only on VaultSync
     if (analysis.remoteFiles.length > 0) {
-      const remoteRow = countsContainer.createDiv({ cls: 'count-row' });
-      remoteRow.style.display = 'flex';
-      remoteRow.style.alignItems = 'center';
-      remoteRow.style.gap = '8px';
-      
-      const icon = remoteRow.createSpan({ text: '☁️' });
-      const text = remoteRow.createSpan({ 
-        text: `${analysis.remoteFiles.length} file${analysis.remoteFiles.length === 1 ? '' : 's'} only on VaultSync` 
+      const remoteRow = countsContainer.createDiv();
+      remoteRow.addClass('vaultconnect-flex');
+      remoteRow.addClass('vaultconnect-items-center');
+      remoteRow.addClass('vaultconnect-gap-sm');
+
+      remoteRow.createSpan({ text: '☁️' });
+      remoteRow.createSpan({
+        text: `${analysis.remoteFiles.length} file${analysis.remoteFiles.length === 1 ? '' : 's'} only on VaultSync`
       });
-      text.style.color = 'var(--text-normal)';
     }
 
     // Files in both locations
     if (analysis.commonFiles.length > 0) {
-      const bothRow = countsContainer.createDiv({ cls: 'count-row' });
-      bothRow.style.display = 'flex';
-      bothRow.style.alignItems = 'center';
-      bothRow.style.gap = '8px';
-      
-      const icon = bothRow.createSpan({ text: '🔄' });
-      const text = bothRow.createSpan({ 
-        text: `${analysis.commonFiles.length} file${analysis.commonFiles.length === 1 ? '' : 's'} in both locations` 
+      const bothRow = countsContainer.createDiv();
+      bothRow.addClass('vaultconnect-flex');
+      bothRow.addClass('vaultconnect-items-center');
+      bothRow.addClass('vaultconnect-gap-sm');
+
+      bothRow.createSpan({ text: '🔄' });
+      bothRow.createSpan({
+        text: `${analysis.commonFiles.length} file${analysis.commonFiles.length === 1 ? '' : 's'} in both locations`
       });
-      text.style.color = 'var(--text-normal)';
     }
 
     // Excluded files
     if (analysis.excludedFiles.length > 0) {
-      const excludedRow = countsContainer.createDiv({ cls: 'count-row' });
-      excludedRow.style.display = 'flex';
-      excludedRow.style.alignItems = 'center';
-      excludedRow.style.gap = '8px';
-      
-      const icon = excludedRow.createSpan({ text: '🚫' });
+      const excludedRow = countsContainer.createDiv();
+      excludedRow.addClass('vaultconnect-flex');
+      excludedRow.addClass('vaultconnect-items-center');
+      excludedRow.addClass('vaultconnect-gap-sm');
+
+      excludedRow.createSpan({ text: '🚫' });
       const configDir = this.app.vault.configDir;
       const text = excludedRow.createSpan({
         text: `${analysis.excludedFiles.length} file${analysis.excludedFiles.length === 1 ? '' : 's'} excluded (${configDir}, .trash)`
       });
-      text.style.color = 'var(--text-muted)';
-      text.style.fontSize = '0.9em';
+      text.addClass('vaultconnect-text-muted');
+      text.addClass('vaultconnect-text-sm');
     }
 
     // Empty vault message
-    if (analysis.localFiles.length === 0 && 
-        analysis.remoteFiles.length === 0 && 
+    if (analysis.localFiles.length === 0 &&
+        analysis.remoteFiles.length === 0 &&
         analysis.commonFiles.length === 0) {
-      const emptyMsg = countsContainer.createDiv({ cls: 'empty-message' });
+      const emptyMsg = countsContainer.createDiv();
       emptyMsg.textContent = 'Both vaults are empty. You can start syncing right away!';
-      emptyMsg.style.color = 'var(--text-muted)';
-      emptyMsg.style.fontStyle = 'italic';
+      emptyMsg.addClass('vaultconnect-text-muted');
+      emptyMsg.setCssProps({ 'font-style': 'italic' });
     }
   }
 
@@ -381,24 +360,24 @@ export class InitialSyncWizardModal extends Modal {
           // Start Fresh confirmation - requires typing "DELETE"
           contentEl.createEl('h2', { text: '⚠️  Confirm: Start Fresh' });
 
-          const warning = contentEl.createDiv({ cls: 'confirmation-warning' });
-          warning.style.marginBottom = '15px';
-          warning.style.padding = '10px';
-          warning.style.backgroundColor = 'var(--background-modifier-error)';
-          warning.style.borderRadius = '4px';
-          warning.style.color = 'var(--text-error)';
+          const warning = contentEl.createDiv();
+          warning.addClass('vaultconnect-bg-error');
+          warning.addClass('vaultconnect-text-error');
+          warning.addClass('vaultconnect-p-md');
+          warning.addClass('vaultconnect-rounded');
+          warning.addClass('vaultconnect-mb-md');
 
-          warning.createEl('p', { 
-            text: `This will DELETE ${fileCount} file${fileCount === 1 ? '' : 's'} from this device:` 
+          warning.createEl('p', {
+            text: `This will DELETE ${fileCount} file${fileCount === 1 ? '' : 's'} from this device:`
           });
 
           // Show sample files
           const { analysis } = this.options;
           const filesToShow = [...analysis.localFiles, ...analysis.commonFiles].slice(0, 5);
           const fileList = warning.createEl('ul');
-          fileList.style.marginLeft = '20px';
-          fileList.style.fontSize = '0.9em';
-          
+          fileList.addClass('vaultconnect-text-sm');
+          fileList.setCssProps({ 'margin-left': '20px' });
+
           filesToShow.forEach(file => {
             fileList.createEl('li', { text: file });
           });
@@ -407,30 +386,31 @@ export class InitialSyncWizardModal extends Modal {
             fileList.createEl('li', { text: `... and ${fileCount - 5} more files` });
           }
 
-          warning.createEl('p', { 
+          warning.createEl('p', {
             text: 'These files will be permanently deleted and replaced with files from VaultSync.',
             cls: 'mod-warning'
           });
 
           // Input for typing DELETE
-          const inputContainer = contentEl.createDiv({ cls: 'confirmation-input' });
-          inputContainer.style.marginBottom = '15px';
+          const inputContainer = contentEl.createDiv();
+          inputContainer.addClass('vaultconnect-mb-md');
 
-          inputContainer.createEl('p', { 
+          inputContainer.createEl('p', {
             text: 'Type DELETE to confirm:',
             cls: 'setting-item-name'
           });
 
           let deleteInput = '';
-          const input = inputContainer.createEl('input', { 
+          const input = inputContainer.createEl('input', {
             type: 'text',
             placeholder: 'DELETE'
           });
-          input.style.width = '100%';
-          input.style.padding = '8px';
-          input.style.fontSize = '1em';
-          input.style.border = '1px solid var(--background-modifier-border)';
-          input.style.borderRadius = '4px';
+          input.addClass('vaultconnect-w-full');
+          input.setCssProps({
+            'padding': '8px',
+            'border': '1px solid var(--background-modifier-border)',
+            'border-radius': '4px'
+          });
           input.addEventListener('input', (e) => {
             deleteInput = (e.target as HTMLInputElement).value;
             confirmButton.disabled = deleteInput !== 'DELETE';
@@ -440,11 +420,7 @@ export class InitialSyncWizardModal extends Modal {
           setTimeout(() => input.focus(), 100);
 
           // Buttons
-          const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-          buttonContainer.style.marginTop = '20px';
-          buttonContainer.style.display = 'flex';
-          buttonContainer.style.justifyContent = 'flex-end';
-          buttonContainer.style.gap = '10px';
+          const buttonContainer = contentEl.createDiv('vaultconnect-modal-footer');
 
           const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
           cancelButton.addEventListener('click', () => {
@@ -452,7 +428,7 @@ export class InitialSyncWizardModal extends Modal {
             resolve(false);
           });
 
-          const confirmButton = buttonContainer.createEl('button', { 
+          const confirmButton = buttonContainer.createEl('button', {
             text: 'Confirm Delete',
             cls: 'mod-warning'
           });
@@ -477,28 +453,24 @@ export class InitialSyncWizardModal extends Modal {
           // Upload Local confirmation - simpler warning
           contentEl.createEl('h2', { text: '⚠️  Confirm: Upload Local Files' });
 
-          const warning = contentEl.createDiv({ cls: 'confirmation-warning' });
-          warning.style.marginBottom = '15px';
-          warning.style.padding = '10px';
-          warning.style.backgroundColor = 'var(--background-modifier-error)';
-          warning.style.borderRadius = '4px';
-          warning.style.color = 'var(--text-error)';
+          const warning = contentEl.createDiv();
+          warning.addClass('vaultconnect-bg-error');
+          warning.addClass('vaultconnect-text-error');
+          warning.addClass('vaultconnect-p-md');
+          warning.addClass('vaultconnect-rounded');
+          warning.addClass('vaultconnect-mb-md');
 
-          warning.createEl('p', { 
-            text: `This will overwrite ${fileCount} file${fileCount === 1 ? '' : 's'} on VaultSync with your local versions.` 
+          warning.createEl('p', {
+            text: `This will overwrite ${fileCount} file${fileCount === 1 ? '' : 's'} on VaultSync with your local versions.`
           });
 
-          warning.createEl('p', { 
+          warning.createEl('p', {
             text: 'The remote versions of these files will be lost.',
             cls: 'mod-warning'
           });
 
           // Buttons
-          const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-          buttonContainer.style.marginTop = '20px';
-          buttonContainer.style.display = 'flex';
-          buttonContainer.style.justifyContent = 'flex-end';
-          buttonContainer.style.gap = '10px';
+          const buttonContainer = contentEl.createDiv('vaultconnect-modal-footer');
 
           const cancelButton = buttonContainer.createEl('button', { text: 'Cancel' });
           cancelButton.addEventListener('click', () => {
@@ -506,7 +478,7 @@ export class InitialSyncWizardModal extends Modal {
             resolve(false);
           });
 
-          const confirmButton = buttonContainer.createEl('button', { 
+          const confirmButton = buttonContainer.createEl('button', {
             text: 'Confirm Upload',
             cls: 'mod-warning'
           });

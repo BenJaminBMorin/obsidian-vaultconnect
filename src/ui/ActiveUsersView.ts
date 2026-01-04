@@ -62,44 +62,30 @@ export class ActiveUsersView extends ItemView {
     this.viewContainerEl.empty();
 
     // Create header
-    const header = this.viewContainerEl.createDiv('active-users-header');
-    const headerTitle = header.createEl('h4', { text: 'Active Users' });
-    headerTitle.style.margin = '0';
-    headerTitle.style.padding = '12px';
-    headerTitle.style.borderBottom = '1px solid var(--background-modifier-border)';
+    const header = this.viewContainerEl.createDiv('vaultconnect-users-header');
+    header.createEl('h4', { text: 'Active Users' });
 
     // Get active users
     const activeUsers = this.presenceService.getActiveUsers();
 
     if (activeUsers.length === 0) {
-      const emptyState = this.viewContainerEl.createDiv('active-users-empty');
-      emptyState.style.padding = '20px';
-      emptyState.style.textAlign = 'center';
-      emptyState.style.color = 'var(--text-muted)';
+      const emptyState = this.viewContainerEl.createDiv();
+      emptyState.addClass('vaultconnect-empty');
       emptyState.createEl('p', { text: 'No active users' });
-      emptyState.createEl('p', { 
-        text: 'Other users will appear here when they connect to the vault',
-        attr: { style: 'font-size: 12px; margin-top: 8px;' }
+      const hint = emptyState.createEl('p', {
+        text: 'Other users will appear here when they connect to the vault'
       });
+      hint.addClass('vaultconnect-text-xs');
+      hint.addClass('vaultconnect-mt-sm');
       return;
     }
 
     // Create user count badge
-    const countBadge = header.createDiv('user-count-badge');
+    const countBadge = header.createDiv('vaultconnect-count-badge');
     countBadge.textContent = `${activeUsers.length}`;
-    countBadge.style.position = 'absolute';
-    countBadge.style.top = '12px';
-    countBadge.style.right = '12px';
-    countBadge.style.backgroundColor = 'var(--interactive-accent)';
-    countBadge.style.color = 'var(--text-on-accent)';
-    countBadge.style.borderRadius = '12px';
-    countBadge.style.padding = '2px 8px';
-    countBadge.style.fontSize = '11px';
-    countBadge.style.fontWeight = 'bold';
 
     // Create user list
-    const userList = this.viewContainerEl.createDiv('active-users-list');
-    userList.style.padding = '8px';
+    const userList = this.viewContainerEl.createDiv('vaultconnect-user-list');
 
     activeUsers.forEach((user) => {
       this.renderUser(userList, user);
@@ -110,113 +96,59 @@ export class ActiveUsersView extends ItemView {
    * Render a single user
    */
   private renderUser(container: HTMLElement, user: ActiveUser): void {
-    const userItem = container.createDiv('active-user-item');
-    userItem.style.padding = '12px';
-    userItem.style.marginBottom = '8px';
-    userItem.style.borderRadius = '6px';
-    userItem.style.backgroundColor = 'var(--background-secondary)';
-    userItem.style.cursor = 'pointer';
-    userItem.style.transition = 'background-color 0.2s';
-
-    // Hover effect
-    userItem.addEventListener('mouseenter', () => {
-      userItem.style.backgroundColor = 'var(--background-modifier-hover)';
-    });
-    userItem.addEventListener('mouseleave', () => {
-      userItem.style.backgroundColor = 'var(--background-secondary)';
-    });
+    const userItem = container.createDiv('vaultconnect-user-item');
 
     // User header (avatar + name + status)
-    const userHeader = userItem.createDiv('user-header');
-    userHeader.style.display = 'flex';
-    userHeader.style.alignItems = 'center';
-    userHeader.style.marginBottom = '8px';
+    const userHeader = userItem.createDiv('vaultconnect-user-header');
 
     // Avatar or status indicator
-    const avatar = userHeader.createDiv('user-avatar');
     if (user.userAvatar) {
-      const img = avatar.createEl('img', { attr: { src: user.userAvatar } });
-      img.style.width = '32px';
-      img.style.height = '32px';
-      img.style.borderRadius = '50%';
-      img.style.marginRight = '12px';
+      const img = userHeader.createEl('img', {
+        cls: 'vaultconnect-user-avatar',
+        attr: { src: user.userAvatar }
+      });
     } else {
       // Status indicator
-      const statusIndicator = avatar.createDiv('user-status-indicator');
-      statusIndicator.style.backgroundColor = user.status === 'active' ? 'var(--color-green)' : 'var(--text-muted)';
-      statusIndicator.style.width = '12px';
-      statusIndicator.style.height = '12px';
-      statusIndicator.style.borderRadius = '50%';
-      statusIndicator.style.marginRight = '12px';
-      statusIndicator.style.flexShrink = '0';
+      const statusIndicator = userHeader.createDiv('vaultconnect-status-indicator');
+      statusIndicator.addClass(user.status === 'active' ? 'vaultconnect-status-indicator--active' : 'vaultconnect-status-indicator--away');
     }
 
     // User info
-    const userInfo = userHeader.createDiv('user-info');
-    userInfo.style.flex = '1';
-    userInfo.style.minWidth = '0';
+    const userInfo = userHeader.createDiv('vaultconnect-user-info');
 
     // User name
-    const userName = userInfo.createDiv('user-name');
+    const userName = userInfo.createDiv('vaultconnect-user-name');
     userName.textContent = user.userName;
-    userName.style.fontWeight = '600';
-    userName.style.color = 'var(--text-normal)';
-    userName.style.overflow = 'hidden';
-    userName.style.textOverflow = 'ellipsis';
-    userName.style.whiteSpace = 'nowrap';
 
     // Status badge
-    const statusBadge = userHeader.createDiv('user-status-badge');
+    const statusBadge = userHeader.createDiv('vaultconnect-status-badge');
     statusBadge.textContent = user.status === 'active' ? 'Active' : 'Away';
-    statusBadge.style.fontSize = '10px';
-    statusBadge.style.padding = '2px 6px';
-    statusBadge.style.borderRadius = '4px';
-    statusBadge.style.backgroundColor = user.status === 'active' ? 'var(--color-green)' : 'var(--background-modifier-border)';
-    statusBadge.style.color = user.status === 'active' ? 'white' : 'var(--text-muted)';
-    statusBadge.style.fontWeight = '600';
+    statusBadge.addClass(user.status === 'active' ? 'vaultconnect-status-badge--active' : 'vaultconnect-status-badge--away');
 
     // Current file
     if (user.currentFile) {
-      const currentFile = userItem.createDiv('user-current-file');
-      currentFile.style.fontSize = '12px';
-      currentFile.style.color = 'var(--text-muted)';
-      currentFile.style.marginBottom = '4px';
-      currentFile.style.display = 'flex';
-      currentFile.style.alignItems = 'center';
-      currentFile.style.gap = '6px';
+      const currentFile = userItem.createDiv('vaultconnect-current-file');
+      currentFile.addClass('vaultconnect-current-file--clickable');
 
-      const fileIcon = currentFile.createSpan();
+      const fileIcon = currentFile.createSpan({ cls: 'vaultconnect-file-icon' });
       fileIcon.textContent = '📄';
-      fileIcon.style.fontSize = '14px';
 
-      const fileName = currentFile.createSpan();
+      const fileName = currentFile.createSpan({ cls: 'vaultconnect-file-name' });
       fileName.textContent = user.currentFile;
-      fileName.style.overflow = 'hidden';
-      fileName.style.textOverflow = 'ellipsis';
-      fileName.style.whiteSpace = 'nowrap';
-      fileName.style.flex = '1';
 
       // Make file clickable
-      currentFile.style.cursor = 'pointer';
-      currentFile.style.textDecoration = 'underline';
       currentFile.addEventListener('click', (e) => {
         e.stopPropagation();
         this.openFile(user.currentFile!);
       });
     } else {
-      const noFile = userItem.createDiv('user-no-file');
+      const noFile = userItem.createDiv('vaultconnect-no-file');
       noFile.textContent = 'Not viewing any file';
-      noFile.style.fontSize = '12px';
-      noFile.style.color = 'var(--text-faint)';
-      noFile.style.fontStyle = 'italic';
-      noFile.style.marginBottom = '4px';
     }
 
     // Last activity
-    const lastActivity = userItem.createDiv('user-last-activity');
+    const lastActivity = userItem.createDiv('vaultconnect-last-activity');
     lastActivity.textContent = `Last seen: ${this.formatLastSeen(user.lastActivity)}`;
-    lastActivity.style.fontSize = '11px';
-    lastActivity.style.color = 'var(--text-faint)';
 
     // Click to show user details
     userItem.addEventListener('click', () => {
