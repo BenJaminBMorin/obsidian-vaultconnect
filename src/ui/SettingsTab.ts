@@ -35,12 +35,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    // Header with title and actions
-    const headerEl = containerEl.createDiv({ cls: 'vaultsync-settings-header' });
-    headerEl.createEl('h2', { text: 'VaultSync Settings' });
-    
+    new Setting(containerEl)
+      .setName('VaultConnect settings')
+      .setHeading();
+
     // Settings actions
-    const actionsEl = headerEl.createDiv({ cls: 'vaultsync-settings-actions' });
+    const actionsEl = containerEl.createDiv({ cls: 'vaultsync-settings-actions' });
     
     // Export settings button
     actionsEl.createEl('button', {
@@ -56,7 +56,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     
     // Reset settings button
     actionsEl.createEl('button', {
-      text: 'Reset to Defaults',
+      text: 'Reset to defaults',
       cls: 'mod-warning'
     }).addEventListener('click', () => this.resetSettings());
 
@@ -84,7 +84,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         cls: 'setting-item-description'
       });
       infoEl.createEl('p', {
-        text: 'Click the Login button above to connect your VaultSync account.',
+        text: 'Click the Login button above to connect your VaultConnect account.',
         cls: 'setting-item-description'
       });
     }
@@ -172,7 +172,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Selected vault
     new Setting(containerEl)
       .setName('Selected vault')
-      .setDesc('The VaultSync vault to sync with')
+      .setDesc('The VaultConnect vault to sync with')
       .addText(text => {
         text
           .setPlaceholder('vault-id')
@@ -199,10 +199,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         
         if (vault.is_cross_tenant) {
           const permissionIcon = vault.permission === 'read' ? '👁️' : vault.permission === 'write' ? '✏️' : '👑';
-          const permissionLabel = vault.permission === 'read' ? 'Read-Only' : vault.permission === 'write' ? 'Read-Write' : 'Admin';
+          const permissionLabel = vault.permission === 'read' ? 'Read-only' : vault.permission === 'write' ? 'Read-write' : 'Admin';
           
           statusEl.createEl('div', {
-            text: `🔗 Cross-Tenant Vault (${permissionIcon} ${permissionLabel})`,
+            text: `🔗 Cross-tenant vault (${permissionIcon} ${permissionLabel})`,
             cls: 'vaultsync-cross-tenant-badge'
           });
           
@@ -219,7 +219,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           }
         } else {
           statusEl.createEl('div', {
-            text: '✅ Owned Vault',
+            text: '✅ Owned vault',
             cls: 'vaultsync-owned-vault-badge'
           });
           statusEl.createEl('p', {
@@ -251,9 +251,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       .setDesc('Choose how files should be synchronized')
       .addDropdown(dropdown => {
         dropdown
-          .addOption(SyncMode.SMART_SYNC, 'Smart Sync (recommended)')
-          .addOption(SyncMode.PULL_ALL, 'Pull All')
-          .addOption(SyncMode.PUSH_ALL, 'Push All')
+          .addOption(SyncMode.SMART_SYNC, 'Smart sync (recommended)')
+          .addOption(SyncMode.PULL_ALL, 'Pull all')
+          .addOption(SyncMode.PUSH_ALL, 'Push all')
           .addOption(SyncMode.MANUAL, 'Manual')
           .setValue(this.plugin.settings.syncMode)
           .onChange(async (value) => {
@@ -320,9 +320,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
   private getSyncModeLabel(mode: SyncMode): string {
     const labels = {
-      [SyncMode.SMART_SYNC]: 'Smart Sync',
-      [SyncMode.PULL_ALL]: 'Pull All',
-      [SyncMode.PUSH_ALL]: 'Push All',
+      [SyncMode.SMART_SYNC]: 'Smart sync',
+      [SyncMode.PULL_ALL]: 'Pull all',
+      [SyncMode.PUSH_ALL]: 'Push all',
       [SyncMode.MANUAL]: 'Manual'
     };
     return labels[mode];
@@ -651,8 +651,8 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // API Base URL
     new Setting(containerEl)
-      .setName('API Base URL')
-      .setDesc('VaultSync API server URL (requires reconnection)')
+      .setName('API base URL')
+      .setDesc('VaultConnect API server URL (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.apiBaseURL,
@@ -667,8 +667,8 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // WebSocket Base URL
     new Setting(containerEl)
-      .setName('WebSocket Base URL')
-      .setDesc('VaultSync WebSocket server URL (requires reconnection)')
+      .setName('WebSocket base URL')
+      .setDesc('VaultConnect WebSocket server URL (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.wsBaseURL,

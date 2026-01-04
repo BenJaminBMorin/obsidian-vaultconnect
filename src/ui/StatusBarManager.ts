@@ -162,15 +162,15 @@ export class StatusBarManager {
       case StatusBarState.DISCONNECTED:
         return {
           icon: '⚫',
-          text: 'VaultSync',
-          tooltip: 'VaultSync: Disconnected'
+          text: 'VaultConnect',
+          tooltip: 'VaultConnect: Disconnected'
         };
 
       case StatusBarState.CONNECTING:
         return {
           icon: '🟡',
-          text: 'VaultSync',
-          tooltip: 'VaultSync: Connecting...'
+          text: 'VaultConnect',
+          tooltip: 'VaultConnect: Connecting...'
         };
 
       case StatusBarState.CONNECTED:
@@ -183,14 +183,14 @@ export class StatusBarManager {
           const timeAgo = this.getTimeAgo(this.lastSyncTime);
           return {
             icon: '🟢',
-            text: `VaultSync${crossTenantIndicator}`,
-            tooltip: `VaultSync: Connected${crossTenantTooltip}\nLast sync: ${timeAgo}`
+            text: `VaultConnect${crossTenantIndicator}`,
+            tooltip: `VaultConnect: Connected${crossTenantTooltip}\nLast sync: ${timeAgo}`
           };
         }
         return {
           icon: '🟢',
-          text: `VaultSync${crossTenantIndicator}`,
-          tooltip: `VaultSync: Connected${crossTenantTooltip}`
+          text: `VaultConnect${crossTenantIndicator}`,
+          tooltip: `VaultConnect: Connected${crossTenantTooltip}`
         };
 
       case StatusBarState.SYNCING:
@@ -198,35 +198,35 @@ export class StatusBarManager {
           const percent = Math.round((this.syncProgress.current / this.syncProgress.total) * 100);
           return {
             icon: '🔄',
-            text: `VaultSync (${percent}%)`,
-            tooltip: `VaultSync: Syncing...\n${this.syncProgress.current}/${this.syncProgress.total} files\nCurrent: ${this.syncProgress.currentFile}`
+            text: `VaultConnect (${percent}%)`,
+            tooltip: `VaultConnect: Syncing...\n${this.syncProgress.current}/${this.syncProgress.total} files\nCurrent: ${this.syncProgress.currentFile}`
           };
         }
         return {
           icon: '🔄',
-          text: 'VaultSync',
-          tooltip: 'VaultSync: Syncing...'
+          text: 'VaultConnect',
+          tooltip: 'VaultConnect: Syncing...'
         };
 
       case StatusBarState.ERROR:
         return {
           icon: '🔴',
-          text: 'VaultSync',
-          tooltip: `VaultSync: Error\n${this.errorMessage || 'Unknown error'}`
+          text: 'VaultConnect',
+          tooltip: `VaultConnect: Error\n${this.errorMessage || 'Unknown error'}`
         };
 
       case StatusBarState.OFFLINE:
         return {
           icon: '⚪',
-          text: 'VaultSync',
-          tooltip: 'VaultSync: Offline mode'
+          text: 'VaultConnect',
+          tooltip: 'VaultConnect: Offline mode'
         };
 
       default:
         return {
           icon: '⚫',
-          text: 'VaultSync',
-          tooltip: 'VaultSync'
+          text: 'VaultConnect',
+          tooltip: 'VaultConnect'
         };
     }
   }

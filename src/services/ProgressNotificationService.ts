@@ -300,9 +300,9 @@ export class ProgressNotificationService {
    */
   private handleConnectionChanged(connected: boolean): void {
     if (connected) {
-      this.showNotification('🟢 Connected to VaultSync', 3000);
+      this.showNotification('🟢 Connected to VaultConnect', 3000);
     } else {
-      this.showNotification('⚫ Disconnected from VaultSync', 3000);
+      this.showNotification('⚫ Disconnected from VaultConnect', 3000);
     }
   }
 

@@ -51,7 +51,7 @@ export class ConflictListView extends ItemView {
     header.addClass('vaultconnect-p-lg');
     header.addClass('vaultconnect-border-bottom');
 
-    const title = header.createEl('h4', { text: 'Sync Conflicts' });
+    const title = header.createEl('h4', { text: 'Sync conflicts' });
     title.addClass('vaultconnect-mb-sm');
     title.setCssProps({ 'margin-top': '0' });
 

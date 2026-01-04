@@ -20,17 +20,17 @@ export class AuthModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    contentEl.createEl('h2', { text: 'VaultSync Authentication' });
+    contentEl.createEl('h2', { text: 'VaultConnect authentication' });
 
     contentEl.createEl('p', {
-      text: 'Enter your VaultSync API key to connect your vault. You can generate an API key from your VaultSync dashboard.',
+      text: 'Enter your VaultConnect API key to connect your vault. You can generate an API key from your VaultConnect dashboard.',
       cls: 'setting-item-description'
     });
 
     // API Key input
     new Setting(contentEl)
-      .setName('API Key')
-      .setDesc('Your VaultSync API key (starts with vb_live_ or vb_test_)')
+      .setName('API key')
+      .setDesc('Your VaultConnect API key (starts with vb_live_ or vb_test_)')
       .addText(text => {
         text
           .setPlaceholder('vb_live_...')
@@ -116,7 +116,7 @@ export class AuthModal extends Modal {
       // Store the API key
       await this.authService.storeApiKey(this.apiKeyInput, expiresAt);
 
-      new Notice('Successfully authenticated with VaultSync!');
+      new Notice('Successfully authenticated with VaultConnect!');
       this.close();
       this.onSuccess();
     } catch (error) {
@@ -132,7 +132,7 @@ export class AuthModal extends Modal {
     contentEl.createEl('h2', { text: 'How to get an API key' });
 
     const steps = [
-      'Log in to your VaultSync dashboard at https://vaultsync.io',
+      'Log in to your VaultConnect dashboard at https://vaultconnect.io',
       'Navigate to Settings → API Keys',
       'Click "Generate New API Key"',
       'Give your key a name (e.g., "Obsidian Desktop")',

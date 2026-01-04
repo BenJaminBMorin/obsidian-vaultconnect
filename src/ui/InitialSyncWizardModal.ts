@@ -52,7 +52,7 @@ export class InitialSyncWizardModal extends Modal {
     contentEl.addClass('initial-sync-wizard-modal');
 
     // Header
-    contentEl.createEl('h2', { text: 'Initial Sync Setup' });
+    contentEl.createEl('h2', { text: 'Initial sync setup' });
 
     // Introduction
     const intro = contentEl.createDiv();
@@ -103,7 +103,7 @@ export class InitialSyncWizardModal extends Modal {
         description: 'Intelligently merge files from both locations:',
         bullets: [
           'Upload files only on this device',
-          'Download files only on VaultSync',
+          'Download files only on VaultConnect',
           'Create conflict copies for different files'
         ],
         benefits: [
@@ -124,7 +124,7 @@ export class InitialSyncWizardModal extends Modal {
         title: 'Start fresh',
         badge: 'Warning',
         badgeColor: 'var(--text-error)',
-        description: 'Clear this device and download from VaultSync',
+        description: 'Clear this device and download from VaultConnect',
         bullets: analysis.localFiles.length > 0 || analysis.commonFiles.length > 0
           ? [`⚠️  Will delete ${analysis.localFiles.length + analysis.commonFiles.length} local file${analysis.localFiles.length + analysis.commonFiles.length === 1 ? '' : 's'}`]
           : ['No local files will be deleted'],
@@ -143,7 +143,7 @@ export class InitialSyncWizardModal extends Modal {
         title: 'Upload local files',
         badge: analysis.commonFiles.length > 0 ? 'Warning' : undefined,
         badgeColor: 'var(--text-error)',
-        description: 'Upload all files from this device to VaultSync',
+        description: 'Upload all files from this device to VaultConnect',
         bullets: analysis.commonFiles.length > 0
           ? [`⚠️  Will overwrite ${analysis.commonFiles.length} remote file${analysis.commonFiles.length === 1 ? '' : 's'}`]
           : ['No remote files will be overwritten'],
@@ -260,7 +260,7 @@ export class InitialSyncWizardModal extends Modal {
     summaryContainer.addClass('vaultconnect-mb-lg');
 
     // Title
-    const title = summaryContainer.createEl('h3', { text: '📊 File Analysis' });
+    const title = summaryContainer.createEl('h3', { text: '📊 File analysis' });
     title.addClass('vaultconnect-m-0');
     title.addClass('vaultconnect-mb-md');
 
@@ -293,7 +293,7 @@ export class InitialSyncWizardModal extends Modal {
 
       remoteRow.createSpan({ text: '☁️' });
       remoteRow.createSpan({
-        text: `${analysis.remoteFiles.length} file${analysis.remoteFiles.length === 1 ? '' : 's'} only on VaultSync`
+        text: `${analysis.remoteFiles.length} file${analysis.remoteFiles.length === 1 ? '' : 's'} only on VaultConnect`
       });
     }
 
@@ -388,7 +388,7 @@ export class InitialSyncWizardModal extends Modal {
           }
 
           warning.createEl('p', {
-            text: 'These files will be permanently deleted and replaced with files from VaultSync.',
+            text: 'These files will be permanently deleted and replaced with files from VaultConnect.',
             cls: 'mod-warning'
           });
 
@@ -462,7 +462,7 @@ export class InitialSyncWizardModal extends Modal {
           warning.addClass('vaultconnect-mb-md');
 
           warning.createEl('p', {
-            text: `This will overwrite ${fileCount} file${fileCount === 1 ? '' : 's'} on VaultSync with your local versions.`
+            text: `This will overwrite ${fileCount} file${fileCount === 1 ? '' : 's'} on VaultConnect with your local versions.`
           });
 
           warning.createEl('p', {

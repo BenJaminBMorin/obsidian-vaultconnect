@@ -191,9 +191,9 @@ export class ErrorNotificationService {
     // Add action button if provided
     if (options?.actionButton) {
       const noticeWithEl = notice as NoticeWithElement;
-      const noticeEl = noticeWithEl.noticeEl;
-      if (noticeEl) {
-        const button = noticeEl.createEl('button', {
+      const messageEl = noticeWithEl.messageEl;
+      if (messageEl) {
+        const button = messageEl.createEl('button', {
           text: options.actionButton.text,
           cls: 'vaultsync-error-action-button'
         });
@@ -213,10 +213,10 @@ export class ErrorNotificationService {
 
     const notice = new Notice(message, 10000);
     const noticeWithEl = notice as NoticeWithElement;
-    const noticeEl = noticeWithEl.noticeEl;
+    const messageEl = noticeWithEl.messageEl;
 
-    if (noticeEl) {
-      const button = noticeEl.createEl('button', {
+    if (messageEl) {
+      const button = messageEl.createEl('button', {
         text: 'Resolve conflict',
         cls: 'vaultsync-conflict-button'
       });

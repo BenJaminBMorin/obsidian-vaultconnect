@@ -77,7 +77,7 @@ export class ConflictResolutionModal extends Modal {
     header.addClass('vaultconnect-header');
 
     const title = header.createEl('h2', {
-      text: `Resolve Conflict: ${conflict.path}`
+      text: `Resolve conflict: ${conflict.path}`
     });
     title.addClass('vaultconnect-mb-sm');
 
@@ -104,7 +104,7 @@ export class ConflictResolutionModal extends Modal {
       });
 
       const warningTitle = warningBanner.createEl('div', {
-        text: '🔗 Cross-Tenant Vault Conflict'
+        text: '🔗 Cross-tenant vault conflict'
       });
       warningTitle.addClass('vaultconnect-font-semibold');
       warningTitle.addClass('vaultconnect-mb-sm');
@@ -180,7 +180,7 @@ export class ConflictResolutionModal extends Modal {
     localPanel.addClass('vaultconnect-p-md');
 
     const localHeader = localPanel.createDiv('conflict-panel-header');
-    localHeader.textContent = 'Local Version';
+    localHeader.textContent = 'Local version';
     localHeader.addClass('vaultconnect-font-semibold');
     localHeader.addClass('vaultconnect-mb-md');
     localHeader.addClass('vaultconnect-text-accent');
@@ -198,7 +198,7 @@ export class ConflictResolutionModal extends Modal {
     remotePanel.addClass('vaultconnect-p-md');
 
     const remoteHeader = remotePanel.createDiv('conflict-panel-header');
-    remoteHeader.textContent = 'Remote Version';
+    remoteHeader.textContent = 'Remote version';
     remoteHeader.addClass('vaultconnect-font-semibold');
     remoteHeader.addClass('vaultconnect-mb-md');
     remoteHeader.addClass('vaultconnect-text-accent');
@@ -297,7 +297,7 @@ export class ConflictResolutionModal extends Modal {
     const { contentEl } = this;
     contentEl.empty();
 
-    contentEl.createEl('h2', { text: `Manual Merge: ${conflict.path}` });
+    contentEl.createEl('h2', { text: `Manual merge: ${conflict.path}` });
 
     const description = contentEl.createDiv('merge-description');
     description.textContent = 'Edit the content below to create your merged version:';
@@ -323,7 +323,7 @@ export class ConflictResolutionModal extends Modal {
     previewContent.textContent = mergedContent;
 
     new Setting(contentEl)
-      .setName('Merged Content')
+      .setName('Merged content')
       .setDesc('Combine both versions as needed')
       .addTextArea(text => {
         text

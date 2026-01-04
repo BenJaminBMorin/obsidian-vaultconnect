@@ -133,7 +133,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Initialize logger with user's log level
 		logger.setLevel(this.settings.logLevel as LogLevel);
-		logger.info('VaultSync plugin loading...');
+		logger.info('VaultConnect plugin loading...');
 
 		// Generate device ID if not exists
 		if (!this.settings.deviceId) {
@@ -155,7 +155,7 @@ export default class VaultSyncPlugin extends Plugin {
 		);
 
 		// Add ribbon icon with menu
-		this.ribbonIconEl = this.addRibbonIcon('sync', 'VaultSync', (evt: MouseEvent) => {
+		this.ribbonIconEl = this.addRibbonIcon('sync', 'VaultConnect', (evt: MouseEvent) => {
 			this.showSyncMenu(evt);
 		});
 		this.updateRibbonIcon();
@@ -824,9 +824,9 @@ export default class VaultSyncPlugin extends Plugin {
 				
 				// Show appropriate success message
 				if (completedInitialSync) {
-					new Notice('Initial sync complete! Connected to VaultSync');
+					new Notice('Initial sync complete! Connected to VaultConnect');
 				} else {
-					new Notice('Connected to VaultSync');
+					new Notice('Connected to VaultConnect');
 				}
 
 				// Subscribe to vault
@@ -895,7 +895,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 		this.isConnected = false;
 		this.updateStatusBar('disconnected');
-		new Notice('Disconnected from VaultSync');
+		new Notice('Disconnected from VaultConnect');
 	}
 
 	/**
@@ -1398,7 +1398,7 @@ export default class VaultSyncPlugin extends Plugin {
 	showSyncStatus() {
 		const status = this.isConnected ? 'Connected' : 'Disconnected';
 		const vault = this.settings.vaultId || 'Not configured';
-		new Notice(`VaultSync Status: ${status}\nVault: ${vault}`, 5000);
+		new Notice(`VaultConnect Status: ${status}\nVault: ${vault}`, 5000);
 	}
 
 	updateStatusBar(status: 'connected' | 'disconnected' | 'syncing' | 'connecting' | 'error') {
@@ -1411,11 +1411,11 @@ export default class VaultSyncPlugin extends Plugin {
 		};
 
 		const labels = {
-			connected: 'VaultSync: Connected',
-			disconnected: 'VaultSync: Disconnected',
-			syncing: 'VaultSync: Syncing...',
-			connecting: 'VaultSync: Connecting...',
-			error: 'VaultSync: Error'
+			connected: 'VaultConnect: Connected',
+			disconnected: 'VaultConnect: Disconnected',
+			syncing: 'VaultConnect: Syncing...',
+			connecting: 'VaultConnect: Connecting...',
+			error: 'VaultConnect: Error'
 		};
 
 		// Add cross-tenant indicator if applicable
@@ -1456,17 +1456,17 @@ export default class VaultSyncPlugin extends Plugin {
 		// Add appropriate status class
 		if (this.isSyncing) {
 			this.ribbonIconEl.addClass('vaultsync-syncing');
-			this.ribbonIconEl.setAttribute('aria-label', 'VaultSync: Syncing...');
+			this.ribbonIconEl.setAttribute('aria-label', 'VaultConnect: Syncing...');
 		} else if (this.isConnected) {
 			this.ribbonIconEl.addClass('vaultsync-connected');
 			const conflictCount = this.conflictService?.getConflictCount() || 0;
 			const label = conflictCount > 0
-				? `VaultSync: Connected (${conflictCount} conflicts)`
-				: 'VaultSync: Connected';
+				? `VaultConnect: Connected (${conflictCount} conflicts)`
+				: 'VaultConnect: Connected';
 			this.ribbonIconEl.setAttribute('aria-label', label);
 		} else {
 			this.ribbonIconEl.addClass('vaultsync-disconnected');
-			this.ribbonIconEl.setAttribute('aria-label', 'VaultSync: Disconnected');
+			this.ribbonIconEl.setAttribute('aria-label', 'VaultConnect: Disconnected');
 		}
 	}
 }
@@ -1483,12 +1483,14 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'VaultSync Settings' });
+		new Setting(containerEl)
+			.setName('VaultConnect settings')
+			.setHeading();
 
 		// API URL
 		new Setting(containerEl)
 			.setName('API URL')
-			.setDesc('VaultSync API server URL')
+			.setDesc('VaultConnect API server URL')
 			.addText(text => text
 				.setPlaceholder('http://localhost:3001/v1')
 				.setValue(this.plugin.settings.apiUrl)
@@ -1500,7 +1502,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		// WebSocket URL
 		new Setting(containerEl)
 			.setName('WebSocket URL')
-			.setDesc('VaultSync WebSocket server URL')
+			.setDesc('VaultConnect WebSocket server URL')
 			.addText(text => text
 				.setPlaceholder('http://localhost:3001')
 				.setValue(this.plugin.settings.wsUrl)
@@ -1710,7 +1712,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 
 		// Auto Sync
 		new Setting(containerEl)
-			.setName('Auto Sync')
+			.setName('Auto sync')
 			.setDesc('Automatically sync file changes')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoSync)
@@ -1722,7 +1724,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		// Excluded Folders
 		const configDir = this.app.vault.configDir;
 		new Setting(containerEl)
-			.setName('Excluded Folders')
+			.setName('Excluded folders')
 			.setDesc('Folders to exclude from sync (comma-separated)')
 			.addText(text => text
 				.setPlaceholder(`${configDir}, .trash`)
@@ -1736,10 +1738,12 @@ class VaultSyncSettingTab extends PluginSettingTab {
 				}));
 
 		// Connection Controls
-		containerEl.createEl('h3', { text: 'Connection' });
+		new Setting(containerEl)
+			.setName('Connection')
+			.setHeading();
 
 		new Setting(containerEl)
-			.setName('Connection Status')
+			.setName('Connection status')
 			.setDesc(this.plugin.isConnected ? 'Connected' : 'Disconnected')
 			.addButton(button => button
 				.setButtonText(this.plugin.isConnected ? 'Disconnect' : 'Connect')
@@ -1762,8 +1766,10 @@ class VaultSyncSettingTab extends PluginSettingTab {
 				}));
 
 		// Log Level
-		containerEl.createEl('h3', { text: 'Logging' });
-		
+		new Setting(containerEl)
+			.setName('Logging')
+			.setHeading();
+
 		new Setting(containerEl)
 			.setName('Log level')
 			.setDesc('Control how much information is logged to the console')

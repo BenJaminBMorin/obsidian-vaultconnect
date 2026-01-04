@@ -323,10 +323,12 @@ export class CollaborationMetadataService {
     }
 
     const indicator = itemEl.createDiv('collab-indicator');
-    indicator.style.display = 'inline-block';
-    indicator.style.marginLeft = '4px';
-    indicator.style.fontSize = '12px';
-    indicator.style.color = 'var(--interactive-accent)';
+    indicator.setCssProps({
+      'display': 'inline-block',
+      'margin-left': '4px',
+      'font-size': '12px',
+      'color': 'var(--interactive-accent)'
+    });
     indicator.textContent = '●';
     
     // Add tooltip

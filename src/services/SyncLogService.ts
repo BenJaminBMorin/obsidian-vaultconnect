@@ -218,7 +218,7 @@ export class SyncLogService {
     this.eventBus.on(EVENTS.CONNECTION_CHANGED, (connected: boolean) => {
       this.addLog(
         SyncLogType.CONNECTION_CHANGED,
-        connected ? 'Connected to VaultSync' : 'Disconnected from VaultSync',
+        connected ? 'Connected to VaultConnect' : 'Disconnected from VaultConnect',
         { connected }
       );
     });

@@ -348,7 +348,7 @@ export class AuthService {
           }
         } catch (error) {
           clearInterval(intervalId);
-          reject(error);
+          reject(error instanceof Error ? error : new Error(String(error)));
         }
       };
 
