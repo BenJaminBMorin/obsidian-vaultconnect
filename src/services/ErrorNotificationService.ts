@@ -354,8 +354,10 @@ export class ErrorNotificationService {
       // Log that we would report (but don't actually send anywhere)
       console.debug('Error report prepared (not sent):', errorReport);
 
-      // In a real implementation:
-      // await fetch('https://telemetry.example.com/errors', {
+      // In a real implementation with user consent:
+      // import { requestUrl } from 'obsidian';
+      // await requestUrl({
+      //   url: 'https://telemetry.example.com/errors',
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify(errorReport)

@@ -494,9 +494,9 @@ export class ErrorLogger {
       case ErrorSeverity.MEDIUM:
         return console.warn;
       case ErrorSeverity.LOW:
-        return console.info;
+        return console.debug;
       default:
-        return console.log;
+        return console.debug;
     }
   }
 
