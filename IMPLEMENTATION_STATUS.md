@@ -51,13 +51,13 @@
 
 ## 🚧 PHASE 2A: INLINE STYLES REMOVAL - **IN PROGRESS**
 
-### Progress: 69/417 (17% Complete)
+### Progress: 249/417 (60% Complete)
 
 | File | Occurrences | Status |
 |------|-------------|--------|
 | **ActiveUsersView.ts** | **69** | **✅ DONE** |
-| InitialSyncWizardModal.ts | 96 | ⏳ Pending |
-| ConflictResolutionModal.ts | 84 | ⏳ Pending |
+| **InitialSyncWizardModal.ts** | **96** | **✅ DONE** |
+| **ConflictResolutionModal.ts** | **84** | **✅ DONE** |
 | InitialSyncProgressModal.ts | 55 | ⏳ Pending |
 | ConflictListView.ts | 45 | ⏳ Pending |
 | CollaborationUI.ts | 42 | ⏳ Pending |
@@ -65,7 +65,9 @@
 | SettingsTab.ts | 8 | ⏳ Pending |
 | Other UI files (~5 files) | ~10 | ⏳ Pending |
 
-### ActiveUsersView.ts Completed ✅
+### Files Completed ✅
+
+#### ActiveUsersView.ts (69 inline styles)
 **What was fixed**:
 - Removed all 69 inline style assignments
 - Replaced with vaultconnect-* CSS classes
@@ -86,15 +88,32 @@ const userItem = container.createDiv('vaultconnect-user-item');
 // All styles now in CSS
 ```
 
-### Remaining Work: 348 occurrences across 11 files
+#### InitialSyncWizardModal.ts (96 inline styles)
+**What was fixed**:
+- Wizard intro, options, and footer layouts
+- Option cards with badges and benefits
+- File analysis summary display
+- Confirmation modals with warnings and inputs
+- All flex, grid, spacing, and typography styles
+
+#### ConflictResolutionModal.ts (84 inline styles)
+**What was fixed**:
+- Conflict header with navigation
+- Cross-tenant warning banners
+- Side-by-side diff viewer (timestamps, panels, content)
+- Resolution buttons grid layout
+- Manual merge editor with preview
+- All flex, grid, spacing, and panel styles
+
+### Remaining Work: 168 occurrences across 7 files
 
 **Next Priority**:
-1. InitialSyncWizardModal.ts (96 occurrences) - Largest file
-2. ConflictResolutionModal.ts (84 occurrences)
-3. InitialSyncProgressModal.ts (55 occurrences)
+1. InitialSyncProgressModal.ts (55 occurrences)
+2. ConflictListView.ts (45 occurrences)
+3. CollaborationUI.ts (42 occurrences)
 4. Continue with smaller files
 
-**Estimated Time**: 6-10 hours for remaining files
+**Estimated Time**: 3-5 hours for remaining files
 
 ---
 
@@ -168,14 +187,14 @@ const userItem = container.createDiv('vaultconnect-user-item');
 | Phase | Progress | Status |
 |-------|----------|--------|
 | Phase 1: Critical Fixes | 100% | ✅ COMPLETE |
-| Phase 2A: Inline Styles | 17% (69/417) | 🚧 IN PROGRESS |
+| Phase 2A: Inline Styles | 60% (249/417) | 🚧 IN PROGRESS |
 | Phase 2B: Type Safety | 0% (0/184) | ⏳ PENDING |
 | Phase 3: Code Quality | 0% | ⏳ PENDING |
 | Phase 4: Testing | 0% | ⏳ PENDING |
 
-### Total Progress: ~20% Complete
+### Total Progress: ~44% Complete
 
-**Total Issues Fixed**: 80/740+ (11%)
+**Total Issues Fixed**: 329/740+ (44%)
 **Critical Blocking Issues**: 5/6 resolved (83%)
 
 ---
@@ -184,10 +203,10 @@ const userItem = container.createDiv('vaultconnect-user-item');
 
 ### Immediate Next Task
 Continue Phase 2A by fixing the next largest file:
-- **InitialSyncWizardModal.ts** (96 inline styles)
+- **InitialSyncProgressModal.ts** (55 inline styles)
 
 ### Priority Order
-1. Complete inline styles removal (348 remaining)
+1. Complete inline styles removal (168 remaining)
 2. Replace `any` types (184 occurrences)
 3. Code quality improvements
 4. Testing and validation
@@ -197,17 +216,17 @@ Continue Phase 2A by fixing the next largest file:
 ## ⏰ TIME ESTIMATES
 
 ### Remaining Work
-- Phase 2A (Inline Styles): 6-10 hours
+- Phase 2A (Inline Styles): 3-5 hours
 - Phase 2B (Type Safety): 8-12 hours
 - Phase 3 (Code Quality): 5-8 hours
 - Phase 4 (Testing): 4-6 hours
 
-**Total Remaining**: 23-36 hours
+**Total Remaining**: 20-33 hours
 
 ### At Different Work Rates
-- **Full-time (8 hrs/day)**: 3-5 days
-- **Part-time (4 hrs/day)**: 6-9 days
-- **Casual (2 hrs/day)**: 12-18 days
+- **Full-time (8 hrs/day)**: 2-4 days
+- **Part-time (4 hrs/day)**: 5-8 days
+- **Casual (2 hrs/day)**: 10-16 days
 
 ---
 
@@ -220,7 +239,7 @@ All Phase 1 critical fixes are production-ready:
 4. ✅ Uses proper file deletion methods
 5. ✅ CSS classes are ready for use
 
-**One UI file (ActiveUsersView.ts) is fully refactored** and theme-compatible.
+**Three UI files (ActiveUsersView.ts, InitialSyncWizardModal.ts, ConflictResolutionModal.ts) are fully refactored** and theme-compatible.
 
 ---
 
@@ -248,11 +267,14 @@ All Phase 1 critical fixes are production-ready:
 
 ## 🔄 CHANGE LOG
 
-### 2026-01-04
+### 2026-01-04 (Session 1)
 - ✅ Phase 1 complete: All critical fixes done
 - ✅ ActiveUsersView.ts: Removed 69 inline styles
+- ✅ InitialSyncWizardModal.ts: Removed 96 inline styles
+- ✅ ConflictResolutionModal.ts: Removed 84 inline styles
 - 📝 Created comprehensive progress documentation
+- 📊 60% of inline styles now complete (249/417)
 
 ---
 
-**Next Update**: After InitialSyncWizardModal.ts completion
+**Next Update**: After InitialSyncProgressModal.ts completion

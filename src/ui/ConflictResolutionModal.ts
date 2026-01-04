@@ -44,16 +44,12 @@ export class ConflictResolutionModal extends Modal {
     contentEl.empty();
 
     contentEl.createEl('h2', { text: 'No Conflicts' });
-    
-    const message = contentEl.createDiv({ cls: 'conflict-no-conflicts' });
-    message.textContent = 'All files are in sync. No conflicts to resolve.';
-    message.style.textAlign = 'center';
-    message.style.padding = '40px 20px';
-    message.style.color = 'var(--text-muted)';
 
-    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-    buttonContainer.style.marginTop = '20px';
-    buttonContainer.style.textAlign = 'center';
+    const message = contentEl.createDiv('vaultconnect-empty');
+    message.textContent = 'All files are in sync. No conflicts to resolve.';
+
+    const buttonContainer = contentEl.createDiv('vaultconnect-modal-footer');
+    buttonContainer.setCssProps({ 'text-align': 'center' });
 
     const closeButton = buttonContainer.createEl('button', {
       text: 'Close',
@@ -71,45 +67,45 @@ export class ConflictResolutionModal extends Modal {
     const conflict = this.conflicts[this.currentConflictIndex];
 
     // Header
-    const header = contentEl.createDiv({ cls: 'conflict-header' });
-    header.style.marginBottom = '20px';
+    const header = contentEl.createDiv();
+    header.addClass('vaultconnect-header');
 
     const title = header.createEl('h2', {
       text: `Resolve Conflict: ${conflict.path}`
     });
-    title.style.marginBottom = '8px';
+    title.addClass('vaultconnect-mb-sm');
 
-    const info = header.createDiv({ cls: 'conflict-info' });
-    info.style.color = 'var(--text-muted)';
-    info.style.fontSize = '0.9em';
+    const info = header.createDiv();
+    info.addClass('vaultconnect-text-muted');
+    info.addClass('vaultconnect-text-sm');
     info.textContent = `Conflict ${this.currentConflictIndex + 1} of ${this.conflicts.length} • Type: ${conflict.conflictType}`;
 
     // Cross-tenant warning banner
     const isCrossTenant = (this.conflictService as any).isCrossTenant;
     const permission = (this.conflictService as any).vaultPermission;
-    
+
     if (isCrossTenant) {
-      const warningBanner = contentEl.createDiv({ cls: 'conflict-cross-tenant-warning' });
-      warningBanner.style.marginTop = '15px';
-      warningBanner.style.padding = '12px';
-      warningBanner.style.background = 'rgba(255, 152, 0, 0.1)';
-      warningBanner.style.border = '1px solid rgba(255, 152, 0, 0.3)';
-      warningBanner.style.borderRadius = '6px';
-      warningBanner.style.marginBottom = '15px';
-      
+      const warningBanner = contentEl.createDiv();
+      warningBanner.addClass('vaultconnect-bg-warning');
+      warningBanner.addClass('vaultconnect-p-md');
+      warningBanner.addClass('vaultconnect-rounded-md');
+      warningBanner.addClass('vaultconnect-mt-md');
+      warningBanner.addClass('vaultconnect-mb-md');
+      warningBanner.setCssProps({
+        'background': 'rgba(255, 152, 0, 0.1)',
+        'border': '1px solid rgba(255, 152, 0, 0.3)'
+      });
+
       const warningTitle = warningBanner.createEl('div', {
-        text: '🔗 Cross-Tenant Vault Conflict',
-        cls: 'conflict-warning-title'
+        text: '🔗 Cross-Tenant Vault Conflict'
       });
-      warningTitle.style.fontWeight = '600';
-      warningTitle.style.marginBottom = '8px';
-      
-      const warningText = warningBanner.createEl('div', {
-        cls: 'conflict-warning-text'
-      });
-      warningText.style.fontSize = '0.9em';
-      warningText.style.lineHeight = '1.4';
-      
+      warningTitle.addClass('vaultconnect-font-semibold');
+      warningTitle.addClass('vaultconnect-mb-sm');
+
+      const warningText = warningBanner.createEl('div');
+      warningText.addClass('vaultconnect-text-sm');
+      warningText.setCssProps({ 'line-height': '1.4' });
+
       if (permission === 'read') {
         warningText.textContent = '⚠️ This vault is shared with read-only access. The remote version will be used automatically to prevent sync conflicts.';
       } else {
@@ -119,10 +115,10 @@ export class ConflictResolutionModal extends Modal {
 
     // Navigation buttons (if multiple conflicts)
     if (this.conflicts.length > 1) {
-      const nav = header.createDiv({ cls: 'conflict-navigation' });
-      nav.style.marginTop = '10px';
-      nav.style.display = 'flex';
-      nav.style.gap = '10px';
+      const nav = header.createDiv();
+      nav.addClass('vaultconnect-flex');
+      nav.addClass('vaultconnect-gap-md');
+      nav.addClass('vaultconnect-mt-md');
 
       const prevButton = nav.createEl('button', { text: '← Previous' });
       prevButton.disabled = this.currentConflictIndex === 0;
@@ -147,16 +143,16 @@ export class ConflictResolutionModal extends Modal {
   }
 
   private renderConflictDetails(container: HTMLElement, conflict: ConflictInfo) {
-    const detailsContainer = container.createDiv({ cls: 'conflict-details' });
-    detailsContainer.style.marginTop = '20px';
+    const detailsContainer = container.createDiv('conflict-details');
+    detailsContainer.addClass('vaultconnect-mt-lg');
 
     // Timestamps
-    const timestamps = detailsContainer.createDiv({ cls: 'conflict-timestamps' });
-    timestamps.style.marginBottom = '15px';
-    timestamps.style.display = 'flex';
-    timestamps.style.justifyContent = 'space-between';
-    timestamps.style.fontSize = '0.9em';
-    timestamps.style.color = 'var(--text-muted)';
+    const timestamps = detailsContainer.createDiv('conflict-timestamps');
+    timestamps.addClass('vaultconnect-mb-md');
+    timestamps.addClass('vaultconnect-flex');
+    timestamps.addClass('vaultconnect-justify-between');
+    timestamps.addClass('vaultconnect-text-sm');
+    timestamps.addClass('vaultconnect-text-muted');
 
     const localTime = timestamps.createDiv();
     localTime.textContent = `Local: ${formatRelativeTime(conflict.localModified)}`;
@@ -165,59 +161,55 @@ export class ConflictResolutionModal extends Modal {
     remoteTime.textContent = `Remote: ${formatRelativeTime(conflict.remoteModified)}`;
 
     // Side-by-side diff view
-    const diffContainer = detailsContainer.createDiv({ cls: 'conflict-diff' });
-    diffContainer.style.display = 'grid';
-    diffContainer.style.gridTemplateColumns = '1fr 1fr';
-    diffContainer.style.gap = '10px';
-    diffContainer.style.marginBottom = '20px';
+    const diffContainer = detailsContainer.createDiv('conflict-diff');
+    diffContainer.addClass('vaultconnect-grid');
+    diffContainer.addClass('vaultconnect-grid-cols-2');
+    diffContainer.addClass('vaultconnect-gap-md');
+    diffContainer.addClass('vaultconnect-mb-lg');
 
     // Local version
-    const localPanel = diffContainer.createDiv({ cls: 'conflict-panel' });
-    localPanel.style.border = '1px solid var(--background-modifier-border)';
-    localPanel.style.borderRadius = '4px';
-    localPanel.style.padding = '10px';
+    const localPanel = diffContainer.createDiv('conflict-panel');
+    localPanel.addClass('vaultconnect-panel');
+    localPanel.addClass('vaultconnect-p-md');
 
-    const localHeader = localPanel.createDiv({ cls: 'conflict-panel-header' });
+    const localHeader = localPanel.createDiv('conflict-panel-header');
     localHeader.textContent = 'Local Version';
-    localHeader.style.fontWeight = 'bold';
-    localHeader.style.marginBottom = '10px';
-    localHeader.style.color = 'var(--text-accent)';
+    localHeader.addClass('vaultconnect-font-semibold');
+    localHeader.addClass('vaultconnect-mb-md');
+    localHeader.addClass('vaultconnect-text-accent');
 
     const localContent = localPanel.createEl('pre', { cls: 'conflict-content' });
     localContent.textContent = conflict.localContent || '(deleted)';
-    localContent.style.maxHeight = '300px';
-    localContent.style.overflowY = 'auto';
-    localContent.style.fontSize = '0.85em';
-    localContent.style.whiteSpace = 'pre-wrap';
-    localContent.style.wordBreak = 'break-word';
+    localContent.addClass('vaultconnect-code-block');
+    localContent.addClass('vaultconnect-max-h-300');
+    localContent.addClass('vaultconnect-overflow-auto');
+    localContent.addClass('vaultconnect-text-sm');
 
     // Remote version
-    const remotePanel = diffContainer.createDiv({ cls: 'conflict-panel' });
-    remotePanel.style.border = '1px solid var(--background-modifier-border)';
-    remotePanel.style.borderRadius = '4px';
-    remotePanel.style.padding = '10px';
+    const remotePanel = diffContainer.createDiv('conflict-panel');
+    remotePanel.addClass('vaultconnect-panel');
+    remotePanel.addClass('vaultconnect-p-md');
 
-    const remoteHeader = remotePanel.createDiv({ cls: 'conflict-panel-header' });
+    const remoteHeader = remotePanel.createDiv('conflict-panel-header');
     remoteHeader.textContent = 'Remote Version';
-    remoteHeader.style.fontWeight = 'bold';
-    remoteHeader.style.marginBottom = '10px';
-    remoteHeader.style.color = 'var(--text-accent)';
+    remoteHeader.addClass('vaultconnect-font-semibold');
+    remoteHeader.addClass('vaultconnect-mb-md');
+    remoteHeader.addClass('vaultconnect-text-accent');
 
     const remoteContent = remotePanel.createEl('pre', { cls: 'conflict-content' });
     remoteContent.textContent = conflict.remoteContent || '(deleted)';
-    remoteContent.style.maxHeight = '300px';
-    remoteContent.style.overflowY = 'auto';
-    remoteContent.style.fontSize = '0.85em';
-    remoteContent.style.whiteSpace = 'pre-wrap';
-    remoteContent.style.wordBreak = 'break-word';
+    remoteContent.addClass('vaultconnect-code-block');
+    remoteContent.addClass('vaultconnect-max-h-300');
+    remoteContent.addClass('vaultconnect-overflow-auto');
+    remoteContent.addClass('vaultconnect-text-sm');
   }
 
   private renderResolutionButtons(container: HTMLElement, conflict: ConflictInfo) {
-    const buttonContainer = container.createDiv({ cls: 'conflict-resolution-buttons' });
-    buttonContainer.style.marginTop = '20px';
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.flexDirection = 'column';
-    buttonContainer.style.gap = '10px';
+    const buttonContainer = container.createDiv('conflict-resolution-buttons');
+    buttonContainer.addClass('vaultconnect-mt-lg');
+    buttonContainer.addClass('vaultconnect-flex');
+    buttonContainer.addClass('vaultconnect-flex-col');
+    buttonContainer.addClass('vaultconnect-gap-md');
 
     // Check cross-tenant status
     const isCrossTenant = (this.conflictService as any).isCrossTenant;
@@ -225,22 +217,21 @@ export class ConflictResolutionModal extends Modal {
     const isReadOnly = isCrossTenant && permission === 'read';
 
     // Resolution options
-    const optionsContainer = buttonContainer.createDiv({ cls: 'resolution-options' });
-    optionsContainer.style.display = 'grid';
-    optionsContainer.style.gridTemplateColumns = '1fr 1fr';
-    optionsContainer.style.gap = '10px';
+    const optionsContainer = buttonContainer.createDiv('resolution-options');
+    optionsContainer.addClass('vaultconnect-grid');
+    optionsContainer.addClass('vaultconnect-grid-cols-2');
+    optionsContainer.addClass('vaultconnect-gap-md');
 
     // Keep Local button (disabled for read-only cross-tenant vaults)
     const keepLocalBtn = optionsContainer.createEl('button', {
       text: 'Keep Local',
       cls: 'mod-cta'
     });
-    
+
     if (isReadOnly) {
       keepLocalBtn.disabled = true;
       keepLocalBtn.title = 'Cannot keep local version in read-only cross-tenant vault';
-      keepLocalBtn.style.opacity = '0.5';
-      keepLocalBtn.style.cursor = 'not-allowed';
+      keepLocalBtn.addClass('vaultconnect-btn-disabled');
     } else {
       keepLocalBtn.addEventListener('click', () => {
         this.resolveConflict(conflict, ResolutionStrategy.KEEP_LOCAL);
@@ -273,10 +264,10 @@ export class ConflictResolutionModal extends Modal {
     });
 
     // Cancel button
-    const actionContainer = buttonContainer.createDiv({ cls: 'action-buttons' });
-    actionContainer.style.display = 'flex';
-    actionContainer.style.justifyContent = 'space-between';
-    actionContainer.style.marginTop = '10px';
+    const actionContainer = buttonContainer.createDiv('action-buttons');
+    actionContainer.addClass('vaultconnect-flex');
+    actionContainer.addClass('vaultconnect-justify-between');
+    actionContainer.addClass('vaultconnect-mt-md');
 
     const skipBtn = actionContainer.createEl('button', { text: 'Skip' });
     skipBtn.addEventListener('click', () => {
@@ -300,29 +291,27 @@ export class ConflictResolutionModal extends Modal {
 
     contentEl.createEl('h2', { text: `Manual Merge: ${conflict.path}` });
 
-    const description = contentEl.createDiv({ cls: 'merge-description' });
+    const description = contentEl.createDiv('merge-description');
     description.textContent = 'Edit the content below to create your merged version:';
-    description.style.marginBottom = '15px';
-    description.style.color = 'var(--text-muted)';
+    description.addClass('vaultconnect-mb-md');
+    description.addClass('vaultconnect-text-muted');
 
     // Merge editor
     let mergedContent = this.createMergeTemplate(conflict);
 
     // Preview section
-    const previewContainer = contentEl.createDiv({ cls: 'merge-preview' });
-    previewContainer.style.marginTop = '20px';
+    const previewContainer = contentEl.createDiv('merge-preview');
+    previewContainer.addClass('vaultconnect-mt-lg');
 
     const previewHeader = previewContainer.createEl('h3', { text: 'Preview' });
-    previewHeader.style.marginBottom = '10px';
+    previewHeader.addClass('vaultconnect-mb-md');
 
     const previewContent = previewContainer.createEl('div', { cls: 'merge-preview-content' });
-    previewContent.style.border = '1px solid var(--background-modifier-border)';
-    previewContent.style.borderRadius = '4px';
-    previewContent.style.padding = '10px';
-    previewContent.style.maxHeight = '200px';
-    previewContent.style.overflowY = 'auto';
-    previewContent.style.whiteSpace = 'pre-wrap';
-    previewContent.style.wordBreak = 'break-word';
+    previewContent.addClass('vaultconnect-panel');
+    previewContent.addClass('vaultconnect-p-md');
+    previewContent.addClass('vaultconnect-max-h-200');
+    previewContent.addClass('vaultconnect-overflow-auto');
+    previewContent.addClass('vaultconnect-code-block');
     previewContent.textContent = mergedContent;
 
     new Setting(contentEl)
@@ -336,17 +325,17 @@ export class ConflictResolutionModal extends Modal {
             previewContent.textContent = value;
           });
         text.inputEl.rows = 20;
-        text.inputEl.style.width = '100%';
-        text.inputEl.style.fontFamily = 'monospace';
-        text.inputEl.style.fontSize = '0.9em';
+        text.inputEl.addClass('vaultconnect-w-full');
+        text.inputEl.addClass('vaultconnect-font-mono');
+        text.inputEl.addClass('vaultconnect-text-sm');
       });
 
     // Buttons
-    const buttonContainer = contentEl.createDiv({ cls: 'modal-button-container' });
-    buttonContainer.style.marginTop = '20px';
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'flex-end';
-    buttonContainer.style.gap = '10px';
+    const buttonContainer = contentEl.createDiv('modal-button-container');
+    buttonContainer.addClass('vaultconnect-mt-lg');
+    buttonContainer.addClass('vaultconnect-flex');
+    buttonContainer.addClass('vaultconnect-justify-end');
+    buttonContainer.addClass('vaultconnect-gap-md');
 
     const backButton = buttonContainer.createEl('button', { text: 'Back' });
     backButton.addEventListener('click', () => {
