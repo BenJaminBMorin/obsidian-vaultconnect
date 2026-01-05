@@ -369,7 +369,7 @@ export class InitialSyncWizardModal extends Modal {
           warning.addClass('vaultconnect-mb-md');
 
           warning.createEl('p', {
-            text: `This will DELETE ${fileCount} file${fileCount === 1 ? '' : 's'} from this device:`
+            text: `This will delete ${fileCount} file${fileCount === 1 ? '' : 's'} from this device:`
           });
 
           // Show sample files
@@ -397,14 +397,14 @@ export class InitialSyncWizardModal extends Modal {
           inputContainer.addClass('vaultconnect-mb-md');
 
           inputContainer.createEl('p', {
-            text: 'Type DELETE to confirm:',
+            text: 'Type delete to confirm:',
             cls: 'setting-item-name'
           });
 
           let deleteInput = '';
           const input = inputContainer.createEl('input', {
             type: 'text',
-            placeholder: 'DELETE'
+            placeholder: 'delete'
           });
           input.addClass('vaultconnect-w-full');
           input.setCssProps({
@@ -414,7 +414,7 @@ export class InitialSyncWizardModal extends Modal {
           });
           input.addEventListener('input', (e) => {
             deleteInput = (e.target as HTMLInputElement).value;
-            confirmButton.disabled = deleteInput !== 'DELETE';
+            confirmButton.disabled = deleteInput !== 'delete';
           });
 
           // Focus input
@@ -435,7 +435,7 @@ export class InitialSyncWizardModal extends Modal {
           });
           confirmButton.disabled = true;
           confirmButton.addEventListener('click', () => {
-            if (deleteInput === 'DELETE') {
+            if (deleteInput === 'delete') {
               modal.close();
               resolve(true);
             }
@@ -443,7 +443,7 @@ export class InitialSyncWizardModal extends Modal {
 
           // Handle Enter key
           input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && deleteInput === 'DELETE') {
+            if (e.key === 'Enter' && deleteInput === 'delete') {
               e.preventDefault();
               modal.close();
               resolve(true);

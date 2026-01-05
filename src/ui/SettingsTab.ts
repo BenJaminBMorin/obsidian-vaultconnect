@@ -83,7 +83,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         cls: 'setting-item-description'
       });
       infoEl.createEl('p', {
-        text: 'Click the login button above to connect your Vaultconnect account.',
+        text: 'Click the login button above to connect your account.',
         cls: 'setting-item-description'
       });
     }
@@ -171,7 +171,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Selected vault
     new Setting(containerEl)
       .setName('Selected vault')
-      .setDesc('The Vaultconnect vault to sync with')
+      .setDesc('The vault to sync with')
       .addText(text => {
         text
           .setPlaceholder('Enter vault ID')
@@ -655,7 +655,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // API Base URL
     new Setting(containerEl)
       .setName('API base URL')
-      .setDesc('Vaultconnect API server URL (requires reconnection)')
+      .setDesc('API server URL (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.apiBaseURL,
@@ -671,7 +671,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // WebSocket Base URL
     new Setting(containerEl)
       .setName('Websocket base URL')
-      .setDesc('Vaultconnect websocket server URL (requires reconnection)')
+      .setDesc('Websocket server URL (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.wsBaseURL,

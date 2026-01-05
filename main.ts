@@ -1497,7 +1497,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		// API URL
 		new Setting(containerEl)
 			.setName('API URL')
-			.setDesc('Vaultconnect API server URL')
+			.setDesc('API server URL')
 			.addText(text => text
 				.setPlaceholder('http://localhost:3001/v1')
 				.setValue(this.plugin.settings.apiUrl)
@@ -1509,7 +1509,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		// WebSocket URL
 		new Setting(containerEl)
 			.setName('Websocket URL')
-			.setDesc('Vaultconnect websocket server URL')
+			.setDesc('Websocket server URL')
 			.addText(text => text
 				.setPlaceholder('http://localhost:3001')
 				.setValue(this.plugin.settings.wsUrl)
