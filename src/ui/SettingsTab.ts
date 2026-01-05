@@ -603,7 +603,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Chunk size
     new Setting(containerEl)
       .setName('Chunk size')
-      .setDesc('Size of file chunks for large file uploads (in MB, 1 to 10)')
+      .setDesc('Size of file chunks for large file uploads in MB (1 to 10)')
       .addText(text => {
         const chunkSizeMB = Math.round(this.plugin.settings.chunkSize / 1048576);
         this.addNumberValidation(text,
