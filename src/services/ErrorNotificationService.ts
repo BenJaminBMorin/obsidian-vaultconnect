@@ -282,17 +282,17 @@ export class ErrorNotificationService {
     const details: string[] = [];
 
     if (context.path !== null && context.path !== undefined) {
-      const pathValue = typeof context.path === 'string' ? context.path : String(context.path);
+      const pathValue = typeof context.path === 'string' ? context.path : JSON.stringify(context.path);
       details.push(`File: ${pathValue}`);
     }
 
     if (context.operation !== null && context.operation !== undefined) {
-      const opValue = typeof context.operation === 'string' ? context.operation : String(context.operation);
+      const opValue = typeof context.operation === 'string' ? context.operation : JSON.stringify(context.operation);
       details.push(`Operation: ${opValue}`);
     }
 
     if (context.source !== null && context.source !== undefined) {
-      const sourceValue = typeof context.source === 'string' ? context.source : String(context.source);
+      const sourceValue = typeof context.source === 'string' ? context.source : JSON.stringify(context.source);
       details.push(`Source: ${sourceValue}`);
     }
 

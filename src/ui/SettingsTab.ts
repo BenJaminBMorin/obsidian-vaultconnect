@@ -79,11 +79,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     } else {
       const infoEl = containerEl.createDiv({ cls: 'vaultsync-auth-required' });
       infoEl.createEl('p', {
-        text: '🔒 please authenticate to access additional settings.',
+        text: '🔒 Please authenticate to access additional settings.',
         cls: 'setting-item-description'
       });
       infoEl.createEl('p', {
-        text: 'click the login button above to connect your vault connect account.',
+        text: 'Click the login button above to connect your VaultConnect account.',
         cls: 'setting-item-description'
       });
     }
@@ -171,10 +171,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Selected vault
     new Setting(containerEl)
       .setName('Selected vault')
-      .setDesc('The vault connect vault to sync with')
+      .setDesc('The VaultConnect vault to sync with')
       .addText(text => {
         text
-          .setPlaceholder('vault-id')
+          .setPlaceholder('Enter vault ID')
           .setValue(this.plugin.settings.selectedVaultId || '')
           .onChange(async (value) => {
             this.plugin.settings.selectedVaultId = value.trim() || null;
@@ -222,7 +222,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
             cls: 'vaultsync-owned-vault-badge'
           });
           statusEl.createEl('p', {
-            text: 'this vault is owned by your tenant. You have full access.',
+            text: 'This vault is owned by your tenant. You have full access.',
             cls: 'setting-item-description'
           });
         }
@@ -384,7 +384,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       .setDesc(includedDisplay)
       .addTextArea(text => {
         text
-          .setPlaceholder('notes/, docs/')
+          .setPlaceholder('Enter folders (e.g., notes/, docs/)')
           .setValue(this.plugin.settings.includedFolders.join(', '))
           .onChange(async (value) => {
             this.plugin.settings.includedFolders = value
@@ -603,7 +603,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Chunk size
     new Setting(containerEl)
       .setName('Chunk size')
-      .setDesc('size of file chunks for large file uploads (in MB, 1-10)')
+      .setDesc('Size of file chunks for large file uploads (in MB, 1-10)')
       .addText(text => {
         const chunkSizeMB = Math.round(this.plugin.settings.chunkSize / 1048576);
         this.addNumberValidation(text,
@@ -648,14 +648,14 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Warning message
     const warningEl = containerEl.createDiv({ cls: 'vaultsync-warning' });
     warningEl.createEl('p', {
-      text: '⚠️ changing these settings may affect plugin functionality. Only modify if you know what you\'re doing.',
+      text: '⚠️ Changing these settings may affect plugin functionality. Only modify if you know what you\'re doing.',
       cls: 'setting-item-description'
     });
 
     // API Base URL
     new Setting(containerEl)
-      .setName('API base url')
-      .setDesc('vault connect API server url (requires reconnection)')
+      .setName('API base URL')
+      .setDesc('VaultConnect API server URL (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.apiBaseURL,
@@ -670,15 +670,15 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // WebSocket Base URL
     new Setting(containerEl)
-      .setName('WebSocket base url')
-      .setDesc('vault connect WebSocket server url (requires reconnection)')
+      .setName('WebSocket base URL')
+      .setDesc('VaultConnect WebSocket server URL (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.wsBaseURL,
           async (value) => {
             this.plugin.settings.wsBaseURL = value.trim();
             await this.plugin.saveSettings();
-            new Notice('WebSocket url updated. Please reconnect to apply changes.');
+            new Notice('WebSocket URL updated. Please reconnect to apply changes.');
             return true;
           }
         );
@@ -871,7 +871,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     onChange: (value: string) => Promise<boolean>
   ): void {
     text
-      .setPlaceholder('http://localhost:3001')
+      .setPlaceholder('https://localhost:3001')
       .setValue(initialValue)
       .onChange(async (value) => {
         const trimmed = value.trim();

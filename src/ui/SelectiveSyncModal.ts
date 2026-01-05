@@ -58,10 +58,10 @@ export class SelectiveSyncModal extends Modal {
 
     // Add excluded folder
     new Setting(containerEl)
-      .setName('add excluded folder')
+      .setName('Add excluded folder')
       .setDesc('Enter a folder path or pattern to exclude (e.g., "private" or "drafts/*")')
       .addText(text => {
-        text.setPlaceholder('folder/path');
+        text.setPlaceholder('Enter folder path');
         text.inputEl.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
             const value = text.getValue().trim();
@@ -116,10 +116,10 @@ export class SelectiveSyncModal extends Modal {
 
     // Add included folder
     new Setting(containerEl)
-      .setName('add included folder')
+      .setName('Add included folder')
       .setDesc('Enter a folder path or pattern to include (e.g., "notes" or "docs/*")')
       .addText(text => {
-        text.setPlaceholder('folder/path');
+        text.setPlaceholder('Enter folder path');
         text.inputEl.addEventListener('keypress', (e) => {
           if (e.key === 'Enter') {
             const value = text.getValue().trim();

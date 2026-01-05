@@ -397,7 +397,7 @@ export class InitialSyncWizardModal extends Modal {
           inputContainer.addClass('vaultconnect-mb-md');
 
           inputContainer.createEl('p', {
-            text: 'type DELETE to confirm:',
+            text: 'Type DELETE to confirm:',
             cls: 'setting-item-name'
           });
 
