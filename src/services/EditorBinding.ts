@@ -224,7 +224,7 @@ export class EditorBinding {
     }
 
     // Get content from Yjs
-    const yjsContent = binding.yjsText.toString();
+    const yjsContent = binding.yjsText.toJSON();
 
     // Get current editor content
     const editorContent = binding.view.state.doc.toString();
@@ -321,7 +321,7 @@ export class EditorBinding {
   private setupChangeListeners(binding: EditorBindingInfo): void {
     // Listen for Yjs text changes
     binding.yjsText.observe((event) => {
-      this.log(`Yjs text changed for ${binding.filePath}: ${binding.yjsText.toString()}`, event);
+      this.log(`Yjs text changed for ${binding.filePath}: ${binding.yjsText.toJSON()}`, event);
 
       // Emit remote change event
       this.eventBus.emit(EVENTS.REMOTE_CHANGE, binding.filePath, [event]);

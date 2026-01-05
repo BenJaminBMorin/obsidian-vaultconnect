@@ -83,7 +83,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         cls: 'setting-item-description'
       });
       infoEl.createEl('p', {
-        text: 'Click the login button above to connect your VaultConnect account.',
+        text: 'Click the login button above to connect your Vaultconnect account.',
         cls: 'setting-item-description'
       });
     }
@@ -171,7 +171,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Selected vault
     new Setting(containerEl)
       .setName('Selected vault')
-      .setDesc('The VaultConnect vault to sync with')
+      .setDesc('The Vaultconnect vault to sync with')
       .addText(text => {
         text
           .setPlaceholder('Enter vault ID')
@@ -655,7 +655,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // API Base URL
     new Setting(containerEl)
       .setName('API base URL')
-      .setDesc('VaultConnect API server URL (requires reconnection)')
+      .setDesc('Vaultconnect API server URL (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.apiBaseURL,
@@ -670,15 +670,15 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     // WebSocket Base URL
     new Setting(containerEl)
-      .setName('WebSocket base URL')
-      .setDesc('VaultConnect WebSocket server URL (requires reconnection)')
+      .setName('Websocket base URL')
+      .setDesc('Vaultconnect websocket server URL (requires reconnection)')
       .addText(text => {
         this.addUrlValidation(text,
           this.plugin.settings.wsBaseURL,
           async (value) => {
             this.plugin.settings.wsBaseURL = value.trim();
             await this.plugin.saveSettings();
-            new Notice('WebSocket URL updated. Please reconnect to apply changes.');
+            new Notice('Websocket URL updated. Please reconnect to apply changes.');
             return true;
           }
         );
@@ -871,7 +871,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     onChange: (value: string) => Promise<boolean>
   ): void {
     text
-      .setPlaceholder('https://localhost:3001')
+      .setPlaceholder('http://localhost:3001')
       .setValue(initialValue)
       .onChange(async (value) => {
         const trimmed = value.trim();

@@ -155,7 +155,7 @@ export default class VaultSyncPlugin extends Plugin {
 		);
 
 		// Add ribbon icon with menu
-		this.ribbonIconEl = this.addRibbonIcon('sync', 'VaultConnect', (evt: MouseEvent) => {
+		this.ribbonIconEl = this.addRibbonIcon('sync', 'Vaultconnect', (evt: MouseEvent) => {
 			this.showSyncMenu(evt);
 		});
 		this.updateRibbonIcon();
@@ -1463,17 +1463,17 @@ export default class VaultSyncPlugin extends Plugin {
 		// Add appropriate status class
 		if (this.isSyncing) {
 			this.ribbonIconEl.addClass('vaultsync-syncing');
-			this.ribbonIconEl.setAttribute('aria-label', 'VaultConnect: syncing...');
+			this.ribbonIconEl.setAttribute('aria-label', 'Vaultconnect: syncing...');
 		} else if (this.isConnected) {
 			this.ribbonIconEl.addClass('vaultsync-connected');
 			const conflictCount = this.conflictService?.getConflictCount() || 0;
 			const label = conflictCount > 0
-				? `VaultConnect: connected (${conflictCount} conflicts)`
-				: 'VaultConnect: connected';
+				? `Vaultconnect: connected (${conflictCount} conflicts)`
+				: 'Vaultconnect: connected';
 			this.ribbonIconEl.setAttribute('aria-label', label);
 		} else {
 			this.ribbonIconEl.addClass('vaultsync-disconnected');
-			this.ribbonIconEl.setAttribute('aria-label', 'VaultConnect: disconnected');
+			this.ribbonIconEl.setAttribute('aria-label', 'Vaultconnect: disconnected');
 		}
 	}
 }
@@ -1491,15 +1491,15 @@ class VaultSyncSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('VaultConnect')
+			.setName('Connection')
 			.setHeading();
 
 		// API URL
 		new Setting(containerEl)
 			.setName('API URL')
-			.setDesc('VaultConnect API server URL')
+			.setDesc('Vaultconnect API server URL')
 			.addText(text => text
-				.setPlaceholder('https://localhost:3001/v1')
+				.setPlaceholder('http://localhost:3001/v1')
 				.setValue(this.plugin.settings.apiUrl)
 				.onChange(async (value) => {
 					this.plugin.settings.apiUrl = value;
@@ -1508,10 +1508,10 @@ class VaultSyncSettingTab extends PluginSettingTab {
 
 		// WebSocket URL
 		new Setting(containerEl)
-			.setName('WebSocket URL')
-			.setDesc('VaultConnect WebSocket server URL')
+			.setName('Websocket URL')
+			.setDesc('Vaultconnect websocket server URL')
 			.addText(text => text
-				.setPlaceholder('https://localhost:3001')
+				.setPlaceholder('http://localhost:3001')
 				.setValue(this.plugin.settings.wsUrl)
 				.onChange(async (value) => {
 					this.plugin.settings.wsUrl = value;
