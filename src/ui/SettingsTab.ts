@@ -79,7 +79,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     } else {
       const infoEl = containerEl.createDiv({ cls: 'vaultsync-auth-required' });
       infoEl.createEl('p', {
-        text: '🔒 Please authenticate to access additional settings.',
+        text: '🔒 please authenticate to access additional settings.',
         cls: 'setting-item-description'
       });
       infoEl.createEl('p', {
@@ -603,7 +603,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Chunk size
     new Setting(containerEl)
       .setName('Chunk size')
-      .setDesc('Size of file chunks for large file uploads (in MB, 1-10)')
+      .setDesc('Size of file chunks for large file uploads (in MB, 1 to 10)')
       .addText(text => {
         const chunkSizeMB = Math.round(this.plugin.settings.chunkSize / 1048576);
         this.addNumberValidation(text,
@@ -648,7 +648,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Warning message
     const warningEl = containerEl.createDiv({ cls: 'vaultsync-warning' });
     warningEl.createEl('p', {
-      text: '⚠️ Changing these settings may affect plugin functionality. Only modify if you know what you\'re doing.',
+      text: '⚠️ changing these settings may affect plugin functionality, only modify if you know what you\'re doing.',
       cls: 'setting-item-description'
     });
 
@@ -871,7 +871,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     onChange: (value: string) => Promise<boolean>
   ): void {
     text
-      .setPlaceholder('http://localhost:3001')
+      .setPlaceholder('https://api.example.com')
       .setValue(initialValue)
       .onChange(async (value) => {
         const trimmed = value.trim();

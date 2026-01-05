@@ -1499,7 +1499,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 			.setName('API URL')
 			.setDesc('API server URL')
 			.addText(text => text
-				.setPlaceholder('http://localhost:3001/v1')
+				.setPlaceholder('https://api.example.com/v1')
 				.setValue(this.plugin.settings.apiUrl)
 				.onChange(async (value) => {
 					this.plugin.settings.apiUrl = value;
@@ -1511,7 +1511,7 @@ class VaultSyncSettingTab extends PluginSettingTab {
 			.setName('Websocket URL')
 			.setDesc('Websocket server URL')
 			.addText(text => text
-				.setPlaceholder('http://localhost:3001')
+				.setPlaceholder('https://ws.example.com')
 				.setValue(this.plugin.settings.wsUrl)
 				.onChange(async (value) => {
 					this.plugin.settings.wsUrl = value;
