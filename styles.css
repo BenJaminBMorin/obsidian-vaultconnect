@@ -1263,3 +1263,230 @@ select:focus-visible {
   font-family: var(--font-monospace);
 }
 
+/* ========================================
+   Onboarding Flow
+   ======================================== */
+
+.vaultconnect-onboarding {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px 0;
+}
+
+.vaultconnect-onboarding-header {
+  margin: 16px 0 8px;
+  font-size: 1.4em;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+/* Step indicator (1-2-3 dots) */
+.vaultconnect-stage-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.vaultconnect-stage-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--background-modifier-border);
+  transition: background-color 0.3s ease;
+}
+
+.vaultconnect-stage-dot.is-active {
+  background-color: var(--interactive-accent);
+  box-shadow: 0 0 0 3px var(--interactive-accent-hover);
+}
+
+.vaultconnect-stage-dot.is-completed {
+  background-color: var(--text-success, #4caf50);
+}
+
+/* Server URL input */
+.vaultconnect-server-input-container {
+  margin: 16px 0;
+}
+
+.vaultconnect-server-input {
+  width: 100%;
+  font-size: 1em;
+}
+
+/* Discovery status area */
+.vaultconnect-discovery-status {
+  min-height: 24px;
+  margin: 12px 0;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+}
+
+.vaultconnect-discovery-status.is-error {
+  color: var(--text-error);
+}
+
+.vaultconnect-discovery-status.is-success {
+  color: var(--text-success, #4caf50);
+}
+
+.vaultconnect-discovery-spinner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+.vaultconnect-discovery-spinner .spinner {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Onboarding action buttons */
+.vaultconnect-onboarding-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+/* Server info line (shown in auth stage) */
+.vaultconnect-server-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: var(--background-secondary);
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.vaultconnect-change-link {
+  font-size: 0.85em;
+  color: var(--text-accent);
+  cursor: pointer;
+  margin-left: auto;
+  text-decoration: none;
+}
+
+.vaultconnect-change-link:hover {
+  text-decoration: underline;
+}
+
+/* Auth status line (shown in vault stage) */
+.vaultconnect-auth-status-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: var(--background-secondary);
+  border-radius: 6px;
+  margin: 12px 0;
+  font-size: 0.9em;
+}
+
+.vaultconnect-status-ok {
+  color: var(--text-success, #4caf50);
+  font-weight: 500;
+}
+
+.vaultconnect-status-ok::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--text-success, #4caf50);
+  margin-right: 6px;
+}
+
+.vaultconnect-oauth-hint {
+  font-size: 0.85em;
+  color: var(--text-faint);
+  margin-top: 12px;
+}
+
+/* Vault picker (onboarding) */
+.vaultconnect-vault-picker {
+  margin: 16px 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.vaultconnect-vault-picker-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.vaultconnect-vault-picker-loading .spinner {
+  width: 20px;
+  height: 20px;
+}
+
+/* Vault cards (onboarding vault selection) */
+.vaultconnect-vault-card {
+  padding: 12px 16px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vaultconnect-vault-card:hover {
+  background-color: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+  transform: translateY(-1px);
+}
+
+.vaultconnect-vault-card-name {
+  font-weight: 600;
+  color: var(--text-normal);
+  margin-bottom: 4px;
+}
+
+.vaultconnect-vault-card-info {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.vaultconnect-vault-card-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-radius: 3px;
+  font-size: 0.75em;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* Manual fallback (expandable) */
+.vaultconnect-manual-fallback {
+  margin-top: 20px;
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 12px;
+}
+
+.vaultconnect-manual-fallback summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.9em;
+  user-select: none;
+}
+
+.vaultconnect-manual-fallback summary:hover {
+  color: var(--text-normal);
+}
+
+.vaultconnect-manual-fields {
+  margin-top: 12px;
+}
+

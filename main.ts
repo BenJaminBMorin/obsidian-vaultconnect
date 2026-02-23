@@ -1,4 +1,4 @@
-import { App, Plugin, PluginSettingTab, Setting, Notice, Modal, TFile, TAbstractFile, Menu } from 'obsidian';
+import { Plugin, Notice, TFile, TAbstractFile, Menu } from 'obsidian';
 import { io, Socket } from 'socket.io-client';
 import { SyncService, SyncMode } from './src/services/SyncService';
 import { FileSyncService } from './src/services/FileSyncService';
@@ -14,12 +14,12 @@ import { EventBus, EVENTS } from './src/core/EventBus';
 import { StorageManager } from './src/core/StorageManager';
 import { showConfirmationModal } from './src/ui/ConfirmationModal';
 import { InitialSyncService } from './src/services/InitialSyncService';
-import { InitialSyncState } from './src/types/initial-sync.types';
-import { logger, LogLevel, LOG_LEVEL_NAMES, LOG_LEVEL_DESCRIPTIONS } from './src/utils/logger';
+import { logger, LogLevel } from './src/utils/logger';
 import { VaultService } from './src/services/VaultService';
 import { AuthService } from './src/services/AuthService';
-import { VaultInfo } from './src/types';
-import { requestUrl } from 'obsidian';
+import { PluginSettings } from './src/types';
+import { DEFAULT_SETTINGS } from './src/utils/constants';
+import { VaultSyncSettingTab } from './src/ui/SettingsTab';
 
 // Event data types
 interface SyncEventData {
@@ -36,70 +36,8 @@ interface ConflictEventData {
 	remote_hash: string;
 }
 
-interface VaultSyncSettings {
-	apiUrl: string;
-	wsUrl: string;
-	apiKey: string;
-	vaultId: string;
-	deviceId: string;
-	includedFolders: string[];
-	excludedFolders: string[];
-	autoSync: boolean;
-	syncMode: SyncMode;
-	// Additional settings from PluginSettings type
-	apiKeyExpires: Date | null;
-	selectedVaultId: string | null;
-	syncInterval: number;
-	collaborationEnabled: boolean;
-	showPresence: boolean;
-	showCursors: boolean;
-	showTypingIndicators: boolean;
-	notifyOnSync: boolean;
-	notifyOnConflict: boolean;
-	notifyOnCollaboratorJoin: boolean;
-	maxConcurrentUploads: number;
-	chunkSize: number;
-	cacheEnabled: boolean;
-	apiBaseURL: string;
-	wsBaseURL: string;
-	debugMode: boolean;
-	logLevel: number; // LogLevel enum value
-	// Initial sync states per vault
-	initialSyncStates: { [vaultId: string]: InitialSyncState };
-}
-
-const DEFAULT_SETTINGS: VaultSyncSettings = {
-	apiUrl: '',
-	wsUrl: '',
-	apiKey: '',
-	vaultId: '',
-	deviceId: '',
-	includedFolders: [],
-	excludedFolders: ['.trash'], // .obsidian will be added dynamically in loadSettings
-	autoSync: true,
-	syncMode: SyncMode.SMART_SYNC,
-	apiKeyExpires: null,
-	selectedVaultId: null,
-	syncInterval: 30,
-	collaborationEnabled: false,
-	showPresence: true,
-	showCursors: true,
-	showTypingIndicators: true,
-	notifyOnSync: false,
-	notifyOnConflict: true,
-	notifyOnCollaboratorJoin: true,
-	maxConcurrentUploads: 5,
-	chunkSize: 1048576,
-	cacheEnabled: true,
-	apiBaseURL: '',
-	wsBaseURL: '',
-	debugMode: false,
-	logLevel: 3, // LogLevel.INFO
-	initialSyncStates: {}
-}
-
 export default class VaultSyncPlugin extends Plugin {
-	settings: VaultSyncSettings;
+	settings: PluginSettings;
 	socket: Socket | null = null;
 	statusBarItem: HTMLElement;
 	ribbonIconEl: HTMLElement | null = null;
@@ -170,7 +108,8 @@ export default class VaultSyncPlugin extends Plugin {
 		this.registerCommands();
 
 		// Connect if settings are configured
-		if (this.settings.apiKey && this.settings.vaultId && this.settings.autoSync) {
+		const activeVaultId = this.settings.selectedVaultId || this.settings.vaultId;
+		if (this.settings.apiKey && activeVaultId && this.settings.autoSync) {
 			await this.connect();
 		}
 
@@ -188,7 +127,7 @@ export default class VaultSyncPlugin extends Plugin {
 		// Initialize auth service
 		this.authService = new AuthService(this, this.eventBus);
 
-		this.apiClient = new APIClient(this.authService, this.settings.apiUrl);
+		this.apiClient = new APIClient(this.authService, this.settings.apiBaseURL || this.settings.apiUrl);
 
 		// Initialize vault service
 		this.vaultService = new VaultService(
@@ -681,7 +620,8 @@ export default class VaultSyncPlugin extends Plugin {
 	 * Analyzes files and presents sync options to the user
 	 */
 	async showInitialSyncWizard(): Promise<void> {
-		if (!this.initialSyncService || !this.settings.vaultId || !this.eventBus) {
+		const vaultId = this.settings.selectedVaultId || this.settings.vaultId;
+		if (!this.initialSyncService || !vaultId || !this.eventBus) {
 			logger.error('[VaultConnect] Cannot show initial sync wizard: service or vault ID not available');
 			throw new Error('Initial sync service not available');
 		}
@@ -691,7 +631,7 @@ export default class VaultSyncPlugin extends Plugin {
 			new Notice('Analyzing files for first-time setup...');
 
 			// Analyze files
-			const analysis = await this.initialSyncService.analyzeFiles(this.settings.vaultId);
+			const analysis = await this.initialSyncService.analyzeFiles(vaultId);
 
 			logger.debug('[VaultConnect] File analysis complete:', {
 				localOnly: analysis.localFiles.length,
@@ -712,8 +652,8 @@ export default class VaultSyncPlugin extends Plugin {
 				const modal = new InitialSyncWizardModal(
 					this.app,
 					{
-						vaultId: this.settings.vaultId,
-						vaultName: this.settings.vaultId.substring(0, 8) + '...', // Show truncated ID
+						vaultId: vaultId,
+						vaultName: vaultId.substring(0, 8) + '...', // Show truncated ID
 						analysis,
 						onComplete: (option) => {
 							logger.debug('[VaultConnect] Initial sync completed with option:', option);
@@ -744,7 +684,8 @@ export default class VaultSyncPlugin extends Plugin {
 			return;
 		}
 
-		if (!this.settings.vaultId) {
+		const vaultId = this.settings.selectedVaultId || this.settings.vaultId;
+		if (!vaultId) {
 			new Notice('Please select a vault in settings');
 			return;
 		}
@@ -755,16 +696,16 @@ export default class VaultSyncPlugin extends Plugin {
 		}
 
 		try {
-			logger.debug('[VaultConnect] Connecting with vault ID:', this.settings.vaultId);
+			logger.debug('[VaultConnect] Connecting with vault ID:', vaultId);
 			this.updateStatusBar('connecting');
 
 			// Get vault information for cross-tenant detection
 			let isCrossTenant = false;
 			let permission: 'read' | 'write' | 'admin' = 'admin';
-			
+
 			if (this.vaultService) {
 				try {
-					await this.vaultService.selectVault(this.settings.vaultId);
+					await this.vaultService.selectVault(vaultId);
 					isCrossTenant = this.vaultService.isCrossTenantVault();
 					permission = this.vaultService.getCurrentVaultPermission() || 'admin';
 					logger.debug('[VaultConnect] Vault info:', { isCrossTenant, permission });
@@ -776,13 +717,13 @@ export default class VaultSyncPlugin extends Plugin {
 			// Initialize fileSyncService early so it can be used by initial sync wizard
 			if (this.fileSyncService) {
 				logger.debug('[VaultConnect] Pre-initializing FileSyncService for initial sync');
-				await this.fileSyncService.initialize(this.settings.vaultId, isCrossTenant, permission);
+				await this.fileSyncService.initialize(vaultId, isCrossTenant, permission);
 			}
 
 			// Check if this is first-time connection
 			let completedInitialSync = false;
 			if (this.initialSyncService) {
-				const isFirstTime = await this.initialSyncService.isFirstTimeConnection(this.settings.vaultId);
+				const isFirstTime = await this.initialSyncService.isFirstTimeConnection(vaultId);
 				
 				if (isFirstTime) {
 					logger.debug('[VaultConnect] First-time connection detected, showing initial sync wizard');
@@ -802,14 +743,14 @@ export default class VaultSyncPlugin extends Plugin {
 
 			// Initialize remaining services with vault
 			if (this.syncService && this.conflictService) {
-				logger.debug('[VaultConnect] Initializing remaining services with vault ID:', this.settings.vaultId);
-				await this.syncService.initialize(this.settings.vaultId, isCrossTenant, permission);
-				await this.conflictService.initialize(this.settings.vaultId, isCrossTenant, permission);
+				logger.debug('[VaultConnect] Initializing remaining services with vault ID:', vaultId);
+				await this.syncService.initialize(vaultId, isCrossTenant, permission);
+				await this.conflictService.initialize(vaultId, isCrossTenant, permission);
 				this.syncService.start();
 				logger.debug('[VaultConnect] Services initialized successfully');
 			}
 
-			this.socket = io(this.settings.wsUrl, {
+			this.socket = io(this.settings.wsBaseURL || this.settings.wsUrl, {
 				auth: {
 					token: this.settings.apiKey
 				},
@@ -835,8 +776,9 @@ export default class VaultSyncPlugin extends Plugin {
 
 				// Subscribe to vault
 				if (this.socket) {
+					const activeVaultId = this.settings.selectedVaultId || this.settings.vaultId;
 					this.socket.emit('subscribe', {
-						vault_id: this.settings.vaultId,
+						vault_id: activeVaultId,
 						device_id: this.settings.deviceId
 					});
 				}
@@ -1404,7 +1346,7 @@ export default class VaultSyncPlugin extends Plugin {
 
 	showSyncStatus() {
 		const status = this.isConnected ? 'Connected' : 'Disconnected';
-		const vault = this.settings.vaultId || 'Not configured';
+		const vault = this.settings.selectedVaultId || this.settings.vaultId || 'Not configured';
 		new Notice(`VaultConnect Status: ${status}\nVault: ${vault}`, 5000);
 	}
 
@@ -1478,434 +1420,3 @@ export default class VaultSyncPlugin extends Plugin {
 	}
 }
 
-class VaultSyncSettingTab extends PluginSettingTab {
-	plugin: VaultSyncPlugin;
-
-	constructor(app: App, plugin: VaultSyncPlugin) {
-		super(app, plugin);
-		this.plugin = plugin;
-	}
-
-	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName('Connection')
-			.setHeading();
-
-		// API URL
-		new Setting(containerEl)
-			.setName('API URL')
-			.setDesc('API server URL')
-			.addText(text => text
-				.setPlaceholder('https://api.example.com/v1')
-				.setValue(this.plugin.settings.apiUrl)
-				.onChange(async (value) => {
-					this.plugin.settings.apiUrl = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// WebSocket URL
-		new Setting(containerEl)
-			.setName('Websocket URL')
-			.setDesc('Websocket server URL')
-			.addText(text => text
-				.setPlaceholder('https://ws.example.com')
-				.setValue(this.plugin.settings.wsUrl)
-				.onChange(async (value) => {
-					this.plugin.settings.wsUrl = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// Authentication
-		new Setting(containerEl)
-			.setName('Authentication')
-			.setDesc(this.plugin.settings.apiKey ? '🟢 Connected' : '⚫ Not connected')
-			.addButton(button => {
-				if (this.plugin.settings.apiKey) {
-					button
-						.setButtonText('Logout')
-						.setWarning()
-						.onClick(async () => {
-							// Disconnect from vault if connected
-							if (this.plugin.isConnected) {
-								this.plugin.disconnect();
-							}
-
-							// Clear all authentication and sync state
-							this.plugin.settings.apiKey = '';
-							this.plugin.settings.apiKeyExpires = null;
-							this.plugin.settings.vaultId = '';
-
-							// Clear initial sync state from plugin data
-							if (this.plugin.initialSyncService) {
-								try {
-									// Clear all initial sync states
-									await this.plugin.initialSyncService['storage'].set('initialSyncStates', {});
-								} catch (e) {
-									logger.warn('Could not clear initial sync states:', e);
-								}
-							}
-
-							// Clear file sync state
-							const syncStateFile = `${this.plugin.manifest.dir}/.sync-state.json`;
-							const adapter = this.plugin.app.vault.adapter;
-							try {
-								if (await adapter.exists(syncStateFile)) {
-									await adapter.remove(syncStateFile);
-								}
-							} catch (e) {
-								logger.warn('Could not clear sync state file:', e);
-							}
-
-							await this.plugin.saveSettings();
-							new Notice('Logged out successfully. All sync state has been cleared.');
-							this.display();
-						});
-				} else {
-					button
-						.setButtonText('Login')
-						.setCta()
-						.onClick(async () => {
-							try {
-								// Ensure clean state before login
-								this.plugin.settings.apiKey = '';
-								this.plugin.settings.apiKeyExpires = null;
-								this.plugin.settings.vaultId = '';
-
-								// Clear initial sync state from plugin data
-								if (this.plugin.initialSyncService) {
-									try {
-										// Clear all initial sync states
-										await this.plugin.initialSyncService['storage'].set('initialSyncStates', {});
-									} catch (e) {
-										console.warn('Could not clear initial sync states:', e);
-									}
-								}
-
-								// Clear file sync state
-								const syncStateFile = `${this.plugin.manifest.dir}/.sync-state.json`;
-								const adapter = this.plugin.app.vault.adapter;
-								try {
-									if (await adapter.exists(syncStateFile)) {
-										await adapter.remove(syncStateFile);
-									}
-								} catch (e) {
-									console.warn('Could not clear sync state file:', e);
-								}
-
-								await this.plugin.saveSettings();
-
-								// Show loading notice
-								const loadingNotice = new Notice('Requesting authorization code...', 0);
-
-								// Start device auth flow
-								const deviceCodeResp = await requestUrl({
-									url: `${this.plugin.settings.apiBaseURL}/auth/device/code`,
-									method: 'POST',
-									headers: { 'Content-Type': 'application/json' },
-									body: JSON.stringify({
-										client_id: 'obsidian-plugin',
-										scope: 'vault:read vault:write file:read file:write'
-									})
-								});
-
-								if (deviceCodeResp.status !== 200) {
-									throw new Error('Failed to request device code');
-								}
-
-								const deviceData = deviceCodeResp.json;
-								loadingNotice.hide();
-
-								// Show user code
-								const modal = new Modal(this.app);
-								modal.titleEl.setText('Authorize vault connect');
-								const codeEl = modal.contentEl.createDiv({ cls: 'vaultconnect-auth-modal' });
-
-								codeEl.createEl('p', { text: 'Enter this code in your browser:', cls: 'vaultconnect-auth-instruction' });
-
-								const codeDisplay = codeEl.createDiv({ cls: 'vaultconnect-auth-code' });
-								codeDisplay.setText(deviceData.user_code);
-
-								const stepsEl = codeEl.createEl('p', { cls: 'vaultconnect-auth-steps' });
-								stepsEl.createSpan({ text: '1. A browser window should open automatically' });
-								stepsEl.createEl('br');
-								stepsEl.createSpan({ text: '2. If not, click the button below' });
-								stepsEl.createEl('br');
-								stepsEl.createSpan({ text: '3. Enter the code and select token duration' });
-								stepsEl.createEl('br');
-								stepsEl.createSpan({ text: '4. Click "Authorize"' });
-
-								const btnContainer = codeEl.createDiv({ cls: 'vaultconnect-auth-buttons' });
-								const openBtn = btnContainer.createEl('button', { text: 'Open browser', cls: 'mod-cta' });
-								openBtn.onclick = () => window.open(deviceData.verification_uri_complete, '_blank');
-
-								const cancelBtn = btnContainer.createEl('button', { text: 'Cancel' });
-								cancelBtn.onclick = () => modal.close();
-
-								const waitingEl = codeEl.createDiv({ cls: 'vaultconnect-auth-waiting' });
-								waitingEl.createEl('p', { text: 'Waiting for authorization...' });
-
-								// Open browser automatically
-								window.open(deviceData.verification_uri_complete, '_blank');
-								modal.open();
-
-								// Poll for token
-								const pollInterval = deviceData.interval * 1000;
-								const expiresAt = Date.now() + deviceData.expires_in * 1000;
-								let cancelled = false;
-
-								modal.onClose = () => { cancelled = true; };
-
-								const poll = async () => {
-									if (cancelled || Date.now() >= expiresAt) {
-										return;
-									}
-
-									try {
-										const tokenResp = await requestUrl({
-											url: `${this.plugin.settings.apiBaseURL}/auth/device/token`,
-											method: 'POST',
-											headers: { 'Content-Type': 'application/json' },
-											body: JSON.stringify({ device_code: deviceData.device_code }),
-											throw: false
-										});
-
-										if (tokenResp.status === 200) {
-											const tokenData = tokenResp.json;
-											this.plugin.settings.apiKey = tokenData.access_token;
-											const expiresDate = new Date(Date.now() + tokenData.expires_in * 1000);
-											this.plugin.settings.apiKeyExpires = expiresDate;
-											await this.plugin.saveSettings();
-											modal.close();
-											new Notice('Successfully authorized!');
-											this.display();
-										} else {
-											const error = tokenResp.json;
-											if (error.error !== 'authorization_pending') {
-												throw new Error(error.error_description || 'Authorization failed');
-											}
-											// Still pending, continue polling
-											void setTimeout(() => { void poll(); }, pollInterval);
-										}
-									} catch (err) {
-										modal.close();
-										new Notice('Authorization failed: ' + err.message);
-									}
-								};
-
-								// Start polling
-								void setTimeout(() => { void poll(); }, pollInterval);
-
-							} catch (err) {
-								new Notice('Failed to start authorization: ' + err.message);
-							}
-						});
-				}
-			});
-
-		// Vault Selection
-		this.addVaultSelector(containerEl);
-
-		// Device ID (read-only)
-		new Setting(containerEl)
-			.setName('Device ID')
-			.setDesc('Unique identifier for this device')
-			.addText(text => {
-				text.setValue(this.plugin.settings.deviceId);
-				text.inputEl.disabled = true;
-			});
-
-		// Auto Sync
-		new Setting(containerEl)
-			.setName('Auto sync')
-			.setDesc('Automatically sync file changes')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.autoSync)
-				.onChange(async (value) => {
-					this.plugin.settings.autoSync = value;
-					await this.plugin.saveSettings();
-				}));
-
-		// Excluded Folders
-		const configDir = this.app.vault.configDir;
-		new Setting(containerEl)
-			.setName('Excluded folders')
-			.setDesc('Folders to exclude from sync (comma-separated)')
-			.addText(text => text
-				.setPlaceholder(`${configDir}, .trash`)
-				.setValue(this.plugin.settings.excludedFolders.join(', '))
-				.onChange(async (value) => {
-					this.plugin.settings.excludedFolders = value
-						.split(',')
-						.map(f => f.trim())
-						.filter(f => f.length > 0);
-					await this.plugin.saveSettings();
-				}));
-
-		// Connection Controls
-		new Setting(containerEl)
-			.setName('Connection')
-			.setHeading();
-
-		new Setting(containerEl)
-			.setName('Connection status')
-			.setDesc(this.plugin.isConnected ? 'Connected' : 'Disconnected')
-			.addButton(button => button
-				.setButtonText(this.plugin.isConnected ? 'Disconnect' : 'Connect')
-				.onClick(async () => {
-					if (this.plugin.isConnected) {
-						this.plugin.disconnect();
-					} else {
-						await this.plugin.connect();
-					}
-					this.display(); // Refresh settings
-				}));
-
-		new Setting(containerEl)
-			.setName('Force sync all')
-			.setDesc('Sync all files in the vault')
-			.addButton(button => button
-				.setButtonText('Sync all')
-				.onClick(async () => {
-					await this.plugin.forceSyncAll();
-				}));
-
-		// Log Level
-		new Setting(containerEl)
-			.setName('Logging')
-			.setHeading();
-
-		new Setting(containerEl)
-			.setName('Log level')
-			.setDesc('Control how much information is logged to the console')
-			.addDropdown(dropdown => {
-				// Add all log levels
-				Object.entries(LOG_LEVEL_NAMES).forEach(([value, name]) => {
-					const level = parseInt(value) as LogLevel;
-					const description = LOG_LEVEL_DESCRIPTIONS[level];
-					dropdown.addOption(value, `${name} - ${description}`);
-				});
-				
-				dropdown
-					.setValue(this.plugin.settings.logLevel.toString())
-					.onChange(async (value) => {
-						const level = parseInt(value) as LogLevel;
-						this.plugin.settings.logLevel = level;
-						await this.plugin.saveSettings();
-						
-						// Update logger immediately
-						logger.setLevel(level);
-						logger.info(`Log level changed to: ${LOG_LEVEL_NAMES[level]}`);
-						
-						new Notice(`Log level set to: ${LOG_LEVEL_NAMES[level]}`);
-					});
-			});
-
-	}
-
-	/**
-	 * Add vault selector with refresh button
-	 */
-	private addVaultSelector(containerEl: HTMLElement): void {
-		const vaultSetting = new Setting(containerEl)
-			.setName('Vault')
-			.setDesc('Select the vault to sync with');
-
-		// Create container for dropdown and button
-		const controlsContainer = vaultSetting.controlEl.createDiv({ cls: 'vaultconnect-vault-selector' });
-
-		// Dropdown
-		const dropdown = controlsContainer.createEl('select', { cls: 'dropdown vaultconnect-vault-dropdown' });
-
-		// Refresh button
-		const refreshButton = controlsContainer.createEl('button', { text: 'Refresh', cls: 'mod-cta vaultconnect-refresh-btn' });
-
-		// Loading indicator
-		const loadingEl = controlsContainer.createEl('span', { text: 'Loading...', cls: 'vaultconnect-loading' });
-
-		// Load vaults function
-		const loadVaults = async () => {
-			if (!this.plugin.settings.apiKey) {
-				dropdown.empty();
-				dropdown.createEl('option', { text: 'Enter API key first', value: '' });
-				dropdown.disabled = true;
-				refreshButton.disabled = true;
-				return;
-			}
-
-			try {
-				loadingEl.addClass('is-visible');
-				refreshButton.disabled = true;
-				dropdown.disabled = true;
-
-				// Fetch vaults using API client
-				const vaults = await this.plugin.apiClient?.listVaults();
-
-				dropdown.empty();
-				
-				if (!vaults || vaults.length === 0) {
-					dropdown.createEl('option', { text: 'No vaults found', value: '' });
-					new Notice('No vaults found. Create a vault in the web UI first.');
-				} else {
-					// Add placeholder option
-					dropdown.createEl('option', { text: 'Select a vault...', value: '' });
-
-					// Add vault options
-					vaults.forEach((vault: VaultInfo) => {
-						const option = dropdown.createEl('option', {
-							text: `${vault.name} (${vault.file_count || 0} files)`,
-							value: vault.vault_id
-						});
-						if (vault.vault_id === this.plugin.settings.vaultId) {
-							option.selected = true;
-						}
-					});
-
-					new Notice(`Found ${vaults.length} vault(s)`);
-				}
-
-				dropdown.disabled = false;
-			} catch (error) {
-				logger.error('Failed to load vaults:', error);
-				dropdown.empty();
-				dropdown.createEl('option', { text: 'Error loading vaults', value: '' });
-				new Notice(`Failed to load vaults: ${error.message}`);
-			} finally {
-				loadingEl.removeClass('is-visible');
-				refreshButton.disabled = false;
-			}
-		};
-
-		// Dropdown change handler
-		dropdown.addEventListener('change', () => {
-			void (async () => {
-				const selectedVaultId = dropdown.value;
-				if (selectedVaultId) {
-					logger.debug('[VaultConnect] Vault selected:', selectedVaultId);
-					this.plugin.settings.vaultId = selectedVaultId;
-					await this.plugin.saveSettings();
-					logger.debug('[VaultConnect] Settings saved. Current vaultId:', this.plugin.settings.vaultId);
-					new Notice(`Vault selected: ${selectedVaultId.substring(0, 8)}...\nDisconnect and reconnect to sync with this vault.`);
-				}
-			})();
-		});
-
-		// Refresh button handler
-		refreshButton.addEventListener('click', () => {
-			void (async () => {
-				await loadVaults();
-			})();
-		});
-
-		// Initial load
-		if (this.plugin.settings.apiKey) {
-			void loadVaults();
-		} else {
-			dropdown.createEl('option', { text: 'Enter API key first', value: '' });
-			dropdown.disabled = true;
-			refreshButton.disabled = true;
-		}
-	}
-}

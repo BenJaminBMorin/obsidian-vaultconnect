@@ -4,43 +4,53 @@
 export * from './initial-sync.types';
 
 export interface PluginSettings {
+  // Server discovery
+  serverUrl: string; // User-facing URL (web UI or API base)
+
   // Authentication
   apiKey: string | null;
   apiKeyExpires: Date | null;
-  
+
   // Vault selection
   selectedVaultId: string | null;
-  
+  vaultId: string; // Legacy alias for selectedVaultId (used by main.ts connect logic)
+
   // Sync settings
   syncMode: SyncMode;
   autoSync: boolean;
   syncInterval: number; // seconds
-  
+
   // Selective sync
   includedFolders: string[];
   excludedFolders: string[];
-  
+
   // Collaboration
   collaborationEnabled: boolean;
   showPresence: boolean;
   showCursors: boolean;
   showTypingIndicators: boolean;
-  
+
   // Notifications
   notifyOnSync: boolean;
   notifyOnConflict: boolean;
   notifyOnCollaboratorJoin: boolean;
-  
+
   // Performance
   maxConcurrentUploads: number;
   chunkSize: number; // bytes
   cacheEnabled: boolean;
-  
+
   // Advanced
   apiBaseURL: string;
   wsBaseURL: string;
+  apiUrl: string; // Legacy alias for apiBaseURL
+  wsUrl: string; // Legacy alias for wsBaseURL
   deviceId: string;
   debugMode: boolean;
+  logLevel: number; // LogLevel enum value
+
+  // Initial sync states per vault
+  initialSyncStates: Record<string, any>;
 }
 
 export enum SyncMode {

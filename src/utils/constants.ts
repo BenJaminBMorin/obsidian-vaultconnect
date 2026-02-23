@@ -1,43 +1,51 @@
 import { PluginSettings, SyncMode } from '../types';
 
 export const DEFAULT_SETTINGS: PluginSettings = {
+  // Server discovery
+  serverUrl: '',
+
   // Authentication
   apiKey: null,
   apiKeyExpires: null,
-  
+
   // Vault selection
   selectedVaultId: null,
-  
+  vaultId: '',
+
   // Sync settings
   syncMode: SyncMode.SMART_SYNC,
   autoSync: true,
   syncInterval: 15, // 15 seconds for faster background sync
-  
+
   // Selective sync
   includedFolders: [],
   excludedFolders: ['.trash'], // Note: vault configDir will be added dynamically during settings load
-  
+
   // Collaboration
   collaborationEnabled: true,
   showPresence: true,
   showCursors: true,
   showTypingIndicators: true,
-  
+
   // Notifications
   notifyOnSync: true,
   notifyOnConflict: true,
   notifyOnCollaboratorJoin: true,
-  
+
   // Performance
   maxConcurrentUploads: 5,
   chunkSize: 1048576, // 1MB
   cacheEnabled: true,
-  
+
   // Advanced
   apiBaseURL: '',
   wsBaseURL: '',
+  apiUrl: '',
+  wsUrl: '',
   deviceId: '',
-  debugMode: false
+  debugMode: false,
+  logLevel: 3, // LogLevel.INFO
+  initialSyncStates: {}
 };
 
 export const API_ENDPOINTS = {
