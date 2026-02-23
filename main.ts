@@ -170,7 +170,8 @@ export default class VaultSyncPlugin extends Plugin {
 			this.largeFileService
 		);
 
-		// Initialize sync service
+		// Initialize sync service — share the FileSyncService instance
+		// so hash maps stay in sync between downloads and uploads
 		this.syncService = new SyncService(
 			this.app.vault,
 			this.apiClient,
@@ -187,7 +188,8 @@ export default class VaultSyncPlugin extends Plugin {
 				retryDelayMs: 1000,
 				maxRetryDelayMs: 30000,
 				maxConcurrent: 5
-			}
+			},
+			this.fileSyncService  // Share instance so hash maps stay consistent
 		);
 
 		// Initialize initial sync service
@@ -457,6 +459,7 @@ export default class VaultSyncPlugin extends Plugin {
 		this.registerEvent(
 			this.app.vault.on('create', (file: TAbstractFile) => {
 				if (file instanceof TFile) {
+					logger.debug(`[VaultConnect] File created: ${file.path}`);
 					// Forward to SyncService which handles selective sync internally
 					if (this.syncService) {
 						this.syncService.handleFileCreate(file);
@@ -469,6 +472,7 @@ export default class VaultSyncPlugin extends Plugin {
 		this.registerEvent(
 			this.app.vault.on('modify', (file: TAbstractFile) => {
 				if (file instanceof TFile) {
+					logger.debug(`[VaultConnect] File modified: ${file.path}`);
 					// Forward to SyncService which handles selective sync internally
 					if (this.syncService) {
 						this.syncService.handleFileModify(file);
@@ -996,19 +1000,32 @@ export default class VaultSyncPlugin extends Plugin {
 					logger.debug(`[VaultConnect] Hash mismatch for ${file_path}: local=${localHash.substring(0, 8)}, remote=${remoteHash.substring(0, 8)}`);
 				}
 
-				// Safe to download - either file doesn't exist locally, hash differs, or no local changes
-				// Note: We don't need to ignore the file watcher because the hash-based check in
-				// uploadFile() will prevent unnecessary re-uploads after download
-				const result = await this.fileSyncService.downloadFile(file_path);
-				if (result.success) {
-					logger.debug(`[VaultConnect] Successfully synced remote change: ${file_path}`);
+				// Ignore the file watcher during download to prevent re-upload loops.
+				// Without this, vault.modify() triggers a modify event that the SyncService
+				// catches and re-uploads — causing unnecessary server round-trips.
+				if (this.syncService) {
+					this.syncService.ignorePath(file_path);
+				}
 
-					// Batch notification for create/update
-					const action = operation === 'create' ? 'create' : 'update';
-					this.batchNotification(action, file_path);
-				} else {
-					logger.error(`[VaultConnect] Failed to sync remote change: ${file_path}`, result.error);
-					new Notice(`Failed to sync remote change: ${result.error}`);
+				try {
+					const result = await this.fileSyncService.downloadFile(file_path);
+					if (result.success) {
+						logger.debug(`[VaultConnect] Successfully synced remote change: ${file_path}`);
+
+						// Batch notification for create/update
+						const action = operation === 'create' ? 'create' : 'update';
+						this.batchNotification(action, file_path);
+					} else {
+						logger.error(`[VaultConnect] Failed to sync remote change: ${file_path}`, result.error);
+						new Notice(`Failed to sync remote change: ${result.error}`);
+					}
+				} finally {
+					// Unignore after a short delay to let the modify event pass through
+					if (this.syncService) {
+						setTimeout(() => {
+							this.syncService!.unignorePath(file_path);
+						}, 2000);
+					}
 				}
 			} else {
 				logger.error(`[VaultConnect] FileSyncService not available to handle remote change`);

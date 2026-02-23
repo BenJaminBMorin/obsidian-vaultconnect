@@ -107,7 +107,10 @@ export class FileWatcherService {
    * Handle file creation
    */
   handleCreate(file: TAbstractFile): void {
-    if (!this.isWatching) return;
+    if (!this.isWatching) {
+      console.debug(`[FileWatcher] Create event ignored - not watching. File: ${file instanceof TFile ? file.path : 'folder'}`);
+      return;
+    }
 
     if (file instanceof TFile) {
       // Skip if this file is being written by a download
@@ -117,6 +120,7 @@ export class FileWatcherService {
       }
 
       if (this.shouldSyncFile(file)) {
+        console.debug(`[FileWatcher] Queuing create event for: ${file.path}`);
         this.debounceFileChange(file, 'create');
       }
     }
@@ -126,7 +130,10 @@ export class FileWatcherService {
    * Handle file modification
    */
   handleModify(file: TAbstractFile): void {
-    if (!this.isWatching) return;
+    if (!this.isWatching) {
+      console.debug(`[FileWatcher] Modify event ignored - not watching. File: ${file instanceof TFile ? file.path : 'folder'}`);
+      return;
+    }
 
     if (file instanceof TFile) {
       // Skip if this file is being written by a download
@@ -136,7 +143,10 @@ export class FileWatcherService {
       }
 
       if (this.shouldSyncFile(file)) {
+        console.debug(`[FileWatcher] Queuing modify event for: ${file.path}`);
         this.debounceFileChange(file, 'modify');
+      } else {
+        console.debug(`[FileWatcher] File excluded from sync: ${file.path}`);
       }
     }
   }

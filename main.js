@@ -5369,14 +5369,17 @@ var FileWatcherService = class {
    * Handle file creation
    */
   handleCreate(file) {
-    if (!this.isWatching)
+    if (!this.isWatching) {
+      console.debug(`[FileWatcher] Create event ignored - not watching. File: ${file instanceof import_obsidian.TFile ? file.path : "folder"}`);
       return;
+    }
     if (file instanceof import_obsidian.TFile) {
       if (this.isPathIgnored(file.path)) {
         console.debug(`[FileWatcher] Skipping create event for ignored path: ${file.path}`);
         return;
       }
       if (this.shouldSyncFile(file)) {
+        console.debug(`[FileWatcher] Queuing create event for: ${file.path}`);
         this.debounceFileChange(file, "create");
       }
     }
@@ -5385,15 +5388,20 @@ var FileWatcherService = class {
    * Handle file modification
    */
   handleModify(file) {
-    if (!this.isWatching)
+    if (!this.isWatching) {
+      console.debug(`[FileWatcher] Modify event ignored - not watching. File: ${file instanceof import_obsidian.TFile ? file.path : "folder"}`);
       return;
+    }
     if (file instanceof import_obsidian.TFile) {
       if (this.isPathIgnored(file.path)) {
         console.debug(`[FileWatcher] Skipping modify event for ignored path: ${file.path}`);
         return;
       }
       if (this.shouldSyncFile(file)) {
+        console.debug(`[FileWatcher] Queuing modify event for: ${file.path}`);
         this.debounceFileChange(file, "modify");
+      } else {
+        console.debug(`[FileWatcher] File excluded from sync: ${file.path}`);
       }
     }
   }
@@ -6577,7 +6585,7 @@ init_SelectiveSyncService();
 init_types();
 var SyncService = class {
   // Track last successful sync for incremental checks
-  constructor(vault, apiClient, eventBus, storage, config) {
+  constructor(vault, apiClient, eventBus, storage, config, fileSync) {
     this.vaultId = null;
     this.isRunning = false;
     this.periodicSyncInterval = null;
@@ -6615,7 +6623,7 @@ var SyncService = class {
         maxConcurrent: config.maxConcurrent
       }
     );
-    this.fileSync = new FileSyncService(
+    this.fileSync = fileSync || new FileSyncService(
       vault,
       apiClient,
       eventBus,
@@ -6630,9 +6638,12 @@ var SyncService = class {
     this.eventBus.on(EVENTS.FILE_SYNCED, (event) => {
       void (async () => {
         if (this.config.autoSync && this.config.mode === "smart_sync" /* SMART_SYNC */) {
+          console.debug(`[SyncService] Processing file change: ${event.action} ${event.path}`);
           await this.handleFileChange(event);
         } else if (this.config.mode === "manual" /* MANUAL */) {
-          console.debug(`File change detected but manual mode is active: ${event.path}`);
+          console.debug(`[SyncService] File change detected but manual mode is active: ${event.path}`);
+        } else {
+          console.debug(`[SyncService] File change ignored: autoSync=${this.config.autoSync}, mode=${this.config.mode}, path=${event.path}`);
         }
       })();
     });
@@ -13610,7 +13621,9 @@ var VaultSyncPlugin = class extends import_obsidian19.Plugin {
         retryDelayMs: 1e3,
         maxRetryDelayMs: 3e4,
         maxConcurrent: 5
-      }
+      },
+      this.fileSyncService
+      // Share instance so hash maps stay consistent
     );
     this.initialSyncService = new InitialSyncService(
       this.app,
@@ -13833,6 +13846,7 @@ ${data.error}`, 1e4);
     this.registerEvent(
       this.app.vault.on("create", (file) => {
         if (file instanceof import_obsidian19.TFile) {
+          logger.debug(`[VaultConnect] File created: ${file.path}`);
           if (this.syncService) {
             this.syncService.handleFileCreate(file);
           }
@@ -13842,6 +13856,7 @@ ${data.error}`, 1e4);
     this.registerEvent(
       this.app.vault.on("modify", (file) => {
         if (file instanceof import_obsidian19.TFile) {
+          logger.debug(`[VaultConnect] File modified: ${file.path}`);
           if (this.syncService) {
             this.syncService.handleFileModify(file);
           }
@@ -14252,14 +14267,25 @@ ${data.error}`, 1e4);
           }
           logger.debug(`[VaultConnect] Hash mismatch for ${file_path}: local=${localHash.substring(0, 8)}, remote=${remoteHash.substring(0, 8)}`);
         }
-        const result = await this.fileSyncService.downloadFile(file_path);
-        if (result.success) {
-          logger.debug(`[VaultConnect] Successfully synced remote change: ${file_path}`);
-          const action = operation === "create" ? "create" : "update";
-          this.batchNotification(action, file_path);
-        } else {
-          logger.error(`[VaultConnect] Failed to sync remote change: ${file_path}`, result.error);
-          new import_obsidian19.Notice(`Failed to sync remote change: ${result.error}`);
+        if (this.syncService) {
+          this.syncService.ignorePath(file_path);
+        }
+        try {
+          const result = await this.fileSyncService.downloadFile(file_path);
+          if (result.success) {
+            logger.debug(`[VaultConnect] Successfully synced remote change: ${file_path}`);
+            const action = operation === "create" ? "create" : "update";
+            this.batchNotification(action, file_path);
+          } else {
+            logger.error(`[VaultConnect] Failed to sync remote change: ${file_path}`, result.error);
+            new import_obsidian19.Notice(`Failed to sync remote change: ${result.error}`);
+          }
+        } finally {
+          if (this.syncService) {
+            setTimeout(() => {
+              this.syncService.unignorePath(file_path);
+            }, 2e3);
+          }
         }
       } else {
         logger.error(`[VaultConnect] FileSyncService not available to handle remote change`);

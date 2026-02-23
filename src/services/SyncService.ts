@@ -73,7 +73,8 @@ export class SyncService {
     apiClient: APIClient,
     eventBus: EventBus,
     storage: StorageManager,
-    config: SyncConfig
+    config: SyncConfig,
+    fileSync?: FileSyncService
   ) {
     this.vault = vault;
     this.apiClient = apiClient;
@@ -113,7 +114,8 @@ export class SyncService {
       }
     );
 
-    this.fileSync = new FileSyncService(
+    // Use shared FileSyncService if provided, otherwise create internal one
+    this.fileSync = fileSync || new FileSyncService(
       vault,
       apiClient,
       eventBus,
@@ -132,9 +134,12 @@ export class SyncService {
       void (async () => {
         // Only auto-sync in smart sync mode with auto-sync enabled
         if (this.config.autoSync && this.config.mode === SyncMode.SMART_SYNC) {
+          console.debug(`[SyncService] Processing file change: ${event.action} ${event.path}`);
           await this.handleFileChange(event);
         } else if (this.config.mode === SyncMode.MANUAL) {
-          console.debug(`File change detected but manual mode is active: ${event.path}`);
+          console.debug(`[SyncService] File change detected but manual mode is active: ${event.path}`);
+        } else {
+          console.debug(`[SyncService] File change ignored: autoSync=${this.config.autoSync}, mode=${this.config.mode}, path=${event.path}`);
         }
       })();
     });
