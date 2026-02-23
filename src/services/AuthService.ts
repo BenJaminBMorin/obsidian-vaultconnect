@@ -282,20 +282,26 @@ export class AuthService {
     if (response.status >= 400) {
       const error = response.json;
 
+      // Backend returns { error: { code: "AUTHORIZATION_PENDING", ... } }
+      // Also handle OAuth 2.0 standard format { error: "authorization_pending" }
+      const errorCode = typeof error.error === 'object' ? error.error?.code : error.error;
+      const errorCodeLower = (errorCode || '').toLowerCase();
+
       // These are expected errors during polling
-      if (error.error === 'authorization_pending') {
+      if (errorCodeLower === 'authorization_pending') {
         return null; // User hasn't authorized yet
       }
 
-      if (error.error === 'expired_token') {
+      if (errorCodeLower === 'expired_token') {
         throw new Error('Authorization code expired. Please try again.');
       }
 
-      if (error.error === 'access_denied') {
+      if (errorCodeLower === 'access_denied') {
         throw new Error('Authorization was denied.');
       }
 
-      throw new Error(error.error_description || 'Failed to get token');
+      const message = typeof error.error === 'object' ? error.error?.message : error.error_description;
+      throw new Error(message || 'Failed to get token');
     }
 
     return response.json;

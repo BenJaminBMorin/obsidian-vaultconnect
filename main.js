@@ -12021,6 +12021,7 @@ var AuthService = class {
    * Poll for token (used during device authorization flow)
    */
   async pollForToken(apiBaseUrl, deviceCode) {
+    var _a, _b;
     const response = await (0, import_obsidian12.requestUrl)({
       url: `${apiBaseUrl}/auth/device/token`,
       method: "POST",
@@ -12034,16 +12035,19 @@ var AuthService = class {
     });
     if (response.status >= 400) {
       const error = response.json;
-      if (error.error === "authorization_pending") {
+      const errorCode = typeof error.error === "object" ? (_a = error.error) == null ? void 0 : _a.code : error.error;
+      const errorCodeLower = (errorCode || "").toLowerCase();
+      if (errorCodeLower === "authorization_pending") {
         return null;
       }
-      if (error.error === "expired_token") {
+      if (errorCodeLower === "expired_token") {
         throw new Error("Authorization code expired. Please try again.");
       }
-      if (error.error === "access_denied") {
+      if (errorCodeLower === "access_denied") {
         throw new Error("Authorization was denied.");
       }
-      throw new Error(error.error_description || "Failed to get token");
+      const message = typeof error.error === "object" ? (_b = error.error) == null ? void 0 : _b.message : error.error_description;
+      throw new Error(message || "Failed to get token");
     }
     return response.json;
   }
