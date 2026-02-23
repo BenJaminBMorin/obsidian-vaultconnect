@@ -246,4 +246,11 @@ export class FileWatcherService {
   getPendingChangesCount(): number {
     return this.debounceTimers.size;
   }
+
+  /**
+   * Check if a specific file has a pending debounce (user is actively editing)
+   */
+  hasPendingChange(path: string): boolean {
+    return this.debounceTimers.has(path);
+  }
 }

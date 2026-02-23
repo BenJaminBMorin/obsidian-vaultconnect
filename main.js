@@ -5478,6 +5478,12 @@ var FileWatcherService = class {
   getPendingChangesCount() {
     return this.debounceTimers.size;
   }
+  /**
+   * Check if a specific file has a pending debounce (user is actively editing)
+   */
+  hasPendingChange(path) {
+    return this.debounceTimers.has(path);
+  }
 };
 
 // src/services/SyncQueueService.ts
@@ -7302,6 +7308,12 @@ var SyncService = class {
    */
   unignorePath(path) {
     this.fileWatcher.unignorePath(path);
+  }
+  /**
+   * Check if a file has a pending debounce (user is actively editing)
+   */
+  hasPendingChange(path) {
+    return this.fileWatcher.hasPendingChange(path);
   }
   /**
    * Start periodic sync check to ensure we stay in sync
@@ -13536,7 +13548,12 @@ var VaultSyncPlugin = class extends import_obsidian19.Plugin {
     // Upload progress tracking
     this.uploadProgressModal = null;
     this.uploadStatusBarItem = null;
+    // Track recently uploaded files to detect our own sync_event echoes
+    // Key: file path, Value: timestamp of upload completion
+    this.recentUploads = /* @__PURE__ */ new Map();
+    this.UPLOAD_ECHO_WINDOW_MS = 1e4;
   }
+  // 10 second window to detect echoes
   async onload() {
     await this.loadSettings();
     logger.setLevel(this.settings.logLevel);
@@ -13637,6 +13654,18 @@ var VaultSyncPlugin = class extends import_obsidian19.Plugin {
       }
     );
     this.setupUploadProgressHandlers();
+    this.eventBus.on(EVENTS.SYNC_COMPLETED, (result) => {
+      if ((result == null ? void 0 : result.path) && (result == null ? void 0 : result.operation) === "upload") {
+        this.recentUploads.set(result.path, Date.now());
+        if (this.recentUploads.size > 100) {
+          const cutoff = Date.now() - this.UPLOAD_ECHO_WINDOW_MS;
+          for (const [path, time] of this.recentUploads) {
+            if (time < cutoff)
+              this.recentUploads.delete(path);
+          }
+        }
+      }
+    });
     logger.debug("Services initialized");
   }
   /**
@@ -14220,6 +14249,11 @@ ${data.error}`, 1e4);
         logger.debug(`[VaultConnect] Skipping sync event from own device: ${file_path}`);
         return;
       }
+      const recentUploadTime = this.recentUploads.get(file_path);
+      if (recentUploadTime && Date.now() - recentUploadTime < this.UPLOAD_ECHO_WINDOW_MS) {
+        logger.debug(`[VaultConnect] Skipping echo for ${file_path} - uploaded ${Date.now() - recentUploadTime}ms ago`);
+        return;
+      }
       logger.debug(`[VaultConnect] Processing remote change for: ${file_path}, operation: ${operation}`);
       if (operation === "delete") {
         const file = this.app.vault.getAbstractFileByPath(file_path);
@@ -14256,6 +14290,10 @@ ${data.error}`, 1e4);
       }
       if (this.fileSyncService) {
         const { hash: remoteHash } = data;
+        if (this.syncService && this.syncService.hasPendingChange(file_path)) {
+          logger.debug(`[VaultConnect] Deferring download for ${file_path} - user is actively editing`);
+          return;
+        }
         const localFile = this.app.vault.getAbstractFileByPath(file_path);
         if (localFile instanceof import_obsidian19.TFile && remoteHash) {
           const content = await this.app.vault.read(localFile);
@@ -14263,6 +14301,11 @@ ${data.error}`, 1e4);
           if (localHash === remoteHash) {
             logger.debug(`[VaultConnect] Skipping download for ${file_path} - hash matches (${remoteHash.substring(0, 8)})`);
             this.fileSyncService.updateFileHash(file_path, remoteHash);
+            return;
+          }
+          const storedHash = this.fileSyncService.getStoredHash(file_path);
+          if (storedHash && localHash !== storedHash && localHash !== remoteHash) {
+            logger.debug(`[VaultConnect] Deferring download for ${file_path} - local edits pending upload (stored=${storedHash.substring(0, 8)}, local=${localHash.substring(0, 8)}, remote=${remoteHash.substring(0, 8)})`);
             return;
           }
           logger.debug(`[VaultConnect] Hash mismatch for ${file_path}: local=${localHash.substring(0, 8)}, remote=${remoteHash.substring(0, 8)}`);

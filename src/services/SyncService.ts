@@ -982,6 +982,13 @@ export class SyncService {
   }
 
   /**
+   * Check if a file has a pending debounce (user is actively editing)
+   */
+  hasPendingChange(path: string): boolean {
+    return this.fileWatcher.hasPendingChange(path);
+  }
+
+  /**
    * Start periodic sync check to ensure we stay in sync
    */
   private startPeriodicSyncCheck(): void {

@@ -66,6 +66,11 @@ export default class VaultSyncPlugin extends Plugin {
 	private uploadProgressModal: UploadProgressModal | null = null;
 	private uploadStatusBarItem: HTMLElement | null = null;
 
+	// Track recently uploaded files to detect our own sync_event echoes
+	// Key: file path, Value: timestamp of upload completion
+	private recentUploads: Map<string, number> = new Map();
+	private readonly UPLOAD_ECHO_WINDOW_MS = 10000; // 10 second window to detect echoes
+
 	async onload() {
 		await this.loadSettings();
 
@@ -206,6 +211,20 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Setup upload progress handlers
 		this.setupUploadProgressHandlers();
+
+		// Track recent uploads to detect our own sync_event echoes
+		this.eventBus.on(EVENTS.SYNC_COMPLETED, (result: { path?: string; operation?: string }) => {
+			if (result?.path && result?.operation === 'upload') {
+				this.recentUploads.set(result.path, Date.now());
+				// Clean up old entries periodically
+				if (this.recentUploads.size > 100) {
+					const cutoff = Date.now() - this.UPLOAD_ECHO_WINDOW_MS;
+					for (const [path, time] of this.recentUploads) {
+						if (time < cutoff) this.recentUploads.delete(path);
+					}
+				}
+			}
+		});
 
 		logger.debug('Services initialized');
 	}
@@ -929,6 +948,15 @@ export default class VaultSyncPlugin extends Plugin {
 				return;
 			}
 
+			// Skip echo: if we recently uploaded this file, this sync_event is likely
+			// our own upload echoing back (server uses device_id 'web-${userId}' for HTTP
+			// uploads which doesn't match our obsidian-... device ID)
+			const recentUploadTime = this.recentUploads.get(file_path);
+			if (recentUploadTime && (Date.now() - recentUploadTime) < this.UPLOAD_ECHO_WINDOW_MS) {
+				logger.debug(`[VaultConnect] Skipping echo for ${file_path} - uploaded ${Date.now() - recentUploadTime}ms ago`);
+				return;
+			}
+
 			logger.debug(`[VaultConnect] Processing remote change for: ${file_path}, operation: ${operation}`);
 
 			// Handle delete operation
@@ -981,6 +1009,14 @@ export default class VaultSyncPlugin extends Plugin {
 			if (this.fileSyncService) {
 				const { hash: remoteHash } = data;
 
+				// Check if user is actively editing this file (pending debounce in file watcher)
+				// If so, skip the download to avoid overwriting their work — their edit will
+				// be uploaded after the debounce completes, and the next sync cycle will reconcile
+				if (this.syncService && this.syncService.hasPendingChange(file_path)) {
+					logger.debug(`[VaultConnect] Deferring download for ${file_path} - user is actively editing`);
+					return;
+				}
+
 				// Check if file exists locally
 				const localFile = this.app.vault.getAbstractFileByPath(file_path);
 
@@ -994,6 +1030,17 @@ export default class VaultSyncPlugin extends Plugin {
 						logger.debug(`[VaultConnect] Skipping download for ${file_path} - hash matches (${remoteHash.substring(0, 8)})`);
 						// Update stored hash to prevent unnecessary uploads
 						this.fileSyncService.updateFileHash(file_path, remoteHash);
+						return;
+					}
+
+					// Check if local content has diverged from last known sync state
+					// (user has unsaved edits not yet uploaded)
+					const storedHash = this.fileSyncService.getStoredHash(file_path);
+					if (storedHash && localHash !== storedHash && localHash !== remoteHash) {
+						logger.debug(`[VaultConnect] Deferring download for ${file_path} - local edits pending upload (stored=${storedHash.substring(0, 8)}, local=${localHash.substring(0, 8)}, remote=${remoteHash.substring(0, 8)})`);
+						// Local file has been modified since last sync — the user's edit
+						// will be uploaded soon. Let the upload happen first; the next
+						// periodic sync check will reconcile if needed.
 						return;
 					}
 
