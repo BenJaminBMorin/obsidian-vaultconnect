@@ -87,6 +87,11 @@ export default class VaultSyncPlugin extends Plugin {
 		// Initialize services
 		this.initializeServices();
 
+		// Restore auth state from storage (API key persists across reloads)
+		if (this.authService) {
+			await this.authService.initialize();
+		}
+
 		// Add status bar item
 		this.statusBarItem = this.addStatusBarItem();
 		this.updateStatusBar('disconnected');

@@ -13563,6 +13563,9 @@ var VaultSyncPlugin = class extends import_obsidian19.Plugin {
       await this.saveSettings();
     }
     this.initializeServices();
+    if (this.authService) {
+      await this.authService.initialize();
+    }
     this.statusBarItem = this.addStatusBarItem();
     this.updateStatusBar("disconnected");
     this.registerView(
