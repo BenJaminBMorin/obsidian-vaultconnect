@@ -482,33 +482,47 @@ export class APIClient {
       throw new Error('Not authenticated');
     }
 
-    // Convert ArrayBuffer to base64 for JSON transport
-    const uint8Array = new Uint8Array(request.chunkData);
-    let binary = '';
-    for (let i = 0; i < uint8Array.length; i++) {
-      binary += String.fromCharCode(uint8Array[i]);
-    }
-    const chunkBase64 = btoa(binary);
-
     const url = `${this.baseURL}/vaults/${vaultId}/files/upload/chunk`;
+
+    // Build multipart/form-data body manually (Obsidian's requestUrl doesn't support FormData)
+    const boundary = '----VaultConnectChunk' + Date.now();
+    const chunkData = new Uint8Array(request.chunkData);
+
+    // Build the multipart parts as text fields + file field
+    const textParts = [
+      ['filename', request.filename],
+      ['chunkIndex', String(request.chunkIndex)],
+      ['totalChunks', String(request.totalChunks)],
+      ['path', request.path || ''],
+      ['overwrite', String(request.overwrite ?? true)],
+      ['compressed', String(request.compressed ?? false)],
+    ];
+
+    // Build header bytes
+    let headerStr = '';
+    for (const [key, value] of textParts) {
+      headerStr += `--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`;
+    }
+    headerStr += `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${request.filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`;
+
+    const footerStr = `\r\n--${boundary}--\r\n`;
+
+    // Combine into a single ArrayBuffer
+    const headerBytes = new TextEncoder().encode(headerStr);
+    const footerBytes = new TextEncoder().encode(footerStr);
+    const body = new Uint8Array(headerBytes.length + chunkData.length + footerBytes.length);
+    body.set(headerBytes, 0);
+    body.set(chunkData, headerBytes.length);
+    body.set(footerBytes, headerBytes.length + chunkData.length);
 
     const response = await requestUrl({
       url,
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
         'Authorization': `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        filename: request.filename,
-        chunkIndex: request.chunkIndex,
-        totalChunks: request.totalChunks,
-        chunkData: chunkBase64,
-        path: request.path,
-        overwrite: request.overwrite,
-        compressed: request.compressed,
-        encoding: 'base64'
-      }),
+      body: body.buffer,
       throw: false
     });
 

@@ -1,7 +1,7 @@
 {
   "id": "vaultconnect",
   "name": "VaultConnect",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "minAppVersion": "0.15.0",
   "description": "Real-time sync for your vault with VaultConnect platform. Keep your notes synchronized across devices with conflict resolution and version history.",
   "author": "VaultConnect",

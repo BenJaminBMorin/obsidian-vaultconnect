@@ -5984,7 +5984,7 @@ var FileSyncService = class {
           skipped: true
         };
       }
-      const CHUNK_THRESHOLD = 50 * 1024 * 1024;
+      const CHUNK_THRESHOLD = 5 * 1024 * 1024;
       const fileSize = file.stat.size;
       if (fileSize > CHUNK_THRESHOLD && this.largeFileService) {
         console.debug(`Using chunked upload for large file: ${file.path} (${fileSize} bytes)`);
@@ -10303,41 +10303,58 @@ var APIClient = class {
    * Uses base64 encoding for binary data to work with requestUrl
    */
   async uploadChunk(vaultId, request) {
-    var _a;
+    var _a, _b, _c;
     const apiKey = await this.authService.getApiKey();
     if (!apiKey) {
       throw new Error("Not authenticated");
     }
-    const uint8Array = new Uint8Array(request.chunkData);
-    let binary = "";
-    for (let i = 0; i < uint8Array.length; i++) {
-      binary += String.fromCharCode(uint8Array[i]);
-    }
-    const chunkBase64 = btoa(binary);
     const url2 = `${this.baseURL}/vaults/${vaultId}/files/upload/chunk`;
+    const boundary = "----VaultConnectChunk" + Date.now();
+    const chunkData = new Uint8Array(request.chunkData);
+    const textParts = [
+      ["filename", request.filename],
+      ["chunkIndex", String(request.chunkIndex)],
+      ["totalChunks", String(request.totalChunks)],
+      ["path", request.path || ""],
+      ["overwrite", String((_a = request.overwrite) != null ? _a : true)],
+      ["compressed", String((_b = request.compressed) != null ? _b : false)]
+    ];
+    let headerStr = "";
+    for (const [key, value2] of textParts) {
+      headerStr += `--${boundary}\r
+Content-Disposition: form-data; name="${key}"\r
+\r
+${value2}\r
+`;
+    }
+    headerStr += `--${boundary}\r
+Content-Disposition: form-data; name="file"; filename="${request.filename}"\r
+Content-Type: application/octet-stream\r
+\r
+`;
+    const footerStr = `\r
+--${boundary}--\r
+`;
+    const headerBytes = new TextEncoder().encode(headerStr);
+    const footerBytes = new TextEncoder().encode(footerStr);
+    const body = new Uint8Array(headerBytes.length + chunkData.length + footerBytes.length);
+    body.set(headerBytes, 0);
+    body.set(chunkData, headerBytes.length);
+    body.set(footerBytes, headerBytes.length + chunkData.length);
     const response = await (0, import_obsidian10.requestUrl)({
       url: url2,
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        filename: request.filename,
-        chunkIndex: request.chunkIndex,
-        totalChunks: request.totalChunks,
-        chunkData: chunkBase64,
-        path: request.path,
-        overwrite: request.overwrite,
-        compressed: request.compressed,
-        encoding: "base64"
-      }),
+      body: body.buffer,
       throw: false
     });
     if (response.status >= 400) {
       const errorData = response.json || {};
       throw new Error(
-        ((_a = errorData.error) == null ? void 0 : _a.message) || `Chunk upload failed: HTTP ${response.status}`
+        ((_c = errorData.error) == null ? void 0 : _c.message) || `Chunk upload failed: HTTP ${response.status}`
       );
     }
     const result = response.json;
