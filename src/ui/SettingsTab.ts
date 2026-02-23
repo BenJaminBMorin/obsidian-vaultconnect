@@ -455,6 +455,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     // Compact connection header
     this.displayConnectionHeader(containerEl);
 
+    // Sync actions
+    this.displaySyncActions(containerEl);
+
     // Show all setting sections
     this.displaySyncSection(containerEl);
     this.displaySelectiveSyncSection(containerEl);
@@ -697,6 +700,85 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   // ===========================================================================
+  // Sync action buttons
+  // ===========================================================================
+
+  private displaySyncActions(containerEl: HTMLElement): void {
+    new Setting(containerEl).setName('Sync actions').setHeading();
+
+    const isConnected = this.plugin.isConnected;
+
+    // Push all
+    new Setting(containerEl)
+      .setName('Push all')
+      .setDesc('Upload all local files to the server')
+      .addButton(button => {
+        button
+          .setButtonText('Push all')
+          .setCta()
+          .setDisabled(!isConnected)
+          .onClick(async () => {
+            button.setButtonText('Pushing...');
+            button.setDisabled(true);
+            try {
+              await this.plugin.performPushAll();
+            } finally {
+              button.setButtonText('Push all');
+              button.setDisabled(false);
+            }
+          });
+      });
+
+    // Pull all
+    new Setting(containerEl)
+      .setName('Pull all')
+      .setDesc('Download all remote files to this device')
+      .addButton(button => {
+        button
+          .setButtonText('Pull all')
+          .setDisabled(!isConnected)
+          .onClick(async () => {
+            button.setButtonText('Pulling...');
+            button.setDisabled(true);
+            try {
+              await this.plugin.performPullAll();
+            } finally {
+              button.setButtonText('Pull all');
+              button.setDisabled(false);
+            }
+          });
+      });
+
+    // Force sync
+    new Setting(containerEl)
+      .setName('Force sync')
+      .setDesc('Compare all files and sync differences')
+      .addButton(button => {
+        button
+          .setButtonText('Force sync')
+          .setDisabled(!isConnected)
+          .onClick(async () => {
+            button.setButtonText('Syncing...');
+            button.setDisabled(true);
+            try {
+              await this.plugin.performForceSync();
+            } finally {
+              button.setButtonText('Force sync');
+              button.setDisabled(false);
+            }
+          });
+      });
+
+    if (!isConnected) {
+      const note = containerEl.createEl('p', {
+        text: 'Connect to the server first to use sync actions.',
+        cls: 'setting-item-description'
+      });
+      note.style.marginTop = '-8px';
+      note.style.marginBottom = '12px';
+    }
+  }
+
   // Full settings sections (shown in COMPLETE stage)
   // ===========================================================================
 
