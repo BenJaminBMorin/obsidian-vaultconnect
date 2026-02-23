@@ -12323,8 +12323,10 @@ Please check the URL and ensure the server is running.`
       const wsUrl = config.wsUrl || config.ws_url || apiUrl;
       const googleOAuthEnabled = (_b = (_a = config.googleOAuthEnabled) != null ? _a : config.google_oauth_enabled) != null ? _b : false;
       const version = config.version || "unknown";
+      const normalizedApiUrl = apiUrl.replace(/\/+$/, "");
+      const apiUrlWithVersion = normalizedApiUrl.endsWith("/v1") ? normalizedApiUrl : `${normalizedApiUrl}/v1`;
       return {
-        apiUrl: apiUrl.replace(/\/+$/, ""),
+        apiUrl: apiUrlWithVersion,
         webUiUrl: webUiUrl.replace(/\/+$/, ""),
         wsUrl: wsUrl.replace(/\/+$/, ""),
         googleOAuthEnabled,

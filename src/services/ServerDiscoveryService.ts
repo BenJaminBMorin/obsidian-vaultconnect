@@ -99,8 +99,12 @@ export class ServerDiscoveryService {
       const googleOAuthEnabled = config.googleOAuthEnabled ?? config.google_oauth_enabled ?? false;
       const version = config.version || 'unknown';
 
+      // Ensure apiUrl includes the /v1 prefix since the plugin expects it
+      const normalizedApiUrl = apiUrl.replace(/\/+$/, '');
+      const apiUrlWithVersion = normalizedApiUrl.endsWith('/v1') ? normalizedApiUrl : `${normalizedApiUrl}/v1`;
+
       return {
-        apiUrl: apiUrl.replace(/\/+$/, ''),
+        apiUrl: apiUrlWithVersion,
         webUiUrl: webUiUrl.replace(/\/+$/, ''),
         wsUrl: wsUrl.replace(/\/+$/, ''),
         googleOAuthEnabled,
