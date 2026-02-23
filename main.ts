@@ -69,8 +69,8 @@ interface VaultSyncSettings {
 }
 
 const DEFAULT_SETTINGS: VaultSyncSettings = {
-	apiUrl: 'http://localhost:3001/v1',
-	wsUrl: 'http://localhost:3001',
+	apiUrl: '',
+	wsUrl: '',
 	apiKey: '',
 	vaultId: '',
 	deviceId: '',
@@ -91,8 +91,8 @@ const DEFAULT_SETTINGS: VaultSyncSettings = {
 	maxConcurrentUploads: 5,
 	chunkSize: 1048576,
 	cacheEnabled: true,
-	apiBaseURL: 'http://localhost:3001/v1',
-	wsBaseURL: 'http://localhost:3001',
+	apiBaseURL: '',
+	wsBaseURL: '',
 	debugMode: false,
 	logLevel: 3, // LogLevel.INFO
 	initialSyncStates: {}

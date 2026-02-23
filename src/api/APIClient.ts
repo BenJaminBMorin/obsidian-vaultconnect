@@ -97,6 +97,25 @@ interface BatchUpdateError {
   error: string;
 }
 
+// E2E Encryption response types
+export interface E2EKeyPairResponse {
+  publicKey: string;
+  encryptedPrivateKey: string;
+  keyDerivationSalt: string;
+  keyDerivationIterations: number;
+}
+
+export interface E2EPublicKeyResponse {
+  userId: string;
+  publicKey: string;
+}
+
+export interface E2EGrantResponse {
+  vaultId: string;
+  userId: string;
+  encryptedVaultKey: string;
+}
+
 /**
  * API Client for VaultSync REST API
  */
@@ -614,6 +633,57 @@ export class APIClient {
         body: JSON.stringify(resolution)
       }
     );
+  }
+
+  // E2E Encryption API
+
+  /**
+   * Create a new E2E key pair on the server
+   */
+  async createE2EKeyPair(data: {
+    publicKey: string;
+    encryptedPrivateKey: string;
+    keyDerivationSalt: string;
+    keyDerivationIterations?: number;
+  }): Promise<E2EKeyPairResponse> {
+    return this.request<E2EKeyPairResponse>('/e2e/keys', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  /**
+   * Get own E2E key pair from the server
+   */
+  async getE2EKeyPair(): Promise<E2EKeyPairResponse> {
+    return this.request<E2EKeyPairResponse>('/e2e/keys');
+  }
+
+  /**
+   * Get another user's public key
+   */
+  async getE2EPublicKey(userId: string): Promise<E2EPublicKeyResponse> {
+    return this.request<E2EPublicKeyResponse>(`/e2e/keys/${userId}/public`);
+  }
+
+  /**
+   * Get the E2E vault key grant for the current user
+   */
+  async getE2EGrant(vaultId: string): Promise<E2EGrantResponse> {
+    return this.request<E2EGrantResponse>(`/vaults/${vaultId}/e2e/grants`);
+  }
+
+  /**
+   * Create an E2E vault key grant
+   */
+  async createE2EGrant(vaultId: string, data: {
+    userId: string;
+    encryptedVaultKey: string;
+  }): Promise<E2EGrantResponse> {
+    return this.request<E2EGrantResponse>(`/vaults/${vaultId}/e2e/grants`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   // Health Check

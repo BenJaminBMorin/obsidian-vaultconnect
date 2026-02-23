@@ -1183,3 +1183,83 @@ select:focus-visible {
   cursor: pointer;
 }
 
+/* Vault Browser Modal */
+.vaultconnect-vault-browser-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+}
+
+.vaultconnect-vault-browser-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.vaultconnect-vault-browser-loading {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+}
+
+.vaultconnect-vault-browser-message {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+}
+
+.vaultconnect-vault-browser-message--error {
+  color: var(--text-error);
+}
+
+.vaultconnect-vault-browser-item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  border: 1px solid var(--background-modifier-border);
+  transition: background-color 0.15s;
+}
+
+.vaultconnect-vault-browser-item:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.vaultconnect-vault-browser-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vaultconnect-vault-browser-item-name {
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.vaultconnect-vault-browser-item-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.vaultconnect-vault-browser-item-details {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.vaultconnect-vault-browser-item-id {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 2px;
+  font-family: var(--font-monospace);
+}
+

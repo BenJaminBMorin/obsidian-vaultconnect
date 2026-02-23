@@ -34,8 +34,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   cacheEnabled: true,
   
   // Advanced
-  apiBaseURL: 'http://localhost:3001/v1',
-  wsBaseURL: 'http://localhost:3001',
+  apiBaseURL: '',
+  wsBaseURL: '',
   deviceId: '',
   debugMode: false
 };

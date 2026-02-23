@@ -23,7 +23,7 @@ export class Logger {
   constructor(config: Partial<LoggerConfig> = {}) {
     this.config = {
       level: config.level ?? LogLevel.INFO,
-      prefix: config.prefix ?? '[VaultSync]',
+      prefix: config.prefix ?? '[VaultConnect]',
       enableTimestamps: config.enableTimestamps ?? true
     }
   }
