@@ -240,8 +240,8 @@ export class FileSyncService {
         };
       }
 
-      // Check file size - use chunking for files > 5MB
-      const CHUNK_THRESHOLD = 5 * 1024 * 1024; // 5MB
+      // Check file size - use chunking for files > 50MB
+      const CHUNK_THRESHOLD = 50 * 1024 * 1024; // 50MB
       const fileSize = file.stat.size;
 
       if (fileSize > CHUNK_THRESHOLD && this.largeFileService) {

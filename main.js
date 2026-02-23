@@ -5984,7 +5984,7 @@ var FileSyncService = class {
           skipped: true
         };
       }
-      const CHUNK_THRESHOLD = 5 * 1024 * 1024;
+      const CHUNK_THRESHOLD = 50 * 1024 * 1024;
       const fileSize = file.stat.size;
       if (fileSize > CHUNK_THRESHOLD && this.largeFileService) {
         console.debug(`Using chunked upload for large file: ${file.path} (${fileSize} bytes)`);
