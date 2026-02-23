@@ -12632,7 +12632,12 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     this.plugin.settings.selectedVaultId = vault.vault_id;
     this.plugin.settings.vaultId = vault.vault_id;
     await this.plugin.saveSettings();
-    new import_obsidian16.Notice(`Vault "${vault.name}" selected!`);
+    new import_obsidian16.Notice(`Vault "${vault.name}" selected! Connecting...`);
+    try {
+      await this.plugin.connect();
+    } catch (error) {
+      logger.warn("Auto-connect after vault selection failed:", error);
+    }
     this.display();
   }
   // ===========================================================================
@@ -12693,6 +12698,21 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
         });
       }
     });
+    if (isAuthed && vaultId) {
+      new import_obsidian16.Setting(containerEl).setName("Connection").setDesc(this.plugin.isConnected ? "\u{1F7E2} Connected to server" : "\u26AB Not connected").addButton((button) => {
+        if (this.plugin.isConnected) {
+          button.setButtonText("Disconnect").onClick(() => {
+            this.plugin.disconnect();
+            this.display();
+          });
+        } else {
+          button.setButtonText("Connect").setCta().onClick(async () => {
+            await this.plugin.connect();
+            this.display();
+          });
+        }
+      });
+    }
     if (isAuthed && (authState == null ? void 0 : authState.apiKey)) {
       const maskedKey = authState.apiKey.substring(0, 12) + "****" + authState.apiKey.substring(authState.apiKey.length - 4);
       new import_obsidian16.Setting(containerEl).setName("API key").setDesc(maskedKey);

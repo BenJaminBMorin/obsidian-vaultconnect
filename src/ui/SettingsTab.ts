@@ -434,7 +434,14 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     this.plugin.settings.vaultId = vault.vault_id;
     await this.plugin.saveSettings();
 
-    new Notice(`Vault "${vault.name}" selected!`);
+    new Notice(`Vault "${vault.name}" selected! Connecting...`);
+
+    // Auto-connect now that onboarding is complete
+    try {
+      await this.plugin.connect();
+    } catch (error) {
+      logger.warn('Auto-connect after vault selection failed:', error);
+    }
 
     // Move to complete stage
     this.display();
@@ -514,6 +521,31 @@ export class VaultSyncSettingTab extends PluginSettingTab {
             });
         }
       });
+
+    // Connect/disconnect button
+    if (isAuthed && vaultId) {
+      new Setting(containerEl)
+        .setName('Connection')
+        .setDesc(this.plugin.isConnected ? '🟢 Connected to server' : '⚫ Not connected')
+        .addButton(button => {
+          if (this.plugin.isConnected) {
+            button
+              .setButtonText('Disconnect')
+              .onClick(() => {
+                this.plugin.disconnect();
+                this.display();
+              });
+          } else {
+            button
+              .setButtonText('Connect')
+              .setCta()
+              .onClick(async () => {
+                await this.plugin.connect();
+                this.display();
+              });
+          }
+        });
+    }
 
     // API Key info (if authenticated)
     if (isAuthed && authState?.apiKey) {
