@@ -127,6 +127,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         connectBtn.click();
       }
     });
+
+    // Auto-discover if serverUrl is already set (e.g., returning from "Change")
+    if (this.plugin.settings.serverUrl) {
+      // Small delay to let the UI render first
+      setTimeout(() => connectBtn.click(), 100);
+    }
   }
 
   private async handleServerConnect(
@@ -272,14 +278,14 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     const changeLink = serverInfo.createEl('a', { text: 'Change', cls: 'vaultconnect-change-link' });
     changeLink.addEventListener('click', (e) => {
       e.preventDefault();
-      // Clear server config to go back to server stage
+      // Clear derived URLs but keep serverUrl for re-discovery
       this.plugin.settings.apiBaseURL = '';
       this.plugin.settings.apiUrl = '';
       this.plugin.settings.wsBaseURL = '';
       this.plugin.settings.wsUrl = '';
-      this.plugin.settings.serverUrl = '';
       void (async () => {
         await this.plugin.saveSettings();
+        // If we have a saved serverUrl, go to server stage pre-filled and auto-discover
         this.display();
       })();
     });

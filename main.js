@@ -12410,6 +12410,9 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
         connectBtn.click();
       }
     });
+    if (this.plugin.settings.serverUrl) {
+      setTimeout(() => connectBtn.click(), 100);
+    }
   }
   async handleServerConnect(url2, statusEl, connectBtn, wrapper) {
     statusEl.empty();
@@ -12508,7 +12511,6 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       this.plugin.settings.apiUrl = "";
       this.plugin.settings.wsBaseURL = "";
       this.plugin.settings.wsUrl = "";
-      this.plugin.settings.serverUrl = "";
       void (async () => {
         await this.plugin.saveSettings();
         this.display();
