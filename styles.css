@@ -1299,6 +1299,148 @@ select:focus-visible {
 }
 
 /* ========================================
+   Search Modal
+   ======================================== */
+
+.vaultconnect-search-modal {
+  padding: 16px 0;
+}
+
+.vaultconnect-search-modal .modal-content {
+  max-width: 600px;
+}
+
+.vaultconnect-search-input-row {
+  margin-bottom: 12px;
+}
+
+.vaultconnect-search-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-size: 15px;
+}
+
+.vaultconnect-search-input:focus {
+  border-color: var(--interactive-accent);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--interactive-accent-hover);
+}
+
+.vaultconnect-search-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.vaultconnect-search-vault-select {
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+.vaultconnect-search-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  min-height: 18px;
+}
+
+.vaultconnect-search-results {
+  max-height: 400px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
+.vaultconnect-search-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.vaultconnect-search-empty {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.vaultconnect-search-result-item {
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  border: 1px solid var(--background-modifier-border);
+  transition: background-color 0.15s;
+}
+
+.vaultconnect-search-result-item:hover {
+  background-color: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+
+.vaultconnect-search-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.vaultconnect-search-result-name {
+  font-weight: 600;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.vaultconnect-search-result-score {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  flex-shrink: 0;
+}
+
+.vaultconnect-search-result-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vaultconnect-search-result-preview {
+  font-size: 13px;
+  color: var(--text-faint);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.vaultconnect-search-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* ========================================
    Mobile Responsive Fixes
    ======================================== */
 

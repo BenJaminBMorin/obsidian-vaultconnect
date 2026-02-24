@@ -67,7 +67,10 @@ export const API_ENDPOINTS = {
   
   // Conflicts
   CONFLICTS: (vaultId: string) => `/vaults/${vaultId}/conflicts`,
-  CONFLICT: (conflictId: string) => `/conflicts/${conflictId}`
+  CONFLICT: (conflictId: string) => `/conflicts/${conflictId}`,
+
+  // Search
+  SEMANTIC_SEARCH: '/search/semantic'
 };
 
 export const WS_EVENTS = {

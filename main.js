@@ -582,7 +582,9 @@ var init_constants = __esm({
       DELTA: (vaultId, filePath) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}/delta`,
       // Conflicts
       CONFLICTS: (vaultId) => `/vaults/${vaultId}/conflicts`,
-      CONFLICT: (conflictId) => `/conflicts/${conflictId}`
+      CONFLICT: (conflictId) => `/conflicts/${conflictId}`,
+      // Search
+      SEMANTIC_SEARCH: "/search/semantic"
     };
     WS_EVENTS = {
       // Connection
@@ -880,11 +882,11 @@ var SelectiveSyncModal_exports = {};
 __export(SelectiveSyncModal_exports, {
   SelectiveSyncModal: () => SelectiveSyncModal
 });
-var import_obsidian15, SelectiveSyncModal;
+var import_obsidian16, SelectiveSyncModal;
 var init_SelectiveSyncModal = __esm({
   "src/ui/SelectiveSyncModal.ts"() {
-    import_obsidian15 = require("obsidian");
-    SelectiveSyncModal = class extends import_obsidian15.Modal {
+    import_obsidian16 = require("obsidian");
+    SelectiveSyncModal = class extends import_obsidian16.Modal {
       constructor(app, selectiveSyncService, onSave) {
         super(app);
         this.previewStats = null;
@@ -906,11 +908,11 @@ var init_SelectiveSyncModal = __esm({
         this.createActionButtons(contentEl);
       }
       createExcludedFoldersSection(containerEl) {
-        new import_obsidian15.Setting(containerEl).setName("Excluded folders").setHeading();
+        new import_obsidian16.Setting(containerEl).setName("Excluded folders").setHeading();
         const config = this.selectiveSyncService.getConfig();
         const excludedList = containerEl.createDiv({ cls: "selective-sync-folder-list" });
         this.renderFolderList(excludedList, config.excludedFolders, "excluded");
-        new import_obsidian15.Setting(containerEl).setName("Add excluded folder").setDesc('Enter a folder path or pattern to exclude (e.g., "private" or "drafts/*")').addText((text) => {
+        new import_obsidian16.Setting(containerEl).setName("Add excluded folder").setDesc('Enter a folder path or pattern to exclude (e.g., "private" or "drafts/*")').addText((text) => {
           text.setPlaceholder("Enter folder path");
           text.inputEl.addEventListener("keypress", (e) => {
             if (e.key === "Enter") {
@@ -921,9 +923,9 @@ var init_SelectiveSyncModal = __esm({
                   this.selectiveSyncService.addExcludedFolder(value2);
                   text.setValue("");
                   this.refresh();
-                  new import_obsidian15.Notice(`Added excluded folder: ${value2}`);
+                  new import_obsidian16.Notice(`Added excluded folder: ${value2}`);
                 } else {
-                  new import_obsidian15.Notice(`Invalid pattern: ${validation.error}`, 5e3);
+                  new import_obsidian16.Notice(`Invalid pattern: ${validation.error}`, 5e3);
                 }
               }
             }
@@ -938,16 +940,16 @@ var init_SelectiveSyncModal = __esm({
                 this.selectiveSyncService.addExcludedFolder(value2);
                 input.value = "";
                 this.refresh();
-                new import_obsidian15.Notice(`Added excluded folder: ${value2}`);
+                new import_obsidian16.Notice(`Added excluded folder: ${value2}`);
               } else {
-                new import_obsidian15.Notice(`Invalid pattern: ${validation.error}`, 5e3);
+                new import_obsidian16.Notice(`Invalid pattern: ${validation.error}`, 5e3);
               }
             }
           });
         });
       }
       createIncludedFoldersSection(containerEl) {
-        new import_obsidian15.Setting(containerEl).setName("Included folders (optional)").setHeading();
+        new import_obsidian16.Setting(containerEl).setName("Included folders (optional)").setHeading();
         containerEl.createEl("p", {
           text: "If specified, only these folders will be synced (except those explicitly excluded). Leave empty to sync all folders except excluded ones.",
           cls: "setting-item-description"
@@ -955,7 +957,7 @@ var init_SelectiveSyncModal = __esm({
         const config = this.selectiveSyncService.getConfig();
         const includedList = containerEl.createDiv({ cls: "selective-sync-folder-list" });
         this.renderFolderList(includedList, config.includedFolders, "included");
-        new import_obsidian15.Setting(containerEl).setName("Add included folder").setDesc('Enter a folder path or pattern to include (e.g., "notes" or "docs/*")').addText((text) => {
+        new import_obsidian16.Setting(containerEl).setName("Add included folder").setDesc('Enter a folder path or pattern to include (e.g., "notes" or "docs/*")').addText((text) => {
           text.setPlaceholder("Enter folder path");
           text.inputEl.addEventListener("keypress", (e) => {
             if (e.key === "Enter") {
@@ -966,9 +968,9 @@ var init_SelectiveSyncModal = __esm({
                   this.selectiveSyncService.addIncludedFolder(value2);
                   text.setValue("");
                   this.refresh();
-                  new import_obsidian15.Notice(`Added included folder: ${value2}`);
+                  new import_obsidian16.Notice(`Added included folder: ${value2}`);
                 } else {
-                  new import_obsidian15.Notice(`Invalid pattern: ${validation.error}`, 5e3);
+                  new import_obsidian16.Notice(`Invalid pattern: ${validation.error}`, 5e3);
                 }
               }
             }
@@ -983,27 +985,27 @@ var init_SelectiveSyncModal = __esm({
                 this.selectiveSyncService.addIncludedFolder(value2);
                 input.value = "";
                 this.refresh();
-                new import_obsidian15.Notice(`Added included folder: ${value2}`);
+                new import_obsidian16.Notice(`Added included folder: ${value2}`);
               } else {
-                new import_obsidian15.Notice(`Invalid pattern: ${validation.error}`, 5e3);
+                new import_obsidian16.Notice(`Invalid pattern: ${validation.error}`, 5e3);
               }
             }
           });
         });
         if (config.includedFolders.length > 0) {
-          new import_obsidian15.Setting(containerEl).setName("Clear all included folders").setDesc("Remove all included folders (sync all except excluded)").addButton((button) => {
+          new import_obsidian16.Setting(containerEl).setName("Clear all included folders").setDesc("Remove all included folders (sync all except excluded)").addButton((button) => {
             button.setButtonText("Clear all").setWarning().onClick(() => {
               this.selectiveSyncService.clearIncludedFolders();
               this.refresh();
-              new import_obsidian15.Notice("Cleared all included folders");
+              new import_obsidian16.Notice("Cleared all included folders");
             });
           });
         }
       }
       createPreviewSection(containerEl) {
-        new import_obsidian15.Setting(containerEl).setName("Sync scope preview").setHeading();
+        new import_obsidian16.Setting(containerEl).setName("Sync scope preview").setHeading();
         const previewContainer = containerEl.createDiv({ cls: "selective-sync-preview" });
-        new import_obsidian15.Setting(previewContainer).setName("Calculate preview").setDesc("See how many files will be synced with current settings").addButton((button) => {
+        new import_obsidian16.Setting(previewContainer).setName("Calculate preview").setDesc("See how many files will be synced with current settings").addButton((button) => {
           button.setButtonText("Calculate").onClick(() => {
             const files = this.app.vault.getMarkdownFiles();
             this.previewStats = this.selectiveSyncService.getSyncScopePreview(files);
@@ -1041,7 +1043,7 @@ var init_SelectiveSyncModal = __esm({
         return (value2 / total * 100).toFixed(1);
       }
       createQuickTogglesSection(containerEl) {
-        new import_obsidian15.Setting(containerEl).setName("Quick toggles").setHeading();
+        new import_obsidian16.Setting(containerEl).setName("Quick toggles").setHeading();
         containerEl.createEl("p", {
           text: "Quickly add common folders to exclusions",
           cls: "setting-item-description"
@@ -1111,25 +1113,25 @@ var init_SelectiveSyncModal = __esm({
               this.selectiveSyncService.removeIncludedFolder(folder);
             }
             this.refresh();
-            new import_obsidian15.Notice(`Removed ${type} folder: ${folder}`);
+            new import_obsidian16.Notice(`Removed ${type} folder: ${folder}`);
           });
         }
       }
       createActionButtons(containerEl) {
         const buttonContainer = containerEl.createDiv({ cls: "modal-button-container" });
-        new import_obsidian15.Setting(buttonContainer).addButton((button) => {
+        new import_obsidian16.Setting(buttonContainer).addButton((button) => {
           button.setButtonText("Reset to defaults").setWarning().onClick(() => {
             this.selectiveSyncService.resetExcludedFolders();
             this.selectiveSyncService.clearIncludedFolders();
             this.refresh();
-            new import_obsidian15.Notice("Reset to default settings");
+            new import_obsidian16.Notice("Reset to default settings");
           });
         });
-        new import_obsidian15.Setting(buttonContainer).addButton((button) => {
+        new import_obsidian16.Setting(buttonContainer).addButton((button) => {
           button.setButtonText("Save & close").setCta().onClick(() => {
             this.onSave();
             this.close();
-            new import_obsidian15.Notice("Selective sync settings saved");
+            new import_obsidian16.Notice("Selective sync settings saved");
           });
         });
       }
@@ -1145,11 +1147,11 @@ var init_SelectiveSyncModal = __esm({
 });
 
 // src/ui/InitialSyncProgressModal.ts
-var import_obsidian17, InitialSyncProgressModal;
+var import_obsidian18, InitialSyncProgressModal;
 var init_InitialSyncProgressModal = __esm({
   "src/ui/InitialSyncProgressModal.ts"() {
-    import_obsidian17 = require("obsidian");
-    InitialSyncProgressModal = class extends import_obsidian17.Modal {
+    import_obsidian18 = require("obsidian");
+    InitialSyncProgressModal = class extends import_obsidian18.Modal {
       constructor(app, onCancel) {
         super(app);
         this.contentContainer = null;
@@ -1390,13 +1392,13 @@ var InitialSyncWizardModal_exports = {};
 __export(InitialSyncWizardModal_exports, {
   InitialSyncWizardModal: () => InitialSyncWizardModal
 });
-var import_obsidian18, InitialSyncWizardModal;
+var import_obsidian19, InitialSyncWizardModal;
 var init_InitialSyncWizardModal = __esm({
   "src/ui/InitialSyncWizardModal.ts"() {
-    import_obsidian18 = require("obsidian");
+    import_obsidian19 = require("obsidian");
     init_initial_sync_types();
     init_InitialSyncProgressModal();
-    InitialSyncWizardModal = class extends import_obsidian18.Modal {
+    InitialSyncWizardModal = class extends import_obsidian19.Modal {
       constructor(app, options, initialSyncService, eventBus) {
         super(app);
         this.progressModal = null;
@@ -1626,7 +1628,7 @@ var init_InitialSyncWizardModal = __esm({
        */
       async showConfirmation(option, fileCount) {
         return new Promise((resolve) => {
-          const modal = new import_obsidian18.Modal(this.app);
+          const modal = new import_obsidian19.Modal(this.app);
           modal.onOpen = () => {
             const { contentEl } = modal;
             contentEl.empty();
@@ -1780,7 +1782,7 @@ var init_InitialSyncWizardModal = __esm({
           unsubscribe();
           await this.options.onComplete("smart-merge" /* SMART_MERGE */);
           if (result.conflicts.length > 0) {
-            new import_obsidian18.Notice(`${result.conflicts.length} conflict${result.conflicts.length === 1 ? "" : "s"} created. Check your vault for files with "(conflict)" in the name.`);
+            new import_obsidian19.Notice(`${result.conflicts.length} conflict${result.conflicts.length === 1 ? "" : "s"} created. Check your vault for files with "(conflict)" in the name.`);
           }
         } catch (error) {
           console.error("[InitialSyncWizard] Smart merge failed:", error);
@@ -1790,10 +1792,10 @@ var init_InitialSyncWizardModal = __esm({
           const isCancelled = error.message && error.message.includes("cancelled");
           if (isCancelled) {
             (_b = this.progressModal) == null ? void 0 : _b.showError("Operation cancelled. Your vault may be in a partial state. You can restart the initial sync from settings.");
-            new import_obsidian18.Notice("Initial sync cancelled. You can restart from settings.");
+            new import_obsidian19.Notice("Initial sync cancelled. You can restart from settings.");
           } else {
             (_c = this.progressModal) == null ? void 0 : _c.showError(error.message || "Smart merge failed. You can retry from settings.");
-            new import_obsidian18.Notice(`Smart merge failed: ${error.message}`);
+            new import_obsidian19.Notice(`Smart merge failed: ${error.message}`);
           }
         }
       }
@@ -1850,10 +1852,10 @@ var init_InitialSyncWizardModal = __esm({
           const isCancelled = error.message && error.message.includes("cancelled");
           if (isCancelled) {
             (_b = this.progressModal) == null ? void 0 : _b.showError("Operation cancelled. Some files may have been deleted or downloaded. You can restart the initial sync from settings.");
-            new import_obsidian18.Notice("Initial sync cancelled. You can restart from settings.");
+            new import_obsidian19.Notice("Initial sync cancelled. You can restart from settings.");
           } else {
             (_c = this.progressModal) == null ? void 0 : _c.showError(error.message || "Start fresh failed. You can retry from settings.");
-            new import_obsidian18.Notice(`Start fresh failed: ${error.message}`);
+            new import_obsidian19.Notice(`Start fresh failed: ${error.message}`);
           }
         }
       }
@@ -1912,10 +1914,10 @@ var init_InitialSyncWizardModal = __esm({
           const isCancelled = error.message && error.message.includes("cancelled");
           if (isCancelled) {
             (_b = this.progressModal) == null ? void 0 : _b.showError("Operation cancelled. Some files may have been uploaded. You can restart the initial sync from settings.");
-            new import_obsidian18.Notice("Initial sync cancelled. You can restart from settings.");
+            new import_obsidian19.Notice("Initial sync cancelled. You can restart from settings.");
           } else {
             (_c = this.progressModal) == null ? void 0 : _c.showError(error.message || "Upload local failed. You can retry from settings.");
-            new import_obsidian18.Notice(`Upload local failed: ${error.message}`);
+            new import_obsidian19.Notice(`Upload local failed: ${error.message}`);
           }
         }
       }
@@ -1933,7 +1935,7 @@ __export(main_exports, {
   default: () => VaultSyncPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian19 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 
 // node_modules/engine.io-parser/build/esm/commons.js
 var PACKET_TYPES = /* @__PURE__ */ Object.create(null);
@@ -10201,8 +10203,203 @@ var ConflictListView = class extends import_obsidian9.ItemView {
   }
 };
 
-// src/api/APIClient.ts
+// src/ui/SearchModal.ts
 var import_obsidian10 = require("obsidian");
+var SearchModal = class extends import_obsidian10.Modal {
+  constructor(app, apiClient, vaultService, localVaultId) {
+    super(app);
+    this.results = [];
+    this.vaults = [];
+    this.selectedVaultFilter = "";
+    this.isSearching = false;
+    this.debounceTimer = null;
+    this.inputEl = null;
+    this.resultsContainer = null;
+    this.statusEl = null;
+    this.apiClient = apiClient;
+    this.vaultService = vaultService;
+    this.localVaultId = localVaultId;
+  }
+  async onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("vaultconnect-search-modal");
+    contentEl.createEl("h2", { text: "Search Vaults" });
+    const searchRow = contentEl.createDiv({ cls: "vaultconnect-search-input-row" });
+    this.inputEl = searchRow.createEl("input", {
+      type: "text",
+      placeholder: "Search across your vaults...",
+      cls: "vaultconnect-search-input"
+    });
+    this.inputEl.focus();
+    this.inputEl.addEventListener("input", () => {
+      this.onQueryChange(this.inputEl.value);
+    });
+    this.inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (this.debounceTimer)
+          clearTimeout(this.debounceTimer);
+        this.executeSearch(this.inputEl.value);
+      }
+    });
+    const filterRow = contentEl.createDiv({ cls: "vaultconnect-search-filters" });
+    const vaultSelect = filterRow.createEl("select", {
+      cls: "vaultconnect-search-vault-select"
+    });
+    vaultSelect.createEl("option", { text: "All Vaults", value: "" });
+    try {
+      this.vaults = await this.vaultService.fetchVaults(true);
+      for (const vault of this.vaults) {
+        vaultSelect.createEl("option", {
+          text: vault.name,
+          value: vault.vault_id
+        });
+      }
+    } catch (e) {
+    }
+    vaultSelect.addEventListener("change", () => {
+      var _a;
+      this.selectedVaultFilter = vaultSelect.value;
+      if ((_a = this.inputEl) == null ? void 0 : _a.value.trim()) {
+        this.executeSearch(this.inputEl.value);
+      }
+    });
+    this.statusEl = contentEl.createDiv({ cls: "vaultconnect-search-status" });
+    this.resultsContainer = contentEl.createDiv({ cls: "vaultconnect-search-results" });
+    const hintEl = contentEl.createDiv({ cls: "vaultconnect-search-hint" });
+    hintEl.textContent = "Press Enter to search. Results from your synced vaults.";
+  }
+  onQueryChange(value2) {
+    if (this.debounceTimer)
+      clearTimeout(this.debounceTimer);
+    if (!value2.trim()) {
+      this.clearResults();
+      return;
+    }
+    this.debounceTimer = setTimeout(() => {
+      this.executeSearch(value2);
+    }, 400);
+  }
+  async executeSearch(query) {
+    if (!query.trim())
+      return;
+    if (this.isSearching)
+      return;
+    this.isSearching = true;
+    this.updateStatus("Searching...");
+    this.renderLoading();
+    try {
+      const params = {
+        query: query.trim(),
+        limit: 20
+      };
+      if (this.selectedVaultFilter) {
+        params.vault_id = this.selectedVaultFilter;
+      }
+      const response = await this.apiClient.semanticSearch(params);
+      this.results = response.results || [];
+      const timeStr = response.executionTimeMs ? ` in ${response.executionTimeMs}ms` : "";
+      this.updateStatus(
+        `${this.results.length} result${this.results.length !== 1 ? "s" : ""}${timeStr}`
+      );
+      this.renderResults();
+    } catch (err) {
+      const message = (err == null ? void 0 : err.message) || "Search failed";
+      this.updateStatus(`Error: ${message}`);
+      logger.error("[SearchModal] Search failed:", err);
+      new import_obsidian10.Notice(`Search failed: ${message}`);
+      this.clearResults();
+    } finally {
+      this.isSearching = false;
+    }
+  }
+  updateStatus(text) {
+    if (this.statusEl) {
+      this.statusEl.textContent = text;
+    }
+  }
+  clearResults() {
+    this.results = [];
+    if (this.resultsContainer) {
+      this.resultsContainer.empty();
+    }
+    this.updateStatus("");
+  }
+  renderLoading() {
+    if (!this.resultsContainer)
+      return;
+    this.resultsContainer.empty();
+    const loadingEl = this.resultsContainer.createDiv({ cls: "vaultconnect-search-loading" });
+    const spinner = loadingEl.createDiv({ cls: "vaultsync-loading" });
+    loadingEl.createEl("span", { text: " Searching..." });
+  }
+  renderResults() {
+    if (!this.resultsContainer)
+      return;
+    this.resultsContainer.empty();
+    if (this.results.length === 0) {
+      const emptyEl = this.resultsContainer.createDiv({ cls: "vaultconnect-search-empty" });
+      emptyEl.textContent = "No results found. Try a different query.";
+      return;
+    }
+    for (const result of this.results) {
+      this.renderResultItem(result);
+    }
+  }
+  renderResultItem(result) {
+    if (!this.resultsContainer)
+      return;
+    const item = this.resultsContainer.createDiv({ cls: "vaultconnect-search-result-item" });
+    const header = item.createDiv({ cls: "vaultconnect-search-result-header" });
+    const fileName = result.path.split("/").pop() || result.path;
+    header.createEl("span", {
+      text: fileName,
+      cls: "vaultconnect-search-result-name"
+    });
+    const score = Math.round(result.similarity_score * 100);
+    header.createEl("span", {
+      text: `${score}%`,
+      cls: "vaultconnect-search-result-score"
+    });
+    const meta = item.createDiv({ cls: "vaultconnect-search-result-meta" });
+    const vault = this.vaults.find((v) => v.vault_id === result.vault_id);
+    const vaultName = vault ? vault.name : "Unknown vault";
+    meta.textContent = `${vaultName} / ${result.path}`;
+    if (result.content_preview) {
+      const preview = item.createDiv({ cls: "vaultconnect-search-result-preview" });
+      preview.textContent = result.content_preview.slice(0, 200);
+    }
+    item.addEventListener("click", () => {
+      this.openResult(result);
+    });
+  }
+  openResult(result) {
+    if (this.localVaultId && result.vault_id === this.localVaultId) {
+      const file = this.app.vault.getAbstractFileByPath(result.path);
+      if (file instanceof import_obsidian10.TFile) {
+        this.close();
+        this.app.workspace.getLeaf().openFile(file);
+        return;
+      }
+    }
+    new import_obsidian10.Notice(`File: ${result.path} (in vault "${this.getVaultName(result.vault_id)}")`);
+    this.close();
+  }
+  getVaultName(vaultId) {
+    const vault = this.vaults.find((v) => v.vault_id === vaultId);
+    return vault ? vault.name : vaultId;
+  }
+  onClose() {
+    if (this.debounceTimer)
+      clearTimeout(this.debounceTimer);
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+
+// src/api/APIClient.ts
+var import_obsidian11 = require("obsidian");
 init_constants();
 var APIClient = class {
   constructor(authService, baseURL) {
@@ -10238,7 +10435,7 @@ var APIClient = class {
       body: options.body,
       throw: false
     };
-    const response = await (0, import_obsidian10.requestUrl)(requestParams);
+    const response = await (0, import_obsidian11.requestUrl)(requestParams);
     logger.http(method, endpoint, response.status);
     if (response.status >= 400) {
       const errorData = response.json || {};
@@ -10474,7 +10671,7 @@ var APIClient = class {
         throw new Error("Not authenticated");
       }
       const url2 = `${this.baseURL}${API_ENDPOINTS.FILE_CONTENT(vaultId, filePath)}`;
-      const response = await (0, import_obsidian10.requestUrl)({
+      const response = await (0, import_obsidian11.requestUrl)({
         url: url2,
         method: "HEAD",
         headers: {
@@ -10531,7 +10728,7 @@ Content-Type: application/octet-stream\r
     body.set(headerBytes, 0);
     body.set(chunkData, headerBytes.length);
     body.set(footerBytes, headerBytes.length + chunkData.length);
-    const response = await (0, import_obsidian10.requestUrl)({
+    const response = await (0, import_obsidian11.requestUrl)({
       url: url2,
       method: "POST",
       headers: {
@@ -10672,13 +10869,26 @@ Content-Type: application/octet-stream\r
       body: JSON.stringify(data)
     });
   }
+  // Search
+  /**
+   * Semantic search across vaults
+   */
+  async semanticSearch(params) {
+    return this.request(
+      API_ENDPOINTS.SEMANTIC_SEARCH,
+      {
+        method: "POST",
+        body: JSON.stringify(params)
+      }
+    );
+  }
   // Health Check
   /**
    * Check API health
    */
   async healthCheck() {
     try {
-      const response = await (0, import_obsidian10.requestUrl)({
+      const response = await (0, import_obsidian11.requestUrl)({
         url: `${this.baseURL}/health`,
         method: "GET",
         throw: false
@@ -10695,7 +10905,7 @@ init_EventBus();
 init_StorageManager();
 
 // src/services/InitialSyncService.ts
-var import_obsidian11 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 init_initial_sync_types();
 var InitialSyncService = class {
   constructor(app, apiClient, fileSync, storage, eventBus, settings) {
@@ -11150,7 +11360,7 @@ var InitialSyncService = class {
             percentage: Math.round(completed / totalOperations * 100)
           });
           const file = this.vault.getAbstractFileByPath(filePath);
-          if (file && file instanceof import_obsidian11.TFile) {
+          if (file && file instanceof import_obsidian12.TFile) {
             await this.app.fileManager.trashFile(file);
             deleted++;
             logger.debug("[InitialSync] Deleted:", filePath);
@@ -11298,7 +11508,7 @@ var InitialSyncService = class {
               percentage: Math.round(completed / totalOperations * 100)
             });
             const file = this.vault.getAbstractFileByPath(filePath);
-            if (file instanceof import_obsidian11.TFile) {
+            if (file instanceof import_obsidian12.TFile) {
               const isLocalOnly = analysis.localFiles.includes(filePath);
               await this.retryWithBackoff(
                 async () => {
@@ -11423,7 +11633,7 @@ var InitialSyncService = class {
               percentage: Math.round(completed / totalOperations * 100)
             });
             const file = this.vault.getAbstractFileByPath(filePath);
-            if (file instanceof import_obsidian11.TFile) {
+            if (file instanceof import_obsidian12.TFile) {
               await this.retryWithBackoff(
                 async () => {
                   const uploadResult = await this.fileSync.uploadFile(file, true, true);
@@ -11526,7 +11736,7 @@ var InitialSyncService = class {
             percentage: Math.round(completed / totalOperations * 100)
           });
           const localFile = this.vault.getAbstractFileByPath(filePath);
-          if (!(localFile instanceof import_obsidian11.TFile)) {
+          if (!(localFile instanceof import_obsidian12.TFile)) {
             logger.debug("[InitialSync] Skipping non-file:", filePath);
             completed++;
             continue;
@@ -12041,7 +12251,7 @@ var VaultService = class {
 };
 
 // src/services/AuthService.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 init_EventBus();
 var AuthService = class {
   constructor(plugin, eventBus) {
@@ -12206,7 +12416,7 @@ var AuthService = class {
    */
   async requestDeviceCode(apiBaseUrl) {
     var _a;
-    const response = await (0, import_obsidian12.requestUrl)({
+    const response = await (0, import_obsidian13.requestUrl)({
       url: `${apiBaseUrl}/auth/device/code`,
       method: "POST",
       headers: {
@@ -12229,7 +12439,7 @@ var AuthService = class {
    */
   async pollForToken(apiBaseUrl, deviceCode) {
     var _a, _b;
-    const response = await (0, import_obsidian12.requestUrl)({
+    const response = await (0, import_obsidian13.requestUrl)({
       url: `${apiBaseUrl}/auth/device/token`,
       method: "POST",
       headers: {
@@ -12309,11 +12519,11 @@ var AuthService = class {
 init_constants();
 
 // src/ui/SettingsTab.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 
 // src/ui/DeviceAuthModal.ts
-var import_obsidian13 = require("obsidian");
-var DeviceAuthModal = class extends import_obsidian13.Modal {
+var import_obsidian14 = require("obsidian");
+var DeviceAuthModal = class extends import_obsidian14.Modal {
   constructor(app, authService, apiBaseUrl, onSuccess, onCancel) {
     super(app);
     this.userCode = "";
@@ -12352,7 +12562,7 @@ var DeviceAuthModal = class extends import_obsidian13.Modal {
           window.open(verificationUri, "_blank");
         }
       );
-      new import_obsidian13.Notice("Successfully authorized!");
+      new import_obsidian14.Notice("Successfully authorized!");
       this.close();
       this.onSuccess();
     } catch (error) {
@@ -12385,7 +12595,7 @@ var DeviceAuthModal = class extends import_obsidian13.Modal {
     });
     copyButton.addEventListener("click", () => {
       void navigator.clipboard.writeText(this.userCode);
-      new import_obsidian13.Notice("Code copied to clipboard!");
+      new import_obsidian14.Notice("Code copied to clipboard!");
       copyButton.textContent = "\u2713 copied";
       setTimeout(() => {
         copyButton.textContent = "\u{1F4CB} copy code";
@@ -12462,7 +12672,7 @@ var DeviceAuthModal = class extends import_obsidian13.Modal {
 init_types();
 
 // src/services/ServerDiscoveryService.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 var ServerDiscoveryService = class {
   constructor() {
     this.TIMEOUT_MS = 5e3;
@@ -12514,7 +12724,7 @@ Please check the URL and ensure the server is running.`
   async tryUrl(baseUrl) {
     var _a, _b;
     try {
-      const response = await (0, import_obsidian14.requestUrl)({
+      const response = await (0, import_obsidian15.requestUrl)({
         url: `${baseUrl}${this.CONFIG_PATH}`,
         method: "GET",
         headers: { "Accept": "application/json" },
@@ -12551,7 +12761,7 @@ Please check the URL and ensure the server is running.`
 };
 
 // src/ui/SettingsTab.ts
-var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
+var VaultSyncSettingTab = class extends import_obsidian17.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.cachedServerConfig = null;
@@ -12597,9 +12807,9 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   // ===========================================================================
   displayServerStage(containerEl) {
     this.displayStepIndicator(containerEl, 1);
-    new import_obsidian16.Setting(containerEl).setName("Welcome to VaultConnect").setDesc("Enter your VaultConnect server URL to get started.").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Welcome to VaultConnect").setDesc("Enter your VaultConnect server URL to get started.").setHeading();
     let serverUrlInput;
-    const urlSetting = new import_obsidian16.Setting(containerEl).setName("Server URL").setDesc("Your VaultConnect web or API URL").addText((text) => {
+    const urlSetting = new import_obsidian17.Setting(containerEl).setName("Server URL").setDesc("Your VaultConnect web or API URL").addText((text) => {
       serverUrlInput = text;
       text.setPlaceholder("https://app.vaultsync.morinclan.com").setValue(this.plugin.settings.serverUrl || "");
       text.inputEl.addEventListener("keydown", (e) => {
@@ -12620,10 +12830,10 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   }
   async handleServerConnect(url2, containerEl) {
     if (!url2.trim()) {
-      new import_obsidian16.Notice("Please enter a server URL");
+      new import_obsidian17.Notice("Please enter a server URL");
       return;
     }
-    new import_obsidian16.Notice("Discovering server configuration...");
+    new import_obsidian17.Notice("Discovering server configuration...");
     try {
       const config = await this.discoveryService.discover(url2);
       this.cachedServerConfig = config;
@@ -12636,10 +12846,10 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       if (this.plugin.apiClient) {
         this.plugin.apiClient.setBaseURL(config.apiUrl);
       }
-      new import_obsidian16.Notice(`Connected to VaultConnect ${config.version}`);
+      new import_obsidian17.Notice(`Connected to VaultConnect ${config.version}`);
       setTimeout(() => this.display(), 500);
     } catch (error) {
-      new import_obsidian16.Notice(error.message || "Failed to discover server");
+      new import_obsidian17.Notice(error.message || "Failed to discover server");
       this.displayManualFallback(containerEl);
     }
   }
@@ -12652,20 +12862,20 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     const content = details.createDiv({ cls: "vaultconnect-manual-fields" });
     let apiUrlText;
     let wsUrlText;
-    new import_obsidian16.Setting(content).setName("API URL").setDesc("Direct API server URL").addText((text) => {
+    new import_obsidian17.Setting(content).setName("API URL").setDesc("Direct API server URL").addText((text) => {
       apiUrlText = text;
       text.setPlaceholder("https://api.vaultsync.morinclan.com/v1").setValue(this.plugin.settings.apiBaseURL || "");
     });
-    new import_obsidian16.Setting(content).setName("WebSocket URL").setDesc("WebSocket server URL").addText((text) => {
+    new import_obsidian17.Setting(content).setName("WebSocket URL").setDesc("WebSocket server URL").addText((text) => {
       wsUrlText = text;
       text.setPlaceholder("https://api.vaultsync.morinclan.com").setValue(this.plugin.settings.wsBaseURL || "");
     });
-    new import_obsidian16.Setting(content).addButton((button) => {
+    new import_obsidian17.Setting(content).addButton((button) => {
       button.setButtonText("Save & continue").setCta().onClick(() => {
         const apiUrl = apiUrlText.getValue().trim();
         const wsUrl = wsUrlText.getValue().trim();
         if (!apiUrl) {
-          new import_obsidian16.Notice("API URL is required");
+          new import_obsidian17.Notice("API URL is required");
           return;
         }
         this.plugin.settings.apiBaseURL = apiUrl;
@@ -12689,10 +12899,10 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   displayAuthStage(containerEl) {
     var _a, _b;
     this.displayStepIndicator(containerEl, 2);
-    new import_obsidian16.Setting(containerEl).setName("Sign in").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Sign in").setHeading();
     const serverLabel = this.plugin.settings.serverUrl || this.plugin.settings.apiBaseURL;
     const versionText = ((_a = this.cachedServerConfig) == null ? void 0 : _a.version) ? ` (v${this.cachedServerConfig.version})` : "";
-    new import_obsidian16.Setting(containerEl).setName("Server").setDesc(serverLabel + versionText).addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Server").setDesc(serverLabel + versionText).addButton((button) => {
       button.setButtonText("Change").onClick(() => {
         this.plugin.settings.apiBaseURL = "";
         this.plugin.settings.apiUrl = "";
@@ -12705,10 +12915,10 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       });
     });
     const authDesc = ((_b = this.cachedServerConfig) == null ? void 0 : _b.googleOAuthEnabled) ? "Sign in via your browser. Google sign-in is available." : "Sign in via your browser to connect your account.";
-    new import_obsidian16.Setting(containerEl).setName("Authentication").setDesc(authDesc).addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Authentication").setDesc(authDesc).addButton((button) => {
       button.setButtonText("Sign in with browser").setCta().onClick(() => {
         if (!this.plugin.authService) {
-          new import_obsidian16.Notice("Auth service not available");
+          new import_obsidian17.Notice("Auth service not available");
           return;
         }
         new DeviceAuthModal(
@@ -12735,8 +12945,8 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   // ===========================================================================
   displayVaultStage(containerEl) {
     this.displayStepIndicator(containerEl, 3);
-    new import_obsidian16.Setting(containerEl).setName("Select a vault").setDesc("Choose which vault to sync with this Obsidian vault.").setHeading();
-    new import_obsidian16.Setting(containerEl).setName("Signed in").addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Select a vault").setDesc("Choose which vault to sync with this Obsidian vault.").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Signed in").addButton((button) => {
       button.setButtonText("Sign out").setWarning().onClick(() => {
         if (this.plugin.authService) {
           void this.plugin.authService.clearApiKey().then(() => {
@@ -12754,31 +12964,31 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     try {
       const vaults = await ((_a = this.plugin.apiClient) == null ? void 0 : _a.listVaults());
       if (!vaults || vaults.length === 0) {
-        new import_obsidian16.Setting(containerEl).setName("No vaults found").setDesc("Create a vault in the VaultConnect web UI first.");
+        new import_obsidian17.Setting(containerEl).setName("No vaults found").setDesc("Create a vault in the VaultConnect web UI first.");
         return;
       }
       for (const vault of vaults) {
         const desc = `${vault.file_count || 0} files${vault.is_cross_tenant ? " (Shared)" : ""}`;
-        new import_obsidian16.Setting(containerEl).setName(vault.name).setDesc(desc).addButton((button) => {
+        new import_obsidian17.Setting(containerEl).setName(vault.name).setDesc(desc).addButton((button) => {
           button.setButtonText("Select").setCta().onClick(() => {
             void this.selectVaultAndFinish(vault);
           });
         });
       }
-      new import_obsidian16.Setting(containerEl).addButton((button) => {
+      new import_obsidian17.Setting(containerEl).addButton((button) => {
         button.setButtonText("Refresh list").onClick(() => {
           this.display();
         });
       });
     } catch (error) {
-      new import_obsidian16.Setting(containerEl).setName("Error").setDesc(`Failed to load vaults: ${error.message}`);
+      new import_obsidian17.Setting(containerEl).setName("Error").setDesc(`Failed to load vaults: ${error.message}`);
     }
   }
   async selectVaultAndFinish(vault) {
     this.plugin.settings.selectedVaultId = vault.vault_id;
     this.plugin.settings.vaultId = vault.vault_id;
     await this.plugin.saveSettings();
-    new import_obsidian16.Notice(`Vault "${vault.name}" selected! Connecting...`);
+    new import_obsidian17.Notice(`Vault "${vault.name}" selected! Connecting...`);
     try {
       await this.plugin.connect();
     } catch (error) {
@@ -12801,13 +13011,13 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   }
   displayConnectionHeader(containerEl) {
     var _a, _b;
-    new import_obsidian16.Setting(containerEl).setName("VaultConnect").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("VaultConnect").setHeading();
     const authState = (_a = this.plugin.authService) == null ? void 0 : _a.getAuthState();
     const isAuthed = (_b = authState == null ? void 0 : authState.isAuthenticated) != null ? _b : false;
     const vaultId = this.plugin.settings.selectedVaultId || this.plugin.settings.vaultId;
     const statusDesc = isAuthed ? "Signed in" : "Not signed in";
     const vaultName = vaultId ? vaultId.substring(0, 8) + "..." : "None";
-    new import_obsidian16.Setting(containerEl).setName("Status").setDesc(`${statusDesc} | Vault: ${vaultName}`).addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Status").setDesc(`${statusDesc} | Vault: ${vaultName}`).addButton((button) => {
       if (isAuthed) {
         button.setButtonText("Sign out").setWarning().onClick(async () => {
           if (this.plugin.authService) {
@@ -12818,7 +13028,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
             this.plugin.settings.apiKey = null;
             this.plugin.settings.apiKeyExpires = null;
             await this.plugin.saveSettings();
-            new import_obsidian16.Notice("Signed out");
+            new import_obsidian17.Notice("Signed out");
             this.display();
           }
         });
@@ -12846,7 +13056,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       }
     });
     if (isAuthed && vaultId) {
-      new import_obsidian16.Setting(containerEl).setName("Connection").setDesc(this.plugin.isConnected ? "Connected to server" : "Not connected").addButton((button) => {
+      new import_obsidian17.Setting(containerEl).setName("Connection").setDesc(this.plugin.isConnected ? "Connected to server" : "Not connected").addButton((button) => {
         if (this.plugin.isConnected) {
           button.setButtonText("Disconnect").onClick(() => {
             this.plugin.disconnect();
@@ -12862,12 +13072,12 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     }
     if (isAuthed && (authState == null ? void 0 : authState.apiKey)) {
       const maskedKey = authState.apiKey.substring(0, 12) + "****" + authState.apiKey.substring(authState.apiKey.length - 4);
-      new import_obsidian16.Setting(containerEl).setName("API key").setDesc(maskedKey);
+      new import_obsidian17.Setting(containerEl).setName("API key").setDesc(maskedKey);
       if (authState.expiresAt && this.plugin.authService) {
         const daysUntilExpiration = this.plugin.authService.getDaysUntilExpiration();
         const expirationText = daysUntilExpiration !== null ? `Expires in ${daysUntilExpiration} days` : "Expired";
         const isExpiringSoon = this.plugin.authService.isTokenExpiringSoon();
-        new import_obsidian16.Setting(containerEl).setName("Expiration").setDesc(expirationText).then((setting) => {
+        new import_obsidian17.Setting(containerEl).setName("Expiration").setDesc(expirationText).then((setting) => {
           if (isExpiringSoon) {
             setting.descEl.addClass("vaultconnect-text-error");
           }
@@ -12878,9 +13088,9 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   }
   displayVaultSelector(containerEl) {
     var _a;
-    new import_obsidian16.Setting(containerEl).setName("Vault selection").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Vault selection").setHeading();
     let dropdownComponent = null;
-    new import_obsidian16.Setting(containerEl).setName("Vault").setDesc("Select the vault to sync with").addDropdown((dropdown) => {
+    new import_obsidian17.Setting(containerEl).setName("Vault").setDesc("Select the vault to sync with").addDropdown((dropdown) => {
       dropdownComponent = dropdown;
       dropdown.addOption("", "Loading...");
       dropdown.setDisabled(true);
@@ -12889,7 +13099,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
           this.plugin.settings.selectedVaultId = value2;
           this.plugin.settings.vaultId = value2;
           await this.plugin.saveSettings();
-          new import_obsidian16.Notice("Vault selected. Disconnect and reconnect to sync with this vault.");
+          new import_obsidian17.Notice("Vault selected. Disconnect and reconnect to sync with this vault.");
         }
       });
     }).addButton((button) => {
@@ -12943,10 +13153,10 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       const vault = this.plugin.vaultService.getCurrentVault();
       if (vault == null ? void 0 : vault.is_cross_tenant) {
         const permissionLabel = vault.permission === "read" ? "Read-only" : vault.permission === "write" ? "Read-write" : "Admin";
-        new import_obsidian16.Setting(containerEl).setName("Shared vault").setDesc(`Cross-tenant vault (${permissionLabel})`);
+        new import_obsidian17.Setting(containerEl).setName("Shared vault").setDesc(`Cross-tenant vault (${permissionLabel})`);
       }
     }
-    new import_obsidian16.Setting(containerEl).setName("Device ID").setDesc("Unique identifier for this device").addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Device ID").setDesc("Unique identifier for this device").addText((text) => {
       text.setValue(this.plugin.settings.deviceId);
       text.setDisabled(true);
     });
@@ -12968,12 +13178,12 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   // Sync action buttons
   // ===========================================================================
   displaySyncActions(containerEl) {
-    new import_obsidian16.Setting(containerEl).setName("Sync actions").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Sync actions").setHeading();
     const isConnected = this.plugin.isConnected;
     if (!isConnected) {
-      new import_obsidian16.Setting(containerEl).setDesc("Connect to the server first to use sync actions.");
+      new import_obsidian17.Setting(containerEl).setDesc("Connect to the server first to use sync actions.");
     }
-    new import_obsidian16.Setting(containerEl).setName("Push all").setDesc("Upload all local files to the server").addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Push all").setDesc("Upload all local files to the server").addButton((button) => {
       button.setButtonText("Push all").setCta().setDisabled(!isConnected).onClick(async () => {
         button.setButtonText("Pushing...");
         button.setDisabled(true);
@@ -12985,7 +13195,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
         }
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Pull all").setDesc("Download all remote files to this device").addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Pull all").setDesc("Download all remote files to this device").addButton((button) => {
       button.setButtonText("Pull all").setDisabled(!isConnected).onClick(async () => {
         button.setButtonText("Pulling...");
         button.setDisabled(true);
@@ -12997,7 +13207,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
         }
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Force sync").setDesc("Compare all files and sync differences").addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Force sync").setDesc("Compare all files and sync differences").addButton((button) => {
       button.setButtonText("Force sync").setDisabled(!isConnected).onClick(async () => {
         button.setButtonText("Syncing...");
         button.setDisabled(true);
@@ -13013,23 +13223,23 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   // Full settings sections (shown in COMPLETE stage)
   // ===========================================================================
   displaySyncSection(containerEl) {
-    new import_obsidian16.Setting(containerEl).setName("Sync").setHeading();
-    new import_obsidian16.Setting(containerEl).setName("Sync mode").setDesc(this.getSyncModeDescription(this.plugin.settings.syncMode)).addDropdown((dropdown) => {
+    new import_obsidian17.Setting(containerEl).setName("Sync").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Sync mode").setDesc(this.getSyncModeDescription(this.plugin.settings.syncMode)).addDropdown((dropdown) => {
       dropdown.addOption("smart_sync" /* SMART_SYNC */, "Smart sync (recommended)").addOption("pull_all" /* PULL_ALL */, "Pull all").addOption("push_all" /* PUSH_ALL */, "Push all").addOption("manual" /* MANUAL */, "Manual").setValue(this.plugin.settings.syncMode).onChange(async (value2) => {
         this.plugin.settings.syncMode = value2;
         await this.plugin.saveSettings();
-        new import_obsidian16.Notice(`Sync mode changed to ${this.getSyncModeLabel(value2)}`);
+        new import_obsidian17.Notice(`Sync mode changed to ${this.getSyncModeLabel(value2)}`);
         this.display();
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Auto sync").setDesc("Automatically sync file changes as you work").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Auto sync").setDesc("Automatically sync file changes as you work").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.autoSync).onChange(async (value2) => {
         this.plugin.settings.autoSync = value2;
         await this.plugin.saveSettings();
-        new import_obsidian16.Notice(`Auto sync ${value2 ? "enabled" : "disabled"}`);
+        new import_obsidian17.Notice(`Auto sync ${value2 ? "enabled" : "disabled"}`);
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Sync interval").setDesc("How often to check for changes (10-300 seconds)").addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Sync interval").setDesc("How often to check for changes (10-300 seconds)").addText((text) => {
       this.addNumberValidation(
         text,
         this.plugin.settings.syncInterval,
@@ -13065,9 +13275,9 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     return labels[mode];
   }
   displaySelectiveSyncSection(containerEl) {
-    new import_obsidian16.Setting(containerEl).setName("Selective sync").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Selective sync").setHeading();
     const scopeSummary = this.getSyncScopeSummary();
-    new import_obsidian16.Setting(containerEl).setName("Sync scope").setDesc(scopeSummary).addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Sync scope").setDesc(scopeSummary).addButton((button) => {
       button.setButtonText("Configure").onClick(() => {
         this.openSelectiveSyncModal();
       });
@@ -13075,7 +13285,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     const excludedFolders = this.plugin.settings.excludedFolders;
     const excludedDisplay = excludedFolders.length > 0 ? excludedFolders.slice(0, 3).join(", ") + (excludedFolders.length > 3 ? "..." : "") : "None";
     const configDir = this.app.vault.configDir;
-    new import_obsidian16.Setting(containerEl).setName("Excluded folders").setDesc(excludedDisplay).addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Excluded folders").setDesc(excludedDisplay).addText((text) => {
       text.setPlaceholder(`${configDir}, .trash, private/`).setValue(this.plugin.settings.excludedFolders.join(", ")).onChange(async (value2) => {
         this.plugin.settings.excludedFolders = value2.split(",").map((f) => f.trim()).filter((f) => f.length > 0);
         await this.plugin.saveSettings();
@@ -13087,7 +13297,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     });
     const includedFolders = this.plugin.settings.includedFolders;
     const includedDisplay = includedFolders.length > 0 ? includedFolders.slice(0, 3).join(", ") + (includedFolders.length > 3 ? "..." : "") : "All (except excluded)";
-    new import_obsidian16.Setting(containerEl).setName("Included folders").setDesc(includedDisplay).addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Included folders").setDesc(includedDisplay).addText((text) => {
       text.setPlaceholder("notes/, docs/").setValue(this.plugin.settings.includedFolders.join(", ")).onChange(async (value2) => {
         this.plugin.settings.includedFolders = value2.split(",").map((f) => f.trim()).filter((f) => f.length > 0);
         await this.plugin.saveSettings();
@@ -13160,26 +13370,26 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     });
   }
   displayCollaborationSection(containerEl) {
-    new import_obsidian16.Setting(containerEl).setName("Collaboration").setHeading();
-    new import_obsidian16.Setting(containerEl).setName("Enable collaboration").setDesc("Enable real-time collaborative editing").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Collaboration").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Enable collaboration").setDesc("Enable real-time collaborative editing").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.collaborationEnabled).onChange(async (value2) => {
         this.plugin.settings.collaborationEnabled = value2;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Show presence").setDesc("Show active users and their current files").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Show presence").setDesc("Show active users and their current files").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.showPresence).onChange(async (value2) => {
         this.plugin.settings.showPresence = value2;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Show cursors").setDesc("Show cursor positions of other users").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Show cursors").setDesc("Show cursor positions of other users").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.showCursors).onChange(async (value2) => {
         this.plugin.settings.showCursors = value2;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Show typing indicators").setDesc("Show when other users are typing").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Show typing indicators").setDesc("Show when other users are typing").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.showTypingIndicators).onChange(async (value2) => {
         this.plugin.settings.showTypingIndicators = value2;
         await this.plugin.saveSettings();
@@ -13187,20 +13397,20 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     });
   }
   displayNotificationSection(containerEl) {
-    new import_obsidian16.Setting(containerEl).setName("Notifications").setHeading();
-    new import_obsidian16.Setting(containerEl).setName("Sync notifications").setDesc("Show notifications when files are synced").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Notifications").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Sync notifications").setDesc("Show notifications when files are synced").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.notifyOnSync).onChange(async (value2) => {
         this.plugin.settings.notifyOnSync = value2;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Conflict notifications").setDesc("Show notifications when conflicts are detected").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Conflict notifications").setDesc("Show notifications when conflicts are detected").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.notifyOnConflict).onChange(async (value2) => {
         this.plugin.settings.notifyOnConflict = value2;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Collaborator notifications").setDesc("Show notifications when collaborators join or leave").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Collaborator notifications").setDesc("Show notifications when collaborators join or leave").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.notifyOnCollaboratorJoin).onChange(async (value2) => {
         this.plugin.settings.notifyOnCollaboratorJoin = value2;
         await this.plugin.saveSettings();
@@ -13208,8 +13418,8 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     });
   }
   displayPerformanceSection(containerEl) {
-    new import_obsidian16.Setting(containerEl).setName("Performance").setHeading();
-    new import_obsidian16.Setting(containerEl).setName("Max concurrent uploads").setDesc("Maximum number of files to upload simultaneously (1-10)").addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Performance").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Max concurrent uploads").setDesc("Maximum number of files to upload simultaneously (1-10)").addText((text) => {
       this.addNumberValidation(
         text,
         this.plugin.settings.maxConcurrentUploads,
@@ -13225,7 +13435,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       );
       text.inputEl.type = "number";
     });
-    new import_obsidian16.Setting(containerEl).setName("Chunk size").setDesc("File chunk size in megabytes for large uploads (1 to 10)").addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Chunk size").setDesc("File chunk size in megabytes for large uploads (1 to 10)").addText((text) => {
       const chunkSizeMB = Math.round(this.plugin.settings.chunkSize / 1048576);
       this.addNumberValidation(
         text,
@@ -13242,27 +13452,27 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       );
       text.inputEl.type = "number";
     });
-    new import_obsidian16.Setting(containerEl).setName("Enable caching").setDesc("Cache vault metadata and file lists for better performance").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Enable caching").setDesc("Cache vault metadata and file lists for better performance").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.cacheEnabled).onChange(async (value2) => {
         this.plugin.settings.cacheEnabled = value2;
         await this.plugin.saveSettings();
         const pluginExt = this.plugin;
         if (!value2 && pluginExt.cacheService) {
           pluginExt.cacheService.clearAll();
-          new import_obsidian16.Notice("Cache cleared");
+          new import_obsidian17.Notice("Cache cleared");
         }
       });
     });
   }
   displayAdvancedSection(containerEl) {
-    new import_obsidian16.Setting(containerEl).setName("Advanced").setDesc("Changing these settings may affect plugin functionality.").setHeading();
-    new import_obsidian16.Setting(containerEl).setName("Server URL").setDesc("The URL you entered during setup").addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Advanced").setDesc("Changing these settings may affect plugin functionality.").setHeading();
+    new import_obsidian17.Setting(containerEl).setName("Server URL").setDesc("The URL you entered during setup").addText((text) => {
       text.setPlaceholder("https://app.vaultsync.morinclan.com").setValue(this.plugin.settings.serverUrl || "").onChange(async (value2) => {
         this.plugin.settings.serverUrl = value2.trim();
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("API base URL").setDesc("API server URL (requires reconnection)").addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("API base URL").setDesc("API server URL (requires reconnection)").addText((text) => {
       this.addUrlValidation(
         text,
         this.plugin.settings.apiBaseURL,
@@ -13270,12 +13480,12 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
           this.plugin.settings.apiBaseURL = value2.trim();
           this.plugin.settings.apiUrl = value2.trim();
           await this.plugin.saveSettings();
-          new import_obsidian16.Notice("API URL updated. Please reconnect to apply changes.");
+          new import_obsidian17.Notice("API URL updated. Please reconnect to apply changes.");
           return true;
         }
       );
     });
-    new import_obsidian16.Setting(containerEl).setName("Websocket base URL").setDesc("Websocket server URL (requires reconnection)").addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Websocket base URL").setDesc("Websocket server URL (requires reconnection)").addText((text) => {
       this.addUrlValidation(
         text,
         this.plugin.settings.wsBaseURL,
@@ -13283,30 +13493,30 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
           this.plugin.settings.wsBaseURL = value2.trim();
           this.plugin.settings.wsUrl = value2.trim();
           await this.plugin.saveSettings();
-          new import_obsidian16.Notice("Websocket URL updated. Please reconnect to apply changes.");
+          new import_obsidian17.Notice("Websocket URL updated. Please reconnect to apply changes.");
           return true;
         }
       );
     });
-    new import_obsidian16.Setting(containerEl).setName("Device ID").setDesc("Unique identifier for this device (read-only)").addText((text) => {
+    new import_obsidian17.Setting(containerEl).setName("Device ID").setDesc("Unique identifier for this device (read-only)").addText((text) => {
       text.setValue(this.plugin.settings.deviceId);
       text.setDisabled(true);
     });
     this.displayInitialSyncReset(containerEl);
-    new import_obsidian16.Setting(containerEl).setName("Debug mode").setDesc("Enable verbose logging for troubleshooting (check console)").addToggle((toggle) => {
+    new import_obsidian17.Setting(containerEl).setName("Debug mode").setDesc("Enable verbose logging for troubleshooting (check console)").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.debugMode).onChange(async (value2) => {
         this.plugin.settings.debugMode = value2;
         await this.plugin.saveSettings();
-        new import_obsidian16.Notice(`Debug mode ${value2 ? "enabled" : "disabled"}`);
+        new import_obsidian17.Notice(`Debug mode ${value2 ? "enabled" : "disabled"}`);
       });
     });
-    new import_obsidian16.Setting(containerEl).setName("Export settings").setDesc("Save current settings to a file").addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Export settings").setDesc("Save current settings to a file").addButton((button) => {
       button.setButtonText("Export").onClick(() => void this.exportSettings());
     });
-    new import_obsidian16.Setting(containerEl).setName("Import settings").setDesc("Load settings from a file").addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Import settings").setDesc("Load settings from a file").addButton((button) => {
       button.setButtonText("Import").onClick(() => void this.importSettings());
     });
-    new import_obsidian16.Setting(containerEl).setName("Reset to defaults").setDesc("Reset all settings (preserves auth and server URL)").addButton((button) => {
+    new import_obsidian17.Setting(containerEl).setName("Reset to defaults").setDesc("Reset all settings (preserves auth and server URL)").addButton((button) => {
       button.setButtonText("Reset").setWarning().onClick(() => void this.resetSettings());
     });
   }
@@ -13333,14 +13543,14 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       } else {
         description = "No initial sync completed yet. Reset will clear any partial sync state.";
       }
-      new import_obsidian16.Setting(containerEl).setName("Reset initial sync").setDesc(description).addButton((button) => {
+      new import_obsidian17.Setting(containerEl).setName("Reset initial sync").setDesc(description).addButton((button) => {
         button.setButtonText("Reset").setWarning().onClick(async () => {
           await this.resetInitialSyncState(vaultId, initialSyncService);
         });
       });
     }).catch((error) => {
       console.error("Failed to get sync state:", error);
-      new import_obsidian16.Setting(containerEl).setName("Reset initial sync").setDesc("Reset initial sync state for troubleshooting").addButton((button) => {
+      new import_obsidian17.Setting(containerEl).setName("Reset initial sync").setDesc("Reset initial sync state for troubleshooting").addButton((button) => {
         button.setButtonText("Reset").setWarning().onClick(async () => {
           await this.resetInitialSyncState(vaultId, initialSyncService);
         });
@@ -13386,11 +13596,11 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       return;
     try {
       await initialSyncService.resetSyncState(vaultId);
-      new import_obsidian16.Notice("Initial sync state reset successfully. The wizard will appear on next connection.");
+      new import_obsidian17.Notice("Initial sync state reset successfully. The wizard will appear on next connection.");
       this.display();
     } catch (error) {
       console.error("Failed to reset initial sync state:", error);
-      new import_obsidian16.Notice("Failed to reset initial sync state. Check console for details.");
+      new import_obsidian17.Notice("Failed to reset initial sync state. Check console for details.");
     }
   }
   // ===========================================================================
@@ -13408,7 +13618,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
         text.inputEl.removeClass("vaultconnect-input-error");
       } else {
         text.inputEl.addClass("vaultconnect-input-error");
-        new import_obsidian16.Notice(errorMessage);
+        new import_obsidian17.Notice(errorMessage);
       }
     });
   }
@@ -13417,7 +13627,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       const trimmed = value2.trim();
       if (trimmed && !this.isValidUrl(trimmed)) {
         text.inputEl.addClass("vaultconnect-input-error");
-        new import_obsidian16.Notice("Invalid URL format");
+        new import_obsidian17.Notice("Invalid URL format");
         return;
       }
       const success = await onChange(trimmed);
@@ -13475,10 +13685,10 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       a.download = `vaultsync-settings-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url2);
-      new import_obsidian16.Notice("Settings exported successfully");
+      new import_obsidian17.Notice("Settings exported successfully");
     } catch (error) {
       console.error("Failed to export settings:", error);
-      new import_obsidian16.Notice("Failed to export settings");
+      new import_obsidian17.Notice("Failed to export settings");
     }
   }
   importSettings() {
@@ -13497,26 +13707,26 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
           const success = await pluginExt.settingsManager.importSettings(text);
           if (success) {
             this.display();
-            new import_obsidian16.Notice("Settings imported successfully");
+            new import_obsidian17.Notice("Settings imported successfully");
           } else {
-            new import_obsidian16.Notice("Invalid settings file");
+            new import_obsidian17.Notice("Invalid settings file");
           }
         } else {
           const importedSettings = JSON.parse(text);
           if (!this.validateImportedSettings(importedSettings)) {
-            new import_obsidian16.Notice("Invalid settings file");
+            new import_obsidian17.Notice("Invalid settings file");
             return;
           }
           Object.assign(this.plugin.settings, importedSettings);
           await this.plugin.saveSettings();
           this.display();
-          new import_obsidian16.Notice("Settings imported successfully");
+          new import_obsidian17.Notice("Settings imported successfully");
         }
       };
       input.click();
     } catch (error) {
       console.error("Failed to import settings:", error);
-      new import_obsidian16.Notice("Failed to import settings");
+      new import_obsidian17.Notice("Failed to import settings");
     }
   }
   validateImportedSettings(settings) {
@@ -13579,16 +13789,16 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
         await this.plugin.saveSettings();
       }
       this.display();
-      new import_obsidian16.Notice("Settings reset to defaults");
+      new import_obsidian17.Notice("Settings reset to defaults");
     } catch (error) {
       console.error("Failed to reset settings:", error);
-      new import_obsidian16.Notice("Failed to reset settings");
+      new import_obsidian17.Notice("Failed to reset settings");
     }
   }
 };
 
 // main.ts
-var VaultSyncPlugin = class extends import_obsidian19.Plugin {
+var VaultSyncPlugin = class extends import_obsidian20.Plugin {
   constructor() {
     super(...arguments);
     this.socket = null;
@@ -13757,18 +13967,18 @@ var VaultSyncPlugin = class extends import_obsidian19.Plugin {
     this.eventBus.on(EVENTS.UPLOAD_COMPLETED, (data) => {
       logger.debug(`[Upload] Completed: ${data.filePath}`);
       this.clearUploadProgress();
-      new import_obsidian19.Notice(`Upload completed: ${data.filePath}`);
+      new import_obsidian20.Notice(`Upload completed: ${data.filePath}`);
     });
     this.eventBus.on(EVENTS.UPLOAD_FAILED, (data) => {
       logger.error(`[Upload] Failed: ${data.filePath}`, data.error);
       this.clearUploadProgress();
-      new import_obsidian19.Notice(`Upload failed: ${data.filePath}
+      new import_obsidian20.Notice(`Upload failed: ${data.filePath}
 ${data.error}`, 1e4);
     });
     this.eventBus.on(EVENTS.UPLOAD_CANCELLED, (data) => {
       logger.debug(`[Upload] Cancelled: ${data.uploadId}`);
       this.clearUploadProgress();
-      new import_obsidian19.Notice("Upload cancelled");
+      new import_obsidian20.Notice("Upload cancelled");
     });
   }
   /**
@@ -13848,7 +14058,7 @@ ${data.error}`, 1e4);
           await this.connect();
         } catch (error) {
           logger.error("Connect command failed:", error);
-          new import_obsidian19.Notice("Failed to connect");
+          new import_obsidian20.Notice("Failed to connect");
         }
       }
     });
@@ -13861,7 +14071,7 @@ ${data.error}`, 1e4);
           this.disconnect();
         } catch (error) {
           logger.error("Disconnect command failed:", error);
-          new import_obsidian19.Notice("Failed to disconnect");
+          new import_obsidian20.Notice("Failed to disconnect");
         }
       }
     });
@@ -13874,7 +14084,7 @@ ${data.error}`, 1e4);
           await this.performPullAll();
         } catch (error) {
           logger.error("Pull all command failed:", error);
-          new import_obsidian19.Notice("Pull all failed");
+          new import_obsidian20.Notice("Pull all failed");
         }
       }
     });
@@ -13887,7 +14097,7 @@ ${data.error}`, 1e4);
           await this.performPushAll();
         } catch (error) {
           logger.error("Push all command failed:", error);
-          new import_obsidian19.Notice("Push all failed");
+          new import_obsidian20.Notice("Push all failed");
         }
       }
     });
@@ -13900,7 +14110,7 @@ ${data.error}`, 1e4);
           await this.performForceSync();
         } catch (error) {
           logger.error("Force sync command failed:", error);
-          new import_obsidian19.Notice("Force sync failed");
+          new import_obsidian20.Notice("Force sync failed");
         }
       }
     });
@@ -13925,8 +14135,21 @@ ${data.error}`, 1e4);
           await this.performSmartSync();
         } catch (error) {
           logger.error("Smart sync command failed:", error);
-          new import_obsidian19.Notice("Smart sync failed");
+          new import_obsidian20.Notice("Smart sync failed");
         }
+      }
+    });
+    this.addCommand({
+      id: "search",
+      name: "Search vaults",
+      icon: "search",
+      callback: () => {
+        if (!this.apiClient || !this.vaultService) {
+          new import_obsidian20.Notice("Not connected. Please configure VaultConnect first.");
+          return;
+        }
+        const activeVaultId = this.settings.selectedVaultId || this.settings.vaultId || null;
+        new SearchModal(this.app, this.apiClient, this.vaultService, activeVaultId).open();
       }
     });
     logger.debug("Commands registered");
@@ -13948,7 +14171,7 @@ ${data.error}`, 1e4);
   registerFileEvents() {
     this.registerEvent(
       this.app.vault.on("create", (file) => {
-        if (file instanceof import_obsidian19.TFile) {
+        if (file instanceof import_obsidian20.TFile) {
           logger.debug(`[VaultConnect] File created: ${file.path}`);
           if (this.syncService) {
             this.syncService.handleFileCreate(file);
@@ -13958,7 +14181,7 @@ ${data.error}`, 1e4);
     );
     this.registerEvent(
       this.app.vault.on("modify", (file) => {
-        if (file instanceof import_obsidian19.TFile) {
+        if (file instanceof import_obsidian20.TFile) {
           logger.debug(`[VaultConnect] File modified: ${file.path}`);
           if (this.syncService) {
             this.syncService.handleFileModify(file);
@@ -13968,7 +14191,7 @@ ${data.error}`, 1e4);
     );
     this.registerEvent(
       this.app.vault.on("delete", (file) => {
-        if (file instanceof import_obsidian19.TFile) {
+        if (file instanceof import_obsidian20.TFile) {
           if (this.syncService) {
             this.syncService.handleFileDelete(file);
           }
@@ -13977,7 +14200,7 @@ ${data.error}`, 1e4);
     );
     this.registerEvent(
       this.app.vault.on("rename", (file, oldPath) => {
-        if (file instanceof import_obsidian19.TFile) {
+        if (file instanceof import_obsidian20.TFile) {
           if (this.syncService) {
             this.syncService.handleFileRename(file, oldPath);
           }
@@ -14048,7 +14271,7 @@ ${data.error}`, 1e4);
       this.updateStatusBar("connected");
     } catch (error) {
       logger.error("Error syncing file:", error);
-      new import_obsidian19.Notice(`Failed to sync ${file.path}: ${error.message}`);
+      new import_obsidian20.Notice(`Failed to sync ${file.path}: ${error.message}`);
       this.isSyncing = false;
       this.updateStatusBar("error");
     }
@@ -14065,7 +14288,7 @@ ${data.error}`, 1e4);
       }
     } catch (error) {
       logger.error("Error syncing file rename:", error);
-      new import_obsidian19.Notice(`Failed to sync rename: ${error.message}`);
+      new import_obsidian20.Notice(`Failed to sync rename: ${error.message}`);
     }
   }
   async computeHash(content) {
@@ -14087,7 +14310,7 @@ ${data.error}`, 1e4);
     }
     try {
       logger.debug("[VaultConnect] Starting file analysis for initial sync...");
-      new import_obsidian19.Notice("Analyzing files for first-time setup...");
+      new import_obsidian20.Notice("Analyzing files for first-time setup...");
       const analysis = await this.initialSyncService.analyzeFiles(vaultId);
       logger.debug("[VaultConnect] File analysis complete:", {
         localOnly: analysis.localFiles.length,
@@ -14123,22 +14346,22 @@ ${data.error}`, 1e4);
       });
     } catch (error) {
       logger.error("[VaultConnect] Error during initial sync wizard:", error);
-      new import_obsidian19.Notice(`Initial sync setup failed: ${error.message}`);
+      new import_obsidian20.Notice(`Initial sync setup failed: ${error.message}`);
       throw error;
     }
   }
   async connect() {
     if (!this.settings.apiKey) {
-      new import_obsidian19.Notice("Please configure your API key in settings");
+      new import_obsidian20.Notice("Please configure your API key in settings");
       return;
     }
     const vaultId = this.settings.selectedVaultId || this.settings.vaultId;
     if (!vaultId) {
-      new import_obsidian19.Notice("Please select a vault in settings");
+      new import_obsidian20.Notice("Please select a vault in settings");
       return;
     }
     if (this.socket && this.socket.connected) {
-      new import_obsidian19.Notice("Already connected");
+      new import_obsidian20.Notice("Already connected");
       return;
     }
     try {
@@ -14199,9 +14422,9 @@ ${data.error}`, 1e4);
           this.isConnected = true;
           this.updateStatusBar("connected");
           if (completedInitialSync) {
-            new import_obsidian19.Notice("Initial sync complete! Connected to vault connect");
+            new import_obsidian20.Notice("Initial sync complete! Connected to vault connect");
           } else {
-            new import_obsidian19.Notice("Connected to vault connect");
+            new import_obsidian20.Notice("Connected to vault connect");
           }
           if (this.socket) {
             const activeVaultId = this.settings.selectedVaultId || this.settings.vaultId;
@@ -14223,7 +14446,7 @@ ${data.error}`, 1e4);
       });
       this.socket.on("subscribed", (data) => {
         logger.debug("Subscribed to vault:", data);
-        new import_obsidian19.Notice("Subscribed to vault sync");
+        new import_obsidian20.Notice("Subscribed to vault sync");
       });
       this.socket.on("sync_event", (data) => {
         void (async () => {
@@ -14238,14 +14461,14 @@ ${data.error}`, 1e4);
       this.socket.on("connect_error", (error) => {
         logger.error("Connection error:", error);
         this.updateStatusBar("error");
-        new import_obsidian19.Notice(`Connection error: ${error.message}`);
+        new import_obsidian20.Notice(`Connection error: ${error.message}`);
       });
       this.socket.on("heartbeat", (data) => {
         logger.debug("Heartbeat:", data.timestamp);
       });
     } catch (error) {
       logger.error("Failed to connect:", error);
-      new import_obsidian19.Notice(`Failed to connect: ${error.message}`);
+      new import_obsidian20.Notice(`Failed to connect: ${error.message}`);
       this.updateStatusBar("error");
     }
   }
@@ -14259,7 +14482,7 @@ ${data.error}`, 1e4);
     }
     this.isConnected = false;
     this.updateStatusBar("disconnected");
-    new import_obsidian19.Notice("Disconnected from vault connect");
+    new import_obsidian20.Notice("Disconnected from vault connect");
   }
   /**
    * Batch notifications to avoid notification spam during bulk operations
@@ -14304,7 +14527,7 @@ ${data.error}`, 1e4);
         rename: "renamed"
       };
       const label = operationLabels[operation] || operation;
-      new import_obsidian19.Notice(`File ${label} from remote: ${files[0]}`);
+      new import_obsidian20.Notice(`File ${label} from remote: ${files[0]}`);
     } else {
       const operationLabels = {
         delete: "Deleted",
@@ -14313,7 +14536,7 @@ ${data.error}`, 1e4);
         rename: "Renamed"
       };
       const label = operationLabels[operation] || operation;
-      new import_obsidian19.Notice(`${label} ${count} files from remote`);
+      new import_obsidian20.Notice(`${label} ${count} files from remote`);
     }
   }
   async handleRemoteChange(data) {
@@ -14331,7 +14554,7 @@ ${data.error}`, 1e4);
       logger.debug(`[VaultConnect] Processing remote change for: ${file_path}, operation: ${operation}`);
       if (operation === "delete") {
         const file = this.app.vault.getAbstractFileByPath(file_path);
-        if (file instanceof import_obsidian19.TFile) {
+        if (file instanceof import_obsidian20.TFile) {
           await this.app.fileManager.trashFile(file);
           this.batchNotification("delete", file_path);
           if (this.fileSyncService) {
@@ -14344,7 +14567,7 @@ ${data.error}`, 1e4);
       }
       if (operation === "rename" && old_path) {
         const oldFile = this.app.vault.getAbstractFileByPath(old_path);
-        if (oldFile instanceof import_obsidian19.TFile) {
+        if (oldFile instanceof import_obsidian20.TFile) {
           logger.debug(`[VaultConnect] Renaming file: ${old_path} -> ${file_path}`);
           await this.app.vault.rename(oldFile, file_path);
           this.batchNotification("rename", `${old_path} \u2192 ${file_path}`);
@@ -14369,7 +14592,7 @@ ${data.error}`, 1e4);
           return;
         }
         const localFile = this.app.vault.getAbstractFileByPath(file_path);
-        if (localFile instanceof import_obsidian19.TFile && remoteHash) {
+        if (localFile instanceof import_obsidian20.TFile && remoteHash) {
           const content = await this.app.vault.read(localFile);
           const localHash = await this.fileSyncService.computeHash(content);
           if (localHash === remoteHash) {
@@ -14395,7 +14618,7 @@ ${data.error}`, 1e4);
             this.batchNotification(action, file_path);
           } else {
             logger.error(`[VaultConnect] Failed to sync remote change: ${file_path}`, result.error);
-            new import_obsidian19.Notice(`Failed to sync remote change: ${result.error}`);
+            new import_obsidian20.Notice(`Failed to sync remote change: ${result.error}`);
           }
         } finally {
           if (this.syncService) {
@@ -14409,19 +14632,19 @@ ${data.error}`, 1e4);
       }
     } catch (error) {
       logger.error("Error handling remote change:", error);
-      new import_obsidian19.Notice(`Error syncing remote change: ${error.message}`);
+      new import_obsidian20.Notice(`Error syncing remote change: ${error.message}`);
     }
   }
   handleConflict(data) {
     const { file_path } = data;
-    new import_obsidian19.Notice(`Conflict detected in ${file_path}. Please resolve manually.`, 1e4);
+    new import_obsidian20.Notice(`Conflict detected in ${file_path}. Please resolve manually.`, 1e4);
   }
   async forceSyncAll() {
     if (!this.isConnected) {
-      new import_obsidian19.Notice("Not connected to vault connect");
+      new import_obsidian20.Notice("Not connected to vault connect");
       return;
     }
-    new import_obsidian19.Notice("Starting full sync...");
+    new import_obsidian20.Notice("Starting full sync...");
     const files = this.app.vault.getFiles();
     let synced = 0;
     for (const file of files) {
@@ -14430,39 +14653,39 @@ ${data.error}`, 1e4);
         synced++;
       }
     }
-    new import_obsidian19.Notice(`Synced ${synced} files`);
+    new import_obsidian20.Notice(`Synced ${synced} files`);
   }
   /**
    * Perform Smart Sync
    */
   async performSmartSync() {
     if (!this.isConnected) {
-      new import_obsidian19.Notice("Not connected to vault connect");
+      new import_obsidian20.Notice("Not connected to vault connect");
       return;
     }
     if (!this.syncService) {
-      new import_obsidian19.Notice("Sync service not initialized");
+      new import_obsidian20.Notice("Sync service not initialized");
       return;
     }
     try {
       if (this.settings.notifyOnSync) {
-        new import_obsidian19.Notice("Starting smart sync...");
+        new import_obsidian20.Notice("Starting smart sync...");
       }
       const result = await this.syncService.smartSync();
       if (this.settings.notifyOnSync) {
         if (result.success) {
-          new import_obsidian19.Notice(
+          new import_obsidian20.Notice(
             `Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded`
           );
         } else {
-          new import_obsidian19.Notice(
+          new import_obsidian20.Notice(
             `Smart sync completed with ${result.errors.length} error(s). Check sync log for details.`
           );
         }
       }
     } catch (error) {
       logger.error("Smart Sync error:", error);
-      new import_obsidian19.Notice(`Smart sync failed: ${error.message}`);
+      new import_obsidian20.Notice(`Smart sync failed: ${error.message}`);
     }
   }
   /**
@@ -14470,11 +14693,11 @@ ${data.error}`, 1e4);
    */
   async performPullAll() {
     if (!this.isConnected) {
-      new import_obsidian19.Notice("Not connected to vault connect");
+      new import_obsidian20.Notice("Not connected to vault connect");
       return;
     }
     if (!this.syncService) {
-      new import_obsidian19.Notice("Sync service not initialized");
+      new import_obsidian20.Notice("Sync service not initialized");
       return;
     }
     const confirmed = await showConfirmationModal(
@@ -14486,20 +14709,20 @@ ${data.error}`, 1e4);
       return;
     }
     try {
-      new import_obsidian19.Notice("Starting pull all...");
+      new import_obsidian20.Notice("Starting pull all...");
       const result = await this.syncService.pullAll();
       if (result.success) {
-        new import_obsidian19.Notice(
+        new import_obsidian20.Notice(
           `Pull all completed: ${result.filesDownloaded} files downloaded`
         );
       } else {
-        new import_obsidian19.Notice(
+        new import_obsidian20.Notice(
           `Pull all completed with ${result.errors.length} error(s). Check sync log for details.`
         );
       }
     } catch (error) {
       logger.error("Pull All error:", error);
-      new import_obsidian19.Notice(`Pull all failed: ${error.message}`);
+      new import_obsidian20.Notice(`Pull all failed: ${error.message}`);
     }
   }
   /**
@@ -14507,11 +14730,11 @@ ${data.error}`, 1e4);
    */
   async performPushAll() {
     if (!this.isConnected) {
-      new import_obsidian19.Notice("Not connected to vault connect");
+      new import_obsidian20.Notice("Not connected to vault connect");
       return;
     }
     if (!this.syncService) {
-      new import_obsidian19.Notice("Sync service not initialized");
+      new import_obsidian20.Notice("Sync service not initialized");
       return;
     }
     const confirmed = await showConfirmationModal(
@@ -14523,20 +14746,20 @@ ${data.error}`, 1e4);
       return;
     }
     try {
-      new import_obsidian19.Notice("Starting push all...");
+      new import_obsidian20.Notice("Starting push all...");
       const result = await this.syncService.pushAll();
       if (result.success) {
-        new import_obsidian19.Notice(
+        new import_obsidian20.Notice(
           `Push all completed: ${result.filesUploaded} files uploaded`
         );
       } else {
-        new import_obsidian19.Notice(
+        new import_obsidian20.Notice(
           `Push all completed with ${result.errors.length} error(s). Check sync log for details.`
         );
       }
     } catch (error) {
       logger.error("Push All error:", error);
-      new import_obsidian19.Notice(`Push all failed: ${error.message}`);
+      new import_obsidian20.Notice(`Push all failed: ${error.message}`);
     }
   }
   /**
@@ -14544,11 +14767,11 @@ ${data.error}`, 1e4);
    */
   async performForceSync() {
     if (!this.isConnected) {
-      new import_obsidian19.Notice("Not connected to vault connect");
+      new import_obsidian20.Notice("Not connected to vault connect");
       return;
     }
     if (!this.syncService) {
-      new import_obsidian19.Notice("Sync service not initialized");
+      new import_obsidian20.Notice("Sync service not initialized");
       return;
     }
     const confirmed = await showConfirmationModal(
@@ -14561,23 +14784,23 @@ ${data.error}`, 1e4);
     }
     try {
       if (this.settings.notifyOnSync) {
-        new import_obsidian19.Notice("Starting force sync...");
+        new import_obsidian20.Notice("Starting force sync...");
       }
       const result = await this.syncService.forceSync();
       if (this.settings.notifyOnSync) {
         if (result.success) {
-          new import_obsidian19.Notice(
+          new import_obsidian20.Notice(
             `Force sync completed: ${result.filesProcessed} files processed`
           );
         } else {
-          new import_obsidian19.Notice(
+          new import_obsidian20.Notice(
             `Force sync completed with ${result.errors.length} error(s). Check sync log for details.`
           );
         }
       }
     } catch (error) {
       logger.error("Force Sync error:", error);
-      new import_obsidian19.Notice(`Force sync failed: ${error.message}`);
+      new import_obsidian20.Notice(`Force sync failed: ${error.message}`);
     }
   }
   /**
@@ -14585,12 +14808,12 @@ ${data.error}`, 1e4);
    */
   viewConflicts() {
     if (!this.conflictService) {
-      new import_obsidian19.Notice("Conflict service not initialized");
+      new import_obsidian20.Notice("Conflict service not initialized");
       return;
     }
     const conflicts = this.conflictService.getConflicts();
     if (conflicts.length === 0) {
-      new import_obsidian19.Notice("No conflicts to resolve");
+      new import_obsidian20.Notice("No conflicts to resolve");
       return;
     }
     const modal = new ConflictResolutionModal(
@@ -14607,7 +14830,7 @@ ${data.error}`, 1e4);
    */
   viewSyncLog() {
     if (!this.syncLogService) {
-      new import_obsidian19.Notice("Sync log service not initialized");
+      new import_obsidian20.Notice("Sync log service not initialized");
       return;
     }
     const modal = new SyncLogModal(this.app, this.syncLogService);
@@ -14617,7 +14840,7 @@ ${data.error}`, 1e4);
    * Show sync menu
    */
   showSyncMenu(evt) {
-    const menu = new import_obsidian19.Menu();
+    const menu = new import_obsidian20.Menu();
     menu.addItem((item) => {
       item.setTitle(this.isConnected ? "\u{1F7E2} Connected" : "\u26AB Disconnected").setDisabled(true);
     });
@@ -14658,7 +14881,7 @@ ${data.error}`, 1e4);
   showSyncStatus() {
     const status = this.isConnected ? "Connected" : "Disconnected";
     const vault = this.settings.selectedVaultId || this.settings.vaultId || "Not configured";
-    new import_obsidian19.Notice(`VaultConnect Status: ${status}
+    new import_obsidian20.Notice(`VaultConnect Status: ${status}
 Vault: ${vault}`, 5e3);
   }
   updateStatusBar(status) {

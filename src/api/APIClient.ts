@@ -98,6 +98,35 @@ interface BatchUpdateError {
 }
 
 // E2E Encryption response types
+// Search types
+export interface SearchResult {
+  file_id: string;
+  vault_id: string;
+  path: string;
+  similarity_score: number;
+  content_preview: string;
+  file_type: string;
+  size_bytes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SemanticSearchParams {
+  query: string;
+  vault_id?: string;
+  limit?: number;
+  min_score?: number;
+  file_types?: string[];
+}
+
+export interface SemanticSearchResponse {
+  results: SearchResult[];
+  total: number;
+  query: string;
+  executionTimeMs: number;
+}
+
+// E2E Encryption response types
 export interface E2EKeyPairResponse {
   publicKey: string;
   encryptedPrivateKey: string;
@@ -698,6 +727,21 @@ export class APIClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  // Search
+
+  /**
+   * Semantic search across vaults
+   */
+  async semanticSearch(params: SemanticSearchParams): Promise<SemanticSearchResponse> {
+    return this.request<SemanticSearchResponse>(
+      API_ENDPOINTS.SEMANTIC_SEARCH,
+      {
+        method: 'POST',
+        body: JSON.stringify(params)
+      }
+    );
   }
 
   // Health Check

@@ -9,6 +9,7 @@ import { SyncLogModal } from './src/ui/SyncLogModal';
 import { UploadProgressModal } from './src/ui/UploadProgressModal';
 import { ConflictListView, CONFLICT_LIST_VIEW_TYPE } from './src/ui/ConflictListView';
 import { ConflictResolutionModal } from './src/ui/ConflictResolutionModal';
+import { SearchModal } from './src/ui/SearchModal';
 import { APIClient } from './src/api/APIClient';
 import { EventBus, EVENTS } from './src/core/EventBus';
 import { StorageManager } from './src/core/StorageManager';
@@ -452,6 +453,21 @@ export default class VaultSyncPlugin extends Plugin {
 					logger.error('Smart sync command failed:', error);
 					new Notice('Smart sync failed');
 				}
+			}
+		});
+
+		// Search command
+		this.addCommand({
+			id: 'search',
+			name: 'Search vaults',
+			icon: 'search',
+			callback: () => {
+				if (!this.apiClient || !this.vaultService) {
+					new Notice('Not connected. Please configure VaultConnect first.');
+					return;
+				}
+				const activeVaultId = this.settings.selectedVaultId || this.settings.vaultId || null;
+				new SearchModal(this.app, this.apiClient, this.vaultService, activeVaultId).open();
 			}
 		});
 
