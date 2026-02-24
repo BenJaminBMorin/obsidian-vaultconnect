@@ -590,7 +590,8 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     const controlsContainer = vaultSetting.controlEl.createDiv({ cls: 'vaultconnect-vault-selector' });
     const dropdown = controlsContainer.createEl('select', { cls: 'dropdown vaultconnect-vault-dropdown' });
-    const refreshButton = controlsContainer.createEl('button', { text: 'Refresh', cls: 'mod-cta vaultconnect-refresh-btn' });
+    const refreshButton = controlsContainer.createEl('button', { cls: 'vaultconnect-refresh-btn' });
+    refreshButton.setText('Refresh');
     const loadingEl = controlsContainer.createEl('span', { text: 'Loading...', cls: 'vaultconnect-loading' });
 
     const loadVaults = async () => {
@@ -666,13 +667,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     if (this.plugin.vaultService && currentVaultId) {
       const vault = this.plugin.vaultService.getCurrentVault();
       if (vault?.is_cross_tenant) {
-        const permissionIcon = vault.permission === 'read' ? '👁️' : vault.permission === 'write' ? '✏️' : '👑';
         const permissionLabel = vault.permission === 'read' ? 'Read-only' : vault.permission === 'write' ? 'Read-write' : 'Admin';
-        const statusEl = containerEl.createDiv({ cls: 'vaultsync-vault-status' });
-        statusEl.createEl('div', {
-          text: `🔗 Cross-tenant vault (${permissionIcon} ${permissionLabel})`,
-          cls: 'vaultsync-cross-tenant-badge'
-        });
+        new Setting(containerEl)
+          .setName('Shared vault')
+          .setDesc(`Cross-tenant vault (${permissionLabel})`);
       }
     }
 
@@ -770,12 +768,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       });
 
     if (!isConnected) {
-      const note = containerEl.createEl('p', {
+      containerEl.createEl('p', {
         text: 'Connect to the server first to use sync actions.',
-        cls: 'setting-item-description'
+        cls: 'setting-item-description vaultconnect-sync-note'
       });
-      note.style.marginTop = '-8px';
-      note.style.marginBottom = '12px';
     }
   }
 
@@ -890,7 +886,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Excluded folders')
       .setDesc(excludedDisplay)
-      .addTextArea(text => {
+      .addText(text => {
         text
           .setPlaceholder(`${configDir}, .trash, private/`)
           .setValue(this.plugin.settings.excludedFolders.join(', '))
@@ -906,7 +902,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
               pluginExt.syncService.setExcludedFolders(this.plugin.settings.excludedFolders);
             }
           });
-        text.inputEl.rows = 3;
       });
 
     const includedFolders = this.plugin.settings.includedFolders;
@@ -917,9 +912,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Included folders')
       .setDesc(includedDisplay)
-      .addTextArea(text => {
+      .addText(text => {
         text
-          .setPlaceholder('Enter folders (e.g., notes/, docs/)')
+          .setPlaceholder('notes/, docs/')
           .setValue(this.plugin.settings.includedFolders.join(', '))
           .onChange(async (value) => {
             this.plugin.settings.includedFolders = value
@@ -933,7 +928,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
               pluginExt.syncService.setIncludedFolders(this.plugin.settings.includedFolders);
             }
           });
-        text.inputEl.rows = 3;
       });
   }
 
@@ -1241,22 +1235,33 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       });
 
     // Export/Import/Reset at bottom of Advanced
-    const actionsEl = containerEl.createDiv({ cls: 'vaultsync-settings-actions' });
+    new Setting(containerEl)
+      .setName('Export settings')
+      .setDesc('Save current settings to a file')
+      .addButton(button => {
+        button
+          .setButtonText('Export')
+          .onClick(() => void this.exportSettings());
+      });
 
-    actionsEl.createEl('button', {
-      text: 'Export settings',
-      cls: 'mod-cta'
-    }).addEventListener('click', () => void this.exportSettings());
+    new Setting(containerEl)
+      .setName('Import settings')
+      .setDesc('Load settings from a file')
+      .addButton(button => {
+        button
+          .setButtonText('Import')
+          .onClick(() => void this.importSettings());
+      });
 
-    actionsEl.createEl('button', {
-      text: 'Import settings',
-      cls: 'mod-cta'
-    }).addEventListener('click', () => void this.importSettings());
-
-    actionsEl.createEl('button', {
-      text: 'Reset to defaults',
-      cls: 'mod-warning'
-    }).addEventListener('click', () => void this.resetSettings());
+    new Setting(containerEl)
+      .setName('Reset to defaults')
+      .setDesc('Reset all settings (preserves auth and server URL)')
+      .addButton(button => {
+        button
+          .setButtonText('Reset')
+          .setWarning()
+          .onClick(() => void this.resetSettings());
+      });
   }
 
   private displayInitialSyncReset(containerEl: HTMLElement): void {

@@ -12776,7 +12776,8 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     const vaultSetting = new import_obsidian16.Setting(containerEl).setName("Vault").setDesc("Select the vault to sync with");
     const controlsContainer = vaultSetting.controlEl.createDiv({ cls: "vaultconnect-vault-selector" });
     const dropdown = controlsContainer.createEl("select", { cls: "dropdown vaultconnect-vault-dropdown" });
-    const refreshButton = controlsContainer.createEl("button", { text: "Refresh", cls: "mod-cta vaultconnect-refresh-btn" });
+    const refreshButton = controlsContainer.createEl("button", { cls: "vaultconnect-refresh-btn" });
+    refreshButton.setText("Refresh");
     const loadingEl = controlsContainer.createEl("span", { text: "Loading...", cls: "vaultconnect-loading" });
     const loadVaults = async () => {
       var _a2, _b;
@@ -12843,13 +12844,8 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     if (this.plugin.vaultService && currentVaultId) {
       const vault = this.plugin.vaultService.getCurrentVault();
       if (vault == null ? void 0 : vault.is_cross_tenant) {
-        const permissionIcon = vault.permission === "read" ? "\u{1F441}\uFE0F" : vault.permission === "write" ? "\u270F\uFE0F" : "\u{1F451}";
         const permissionLabel = vault.permission === "read" ? "Read-only" : vault.permission === "write" ? "Read-write" : "Admin";
-        const statusEl = containerEl.createDiv({ cls: "vaultsync-vault-status" });
-        statusEl.createEl("div", {
-          text: `\u{1F517} Cross-tenant vault (${permissionIcon} ${permissionLabel})`,
-          cls: "vaultsync-cross-tenant-badge"
-        });
+        new import_obsidian16.Setting(containerEl).setName("Shared vault").setDesc(`Cross-tenant vault (${permissionLabel})`);
       }
     }
     new import_obsidian16.Setting(containerEl).setName("Device ID").setDesc("Unique identifier for this device").addText((text) => {
@@ -12913,12 +12909,10 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       });
     });
     if (!isConnected) {
-      const note = containerEl.createEl("p", {
+      containerEl.createEl("p", {
         text: "Connect to the server first to use sync actions.",
-        cls: "setting-item-description"
+        cls: "setting-item-description vaultconnect-sync-note"
       });
-      note.style.marginTop = "-8px";
-      note.style.marginBottom = "12px";
     }
   }
   // Full settings sections (shown in COMPLETE stage)
@@ -12992,7 +12986,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     const excludedFolders = this.plugin.settings.excludedFolders;
     const excludedDisplay = excludedFolders.length > 0 ? excludedFolders.slice(0, 3).join(", ") + (excludedFolders.length > 3 ? "..." : "") : "None";
     const configDir = this.app.vault.configDir;
-    new import_obsidian16.Setting(containerEl).setName("Excluded folders").setDesc(excludedDisplay).addTextArea((text) => {
+    new import_obsidian16.Setting(containerEl).setName("Excluded folders").setDesc(excludedDisplay).addText((text) => {
       text.setPlaceholder(`${configDir}, .trash, private/`).setValue(this.plugin.settings.excludedFolders.join(", ")).onChange(async (value2) => {
         this.plugin.settings.excludedFolders = value2.split(",").map((f) => f.trim()).filter((f) => f.length > 0);
         await this.plugin.saveSettings();
@@ -13001,12 +12995,11 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
           pluginExt.syncService.setExcludedFolders(this.plugin.settings.excludedFolders);
         }
       });
-      text.inputEl.rows = 3;
     });
     const includedFolders = this.plugin.settings.includedFolders;
     const includedDisplay = includedFolders.length > 0 ? includedFolders.slice(0, 3).join(", ") + (includedFolders.length > 3 ? "..." : "") : "All (except excluded)";
-    new import_obsidian16.Setting(containerEl).setName("Included folders").setDesc(includedDisplay).addTextArea((text) => {
-      text.setPlaceholder("Enter folders (e.g., notes/, docs/)").setValue(this.plugin.settings.includedFolders.join(", ")).onChange(async (value2) => {
+    new import_obsidian16.Setting(containerEl).setName("Included folders").setDesc(includedDisplay).addText((text) => {
+      text.setPlaceholder("notes/, docs/").setValue(this.plugin.settings.includedFolders.join(", ")).onChange(async (value2) => {
         this.plugin.settings.includedFolders = value2.split(",").map((f) => f.trim()).filter((f) => f.length > 0);
         await this.plugin.saveSettings();
         const pluginExt = this.plugin;
@@ -13014,7 +13007,6 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
           pluginExt.syncService.setIncludedFolders(this.plugin.settings.includedFolders);
         }
       });
-      text.inputEl.rows = 3;
     });
   }
   getSyncScopeSummary() {
@@ -13225,19 +13217,15 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
         new import_obsidian16.Notice(`Debug mode ${value2 ? "enabled" : "disabled"}`);
       });
     });
-    const actionsEl = containerEl.createDiv({ cls: "vaultsync-settings-actions" });
-    actionsEl.createEl("button", {
-      text: "Export settings",
-      cls: "mod-cta"
-    }).addEventListener("click", () => void this.exportSettings());
-    actionsEl.createEl("button", {
-      text: "Import settings",
-      cls: "mod-cta"
-    }).addEventListener("click", () => void this.importSettings());
-    actionsEl.createEl("button", {
-      text: "Reset to defaults",
-      cls: "mod-warning"
-    }).addEventListener("click", () => void this.resetSettings());
+    new import_obsidian16.Setting(containerEl).setName("Export settings").setDesc("Save current settings to a file").addButton((button) => {
+      button.setButtonText("Export").onClick(() => void this.exportSettings());
+    });
+    new import_obsidian16.Setting(containerEl).setName("Import settings").setDesc("Load settings from a file").addButton((button) => {
+      button.setButtonText("Import").onClick(() => void this.importSettings());
+    });
+    new import_obsidian16.Setting(containerEl).setName("Reset to defaults").setDesc("Reset all settings (preserves auth and server URL)").addButton((button) => {
+      button.setButtonText("Reset").setWarning().onClick(() => void this.resetSettings());
+    });
   }
   displayInitialSyncReset(containerEl) {
     const vaultId = this.plugin.settings.selectedVaultId || this.plugin.settings.vaultId;
