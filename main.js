@@ -12429,48 +12429,34 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   // Stage: NEEDS_SERVER
   // ===========================================================================
   displayServerStage(containerEl) {
-    const wrapper = containerEl.createDiv({ cls: "vaultconnect-onboarding" });
-    this.displayStepIndicator(wrapper, 1);
-    wrapper.createEl("h2", { text: "Welcome to VaultConnect", cls: "vaultconnect-onboarding-header" });
-    wrapper.createEl("p", {
-      text: "Enter your VaultConnect server URL to get started.",
-      cls: "setting-item-description"
-    });
-    const inputContainer = wrapper.createDiv({ cls: "vaultconnect-server-input-container" });
+    this.displayStepIndicator(containerEl, 1);
+    new import_obsidian16.Setting(containerEl).setName("Welcome to VaultConnect").setDesc("Enter your VaultConnect server URL to get started.").setHeading();
     let serverUrlInput;
-    new import_obsidian16.Setting(inputContainer).setName("Server URL").setDesc("Your VaultConnect web or API URL").addText((text) => {
+    const urlSetting = new import_obsidian16.Setting(containerEl).setName("Server URL").setDesc("Your VaultConnect web or API URL").addText((text) => {
+      serverUrlInput = text;
       text.setPlaceholder("https://app.vaultsync.morinclan.com").setValue(this.plugin.settings.serverUrl || "");
-      serverUrlInput = text.inputEl;
-      serverUrlInput.addClass("vaultconnect-server-input");
-    });
-    const statusEl = wrapper.createDiv({ cls: "vaultconnect-discovery-status" });
-    const btnContainer = wrapper.createDiv({ cls: "vaultconnect-onboarding-actions" });
-    const connectBtn = btnContainer.createEl("button", { text: "Connect", cls: "mod-cta" });
-    connectBtn.addEventListener("click", () => {
-      void this.handleServerConnect(serverUrlInput.value, statusEl, connectBtn, wrapper);
-    });
-    inputContainer.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        connectBtn.click();
-      }
+      text.inputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          void this.handleServerConnect(serverUrlInput.getValue(), containerEl);
+        }
+      });
+    }).addButton((button) => {
+      button.setButtonText("Connect").setCta().onClick(() => {
+        void this.handleServerConnect(serverUrlInput.getValue(), containerEl);
+      });
     });
     if (this.plugin.settings.serverUrl) {
-      setTimeout(() => connectBtn.click(), 100);
+      setTimeout(() => {
+        void this.handleServerConnect(serverUrlInput.getValue(), containerEl);
+      }, 100);
     }
   }
-  async handleServerConnect(url2, statusEl, connectBtn, wrapper) {
-    statusEl.empty();
-    statusEl.removeClass("is-error", "is-success");
+  async handleServerConnect(url2, containerEl) {
     if (!url2.trim()) {
-      statusEl.addClass("is-error");
-      statusEl.setText("Please enter a server URL");
+      new import_obsidian16.Notice("Please enter a server URL");
       return;
     }
-    connectBtn.disabled = true;
-    connectBtn.setText("Discovering...");
-    const spinner = statusEl.createDiv({ cls: "vaultconnect-discovery-spinner" });
-    spinner.createDiv({ cls: "spinner" });
-    spinner.createEl("span", { text: "Looking up server configuration..." });
+    new import_obsidian16.Notice("Discovering server configuration...");
     try {
       const config = await this.discoveryService.discover(url2);
       this.cachedServerConfig = config;
@@ -12483,57 +12469,51 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       if (this.plugin.apiClient) {
         this.plugin.apiClient.setBaseURL(config.apiUrl);
       }
-      statusEl.empty();
-      statusEl.addClass("is-success");
-      statusEl.setText(`Connected to VaultConnect ${config.version}`);
+      new import_obsidian16.Notice(`Connected to VaultConnect ${config.version}`);
       setTimeout(() => this.display(), 500);
     } catch (error) {
-      statusEl.empty();
-      statusEl.addClass("is-error");
-      statusEl.setText(error.message || "Failed to discover server");
-      this.displayManualFallback(wrapper);
-    } finally {
-      connectBtn.disabled = false;
-      connectBtn.setText("Connect");
+      new import_obsidian16.Notice(error.message || "Failed to discover server");
+      this.displayManualFallback(containerEl);
     }
   }
-  displayManualFallback(wrapper) {
-    if (wrapper.querySelector(".vaultconnect-manual-fallback"))
+  displayManualFallback(containerEl) {
+    if (containerEl.querySelector(".vaultconnect-manual-fallback"))
       return;
-    const fallback = wrapper.createDiv({ cls: "vaultconnect-manual-fallback" });
+    const fallback = containerEl.createDiv({ cls: "vaultconnect-manual-fallback" });
     const details = fallback.createEl("details");
     details.createEl("summary", { text: "Manual configuration" });
     const content = details.createDiv({ cls: "vaultconnect-manual-fields" });
+    let apiUrlText;
+    let wsUrlText;
     new import_obsidian16.Setting(content).setName("API URL").setDesc("Direct API server URL").addText((text) => {
+      apiUrlText = text;
       text.setPlaceholder("https://api.vaultsync.morinclan.com/v1").setValue(this.plugin.settings.apiBaseURL || "");
     });
     new import_obsidian16.Setting(content).setName("WebSocket URL").setDesc("WebSocket server URL").addText((text) => {
+      wsUrlText = text;
       text.setPlaceholder("https://api.vaultsync.morinclan.com").setValue(this.plugin.settings.wsBaseURL || "");
     });
-    const saveBtnContainer = content.createDiv({ cls: "vaultconnect-onboarding-actions" });
-    const saveBtn = saveBtnContainer.createEl("button", { text: "Save & continue", cls: "mod-cta" });
-    saveBtn.addEventListener("click", () => {
-      var _a, _b;
-      const apiInput = content.querySelectorAll("input")[0];
-      const wsInput = content.querySelectorAll("input")[1];
-      const apiUrl = (_a = apiInput == null ? void 0 : apiInput.value) == null ? void 0 : _a.trim();
-      const wsUrl = (_b = wsInput == null ? void 0 : wsInput.value) == null ? void 0 : _b.trim();
-      if (!apiUrl) {
-        new import_obsidian16.Notice("API URL is required");
-        return;
-      }
-      this.plugin.settings.apiBaseURL = apiUrl;
-      this.plugin.settings.apiUrl = apiUrl;
-      this.plugin.settings.wsBaseURL = wsUrl || apiUrl;
-      this.plugin.settings.wsUrl = wsUrl || apiUrl;
-      this.plugin.settings.serverUrl = apiUrl;
-      void (async () => {
-        await this.plugin.saveSettings();
-        if (this.plugin.apiClient) {
-          this.plugin.apiClient.setBaseURL(apiUrl);
+    new import_obsidian16.Setting(content).addButton((button) => {
+      button.setButtonText("Save & continue").setCta().onClick(() => {
+        const apiUrl = apiUrlText.getValue().trim();
+        const wsUrl = wsUrlText.getValue().trim();
+        if (!apiUrl) {
+          new import_obsidian16.Notice("API URL is required");
+          return;
         }
-        this.display();
-      })();
+        this.plugin.settings.apiBaseURL = apiUrl;
+        this.plugin.settings.apiUrl = apiUrl;
+        this.plugin.settings.wsBaseURL = wsUrl || apiUrl;
+        this.plugin.settings.wsUrl = wsUrl || apiUrl;
+        this.plugin.settings.serverUrl = apiUrl;
+        void (async () => {
+          await this.plugin.saveSettings();
+          if (this.plugin.apiClient) {
+            this.plugin.apiClient.setBaseURL(apiUrl);
+          }
+          this.display();
+        })();
+      });
     });
   }
   // ===========================================================================
@@ -12541,134 +12521,93 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   // ===========================================================================
   displayAuthStage(containerEl) {
     var _a, _b;
-    const wrapper = containerEl.createDiv({ cls: "vaultconnect-onboarding" });
-    this.displayStepIndicator(wrapper, 2);
-    wrapper.createEl("h2", { text: "Sign in", cls: "vaultconnect-onboarding-header" });
-    const serverInfo = wrapper.createDiv({ cls: "vaultconnect-server-info" });
+    this.displayStepIndicator(containerEl, 2);
+    new import_obsidian16.Setting(containerEl).setName("Sign in").setHeading();
     const serverLabel = this.plugin.settings.serverUrl || this.plugin.settings.apiBaseURL;
     const versionText = ((_a = this.cachedServerConfig) == null ? void 0 : _a.version) ? ` (v${this.cachedServerConfig.version})` : "";
-    serverInfo.createEl("span", { text: `Server: ${serverLabel}${versionText}` });
-    const changeLink = serverInfo.createEl("a", { text: "Change", cls: "vaultconnect-change-link" });
-    changeLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      this.plugin.settings.apiBaseURL = "";
-      this.plugin.settings.apiUrl = "";
-      this.plugin.settings.wsBaseURL = "";
-      this.plugin.settings.wsUrl = "";
-      void (async () => {
-        await this.plugin.saveSettings();
-        this.display();
-      })();
-    });
-    wrapper.createEl("p", {
-      text: "Sign in via your browser to connect your account.",
-      cls: "setting-item-description"
-    });
-    const btnContainer = wrapper.createDiv({ cls: "vaultconnect-onboarding-actions" });
-    const signInBtn = btnContainer.createEl("button", { text: "Sign in with browser", cls: "mod-cta" });
-    signInBtn.addEventListener("click", () => {
-      if (!this.plugin.authService) {
-        new import_obsidian16.Notice("Auth service not available");
-        return;
-      }
-      new DeviceAuthModal(
-        this.app,
-        this.plugin.authService,
-        this.plugin.settings.apiBaseURL,
-        () => {
-          var _a2;
-          const authState = (_a2 = this.plugin.authService) == null ? void 0 : _a2.getAuthState();
-          if (authState == null ? void 0 : authState.apiKey) {
-            this.plugin.settings.apiKey = authState.apiKey;
-            this.plugin.settings.apiKeyExpires = authState.expiresAt;
-          }
-          void this.plugin.saveSettings().then(() => this.display());
-        },
-        () => {
-        }
-      ).open();
-    });
-    if ((_b = this.cachedServerConfig) == null ? void 0 : _b.googleOAuthEnabled) {
-      wrapper.createEl("p", {
-        text: "Google sign-in is available on the authorization page.",
-        cls: "setting-item-description vaultconnect-oauth-hint"
+    new import_obsidian16.Setting(containerEl).setName("Server").setDesc(serverLabel + versionText).addButton((button) => {
+      button.setButtonText("Change").onClick(() => {
+        this.plugin.settings.apiBaseURL = "";
+        this.plugin.settings.apiUrl = "";
+        this.plugin.settings.wsBaseURL = "";
+        this.plugin.settings.wsUrl = "";
+        void (async () => {
+          await this.plugin.saveSettings();
+          this.display();
+        })();
       });
-    }
+    });
+    const authDesc = ((_b = this.cachedServerConfig) == null ? void 0 : _b.googleOAuthEnabled) ? "Sign in via your browser. Google sign-in is available." : "Sign in via your browser to connect your account.";
+    new import_obsidian16.Setting(containerEl).setName("Authentication").setDesc(authDesc).addButton((button) => {
+      button.setButtonText("Sign in with browser").setCta().onClick(() => {
+        if (!this.plugin.authService) {
+          new import_obsidian16.Notice("Auth service not available");
+          return;
+        }
+        new DeviceAuthModal(
+          this.app,
+          this.plugin.authService,
+          this.plugin.settings.apiBaseURL,
+          () => {
+            var _a2;
+            const authState = (_a2 = this.plugin.authService) == null ? void 0 : _a2.getAuthState();
+            if (authState == null ? void 0 : authState.apiKey) {
+              this.plugin.settings.apiKey = authState.apiKey;
+              this.plugin.settings.apiKeyExpires = authState.expiresAt;
+            }
+            void this.plugin.saveSettings().then(() => this.display());
+          },
+          () => {
+          }
+        ).open();
+      });
+    });
   }
   // ===========================================================================
   // Stage: NEEDS_VAULT
   // ===========================================================================
   displayVaultStage(containerEl) {
-    const wrapper = containerEl.createDiv({ cls: "vaultconnect-onboarding" });
-    this.displayStepIndicator(wrapper, 3);
-    wrapper.createEl("h2", { text: "Select a vault", cls: "vaultconnect-onboarding-header" });
-    const authInfo = wrapper.createDiv({ cls: "vaultconnect-auth-status-line" });
-    authInfo.createEl("span", { text: "Signed in", cls: "vaultconnect-status-ok" });
-    const logoutLink = authInfo.createEl("a", { text: "Sign out", cls: "vaultconnect-change-link" });
-    logoutLink.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (this.plugin.authService) {
-        void this.plugin.authService.clearApiKey().then(() => {
-          this.plugin.settings.apiKey = null;
-          this.plugin.settings.apiKeyExpires = null;
-          void this.plugin.saveSettings().then(() => this.display());
-        });
-      }
+    this.displayStepIndicator(containerEl, 3);
+    new import_obsidian16.Setting(containerEl).setName("Select a vault").setDesc("Choose which vault to sync with this Obsidian vault.").setHeading();
+    new import_obsidian16.Setting(containerEl).setName("Signed in").addButton((button) => {
+      button.setButtonText("Sign out").setWarning().onClick(() => {
+        if (this.plugin.authService) {
+          void this.plugin.authService.clearApiKey().then(() => {
+            this.plugin.settings.apiKey = null;
+            this.plugin.settings.apiKeyExpires = null;
+            void this.plugin.saveSettings().then(() => this.display());
+          });
+        }
+      });
     });
-    wrapper.createEl("p", {
-      text: "Choose which vault to sync with this Obsidian vault.",
-      cls: "setting-item-description"
-    });
-    const vaultListEl = wrapper.createDiv({ cls: "vaultconnect-vault-picker" });
-    const loadingEl = vaultListEl.createDiv({ cls: "vaultconnect-vault-picker-loading" });
-    loadingEl.createDiv({ cls: "spinner" });
-    loadingEl.createEl("span", { text: "Loading vaults..." });
-    void this.loadVaultsForPicker(vaultListEl, wrapper);
+    void this.loadVaultsForPicker(containerEl);
   }
-  async loadVaultsForPicker(vaultListEl, wrapper) {
+  async loadVaultsForPicker(containerEl) {
     var _a;
     try {
       const vaults = await ((_a = this.plugin.apiClient) == null ? void 0 : _a.listVaults());
-      vaultListEl.empty();
       if (!vaults || vaults.length === 0) {
-        vaultListEl.createEl("p", {
-          text: "No vaults found. Create a vault in the VaultConnect web UI first.",
-          cls: "setting-item-description"
-        });
+        new import_obsidian16.Setting(containerEl).setName("No vaults found").setDesc("Create a vault in the VaultConnect web UI first.");
         return;
       }
       for (const vault of vaults) {
-        const card = vaultListEl.createDiv({ cls: "vaultconnect-vault-card" });
-        const nameEl = card.createDiv({ cls: "vaultconnect-vault-card-name" });
-        nameEl.setText(vault.name);
-        const infoEl = card.createDiv({ cls: "vaultconnect-vault-card-info" });
-        infoEl.setText(`${vault.file_count || 0} files`);
-        if (vault.is_cross_tenant) {
-          const badge = card.createEl("span", { cls: "vaultconnect-vault-card-badge" });
-          badge.setText("Shared");
-        }
-        card.addEventListener("click", () => {
-          void this.selectVaultAndFinish(vault, wrapper);
+        const desc = `${vault.file_count || 0} files${vault.is_cross_tenant ? " (Shared)" : ""}`;
+        new import_obsidian16.Setting(containerEl).setName(vault.name).setDesc(desc).addButton((button) => {
+          button.setButtonText("Select").setCta().onClick(() => {
+            void this.selectVaultAndFinish(vault);
+          });
         });
       }
-      const refreshContainer = vaultListEl.createDiv({ cls: "vaultconnect-onboarding-actions" });
-      const refreshBtn = refreshContainer.createEl("button", { text: "Refresh list" });
-      refreshBtn.addEventListener("click", () => {
-        vaultListEl.empty();
-        const loading = vaultListEl.createDiv({ cls: "vaultconnect-vault-picker-loading" });
-        loading.createDiv({ cls: "spinner" });
-        loading.createEl("span", { text: "Loading vaults..." });
-        void this.loadVaultsForPicker(vaultListEl, wrapper);
+      new import_obsidian16.Setting(containerEl).addButton((button) => {
+        button.setButtonText("Refresh list").onClick(() => {
+          this.display();
+        });
       });
     } catch (error) {
-      vaultListEl.empty();
-      vaultListEl.createEl("p", {
-        text: `Failed to load vaults: ${error.message}`,
-        cls: "setting-item-description vaultconnect-error-text"
-      });
+      new import_obsidian16.Setting(containerEl).setName("Error").setDesc(`Failed to load vaults: ${error.message}`);
     }
   }
-  async selectVaultAndFinish(vault, wrapper) {
+  async selectVaultAndFinish(vault) {
     this.plugin.settings.selectedVaultId = vault.vault_id;
     this.plugin.settings.vaultId = vault.vault_id;
     await this.plugin.saveSettings();
@@ -12701,7 +12640,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     const vaultId = this.plugin.settings.selectedVaultId || this.plugin.settings.vaultId;
     const statusDesc = isAuthed ? "Signed in" : "Not signed in";
     const vaultName = vaultId ? vaultId.substring(0, 8) + "..." : "None";
-    new import_obsidian16.Setting(containerEl).setName("Status").setDesc(`${isAuthed ? "\u{1F7E2}" : "\u26AB"} ${statusDesc} | Vault: ${vaultName}`).addButton((button) => {
+    new import_obsidian16.Setting(containerEl).setName("Status").setDesc(`${statusDesc} | Vault: ${vaultName}`).addButton((button) => {
       if (isAuthed) {
         button.setButtonText("Sign out").setWarning().onClick(async () => {
           if (this.plugin.authService) {
@@ -12740,7 +12679,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       }
     });
     if (isAuthed && vaultId) {
-      new import_obsidian16.Setting(containerEl).setName("Connection").setDesc(this.plugin.isConnected ? "\u{1F7E2} Connected to server" : "\u26AB Not connected").addButton((button) => {
+      new import_obsidian16.Setting(containerEl).setName("Connection").setDesc(this.plugin.isConnected ? "Connected to server" : "Not connected").addButton((button) => {
         if (this.plugin.isConnected) {
           button.setButtonText("Disconnect").onClick(() => {
             this.plugin.disconnect();
@@ -12773,7 +12712,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   displayVaultSelector(containerEl) {
     var _a;
     new import_obsidian16.Setting(containerEl).setName("Vault selection").setHeading();
-    let dropdownComponent;
+    let dropdownComponent = null;
     new import_obsidian16.Setting(containerEl).setName("Vault").setDesc("Select the vault to sync with").addDropdown((dropdown) => {
       dropdownComponent = dropdown;
       dropdown.addOption("", "Loading...");
@@ -12842,7 +12781,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     }
     new import_obsidian16.Setting(containerEl).setName("Device ID").setDesc("Unique identifier for this device").addText((text) => {
       text.setValue(this.plugin.settings.deviceId);
-      text.inputEl.disabled = true;
+      text.setDisabled(true);
     });
   }
   // ===========================================================================
@@ -12864,6 +12803,9 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
   displaySyncActions(containerEl) {
     new import_obsidian16.Setting(containerEl).setName("Sync actions").setHeading();
     const isConnected = this.plugin.isConnected;
+    if (!isConnected) {
+      new import_obsidian16.Setting(containerEl).setDesc("Connect to the server first to use sync actions.");
+    }
     new import_obsidian16.Setting(containerEl).setName("Push all").setDesc("Upload all local files to the server").addButton((button) => {
       button.setButtonText("Push all").setCta().setDisabled(!isConnected).onClick(async () => {
         button.setButtonText("Pushing...");
@@ -12900,27 +12842,19 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
         }
       });
     });
-    if (!isConnected) {
-      containerEl.createEl("p", {
-        text: "Connect to the server first to use sync actions.",
-        cls: "setting-item-description vaultconnect-sync-note"
-      });
-    }
   }
   // Full settings sections (shown in COMPLETE stage)
   // ===========================================================================
   displaySyncSection(containerEl) {
     new import_obsidian16.Setting(containerEl).setName("Sync").setHeading();
-    const syncModeDesc = containerEl.createDiv({ cls: "vaultsync-sync-mode-desc" });
-    new import_obsidian16.Setting(containerEl).setName("Sync mode").setDesc("Choose how files should be synchronized").addDropdown((dropdown) => {
+    new import_obsidian16.Setting(containerEl).setName("Sync mode").setDesc(this.getSyncModeDescription(this.plugin.settings.syncMode)).addDropdown((dropdown) => {
       dropdown.addOption("smart_sync" /* SMART_SYNC */, "Smart sync (recommended)").addOption("pull_all" /* PULL_ALL */, "Pull all").addOption("push_all" /* PUSH_ALL */, "Push all").addOption("manual" /* MANUAL */, "Manual").setValue(this.plugin.settings.syncMode).onChange(async (value2) => {
         this.plugin.settings.syncMode = value2;
         await this.plugin.saveSettings();
-        this.updateSyncModeDescription(syncModeDesc, value2);
         new import_obsidian16.Notice(`Sync mode changed to ${this.getSyncModeLabel(value2)}`);
+        this.display();
       });
     });
-    this.updateSyncModeDescription(syncModeDesc, this.plugin.settings.syncMode);
     new import_obsidian16.Setting(containerEl).setName("Auto sync").setDesc("Automatically sync file changes as you work").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.autoSync).onChange(async (value2) => {
         this.plugin.settings.autoSync = value2;
@@ -12945,18 +12879,14 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
       text.inputEl.type = "number";
     });
   }
-  updateSyncModeDescription(containerEl, mode) {
-    containerEl.empty();
+  getSyncModeDescription(mode) {
     const descriptions = {
-      ["smart_sync" /* SMART_SYNC */]: "Bidirectional sync with automatic conflict detection. Changes are synced both ways, and conflicts are detected before overwriting.",
-      ["pull_all" /* PULL_ALL */]: "Download all remote files. Local changes are preserved as conflict copies if they differ from remote.",
-      ["push_all" /* PUSH_ALL */]: "Upload all local files. Remote versions are overwritten with local content.",
-      ["manual" /* MANUAL */]: "No automatic sync. Use commands to manually sync files when needed."
+      ["smart_sync" /* SMART_SYNC */]: "Bidirectional sync with automatic conflict detection.",
+      ["pull_all" /* PULL_ALL */]: "Download all remote files. Local changes preserved as conflict copies.",
+      ["push_all" /* PUSH_ALL */]: "Upload all local files. Remote versions are overwritten.",
+      ["manual" /* MANUAL */]: "No automatic sync. Use commands to manually sync."
     };
-    containerEl.createEl("p", {
-      text: descriptions[mode],
-      cls: "setting-item-description vaultsync-mode-description"
-    });
+    return descriptions[mode] || "";
   }
   getSyncModeLabel(mode) {
     const labels = {
@@ -13158,12 +13088,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     });
   }
   displayAdvancedSection(containerEl) {
-    new import_obsidian16.Setting(containerEl).setName("Advanced").setHeading();
-    const warningEl = containerEl.createDiv({ cls: "vaultsync-warning" });
-    warningEl.createEl("p", {
-      text: "Changing these settings may affect plugin functionality. Only modify if you know what you're doing.",
-      cls: "setting-item-description"
-    });
+    new import_obsidian16.Setting(containerEl).setName("Advanced").setDesc("Changing these settings may affect plugin functionality.").setHeading();
     new import_obsidian16.Setting(containerEl).setName("Server URL").setDesc("The URL you entered during setup").addText((text) => {
       text.setPlaceholder("https://app.vaultsync.morinclan.com").setValue(this.plugin.settings.serverUrl || "").onChange(async (value2) => {
         this.plugin.settings.serverUrl = value2.trim();
@@ -13198,8 +13123,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
     });
     new import_obsidian16.Setting(containerEl).setName("Device ID").setDesc("Unique identifier for this device (read-only)").addText((text) => {
       text.setValue(this.plugin.settings.deviceId);
-      text.inputEl.disabled = true;
-      text.inputEl.addClass("vaultconnect-input-disabled");
+      text.setDisabled(true);
     });
     this.displayInitialSyncReset(containerEl);
     new import_obsidian16.Setting(containerEl).setName("Debug mode").setDesc("Enable verbose logging for troubleshooting (check console)").addToggle((toggle) => {
@@ -13238,7 +13162,7 @@ var VaultSyncSettingTab = class extends import_obsidian16.PluginSettingTab {
           "smart-merge": "Smart merge"
         };
         const optionLabel = syncState.chosenOption ? optionLabels[syncState.chosenOption] || syncState.chosenOption : "Unknown";
-        description = `Completed on ${dateStr} at ${timeStr} using "${optionLabel}" option. Reset to run initial sync wizard again.`;
+        description = `Completed ${dateStr} at ${timeStr} using "${optionLabel}". Reset to run wizard again.`;
       } else {
         description = "No initial sync completed yet. Reset will clear any partial sync state.";
       }

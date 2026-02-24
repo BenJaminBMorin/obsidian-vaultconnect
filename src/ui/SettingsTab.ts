@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, TextComponent } from 'obsidian';
+import { App, PluginSettingTab, Setting, Notice, TextComponent, DropdownComponent } from 'obsidian';
 import VaultSyncPlugin from '../../main';
 import { DeviceAuthModal } from './DeviceAuthModal';
 import { showConfirmationModal } from './ConfirmationModal';
@@ -83,79 +83,56 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   // ===========================================================================
 
   private displayServerStage(containerEl: HTMLElement): void {
-    const wrapper = containerEl.createDiv({ cls: 'vaultconnect-onboarding' });
+    this.displayStepIndicator(containerEl, 1);
 
-    // Step indicator
-    this.displayStepIndicator(wrapper, 1);
+    new Setting(containerEl)
+      .setName('Welcome to VaultConnect')
+      .setDesc('Enter your VaultConnect server URL to get started.')
+      .setHeading();
 
-    // Header
-    wrapper.createEl('h2', { text: 'Welcome to VaultConnect', cls: 'vaultconnect-onboarding-header' });
-    wrapper.createEl('p', {
-      text: 'Enter your VaultConnect server URL to get started.',
-      cls: 'setting-item-description'
-    });
+    let serverUrlInput: TextComponent;
 
-    // Server URL input
-    const inputContainer = wrapper.createDiv({ cls: 'vaultconnect-server-input-container' });
-    let serverUrlInput: HTMLInputElement;
-
-    new Setting(inputContainer)
+    const urlSetting = new Setting(containerEl)
       .setName('Server URL')
       .setDesc('Your VaultConnect web or API URL')
       .addText(text => {
+        serverUrlInput = text;
         text
           .setPlaceholder('https://app.vaultsync.morinclan.com')
           .setValue(this.plugin.settings.serverUrl || '');
-        serverUrlInput = text.inputEl;
-        serverUrlInput.addClass('vaultconnect-server-input');
+        text.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
+          if (e.key === 'Enter') {
+            void this.handleServerConnect(serverUrlInput.getValue(), containerEl);
+          }
+        });
+      })
+      .addButton(button => {
+        button
+          .setButtonText('Connect')
+          .setCta()
+          .onClick(() => {
+            void this.handleServerConnect(serverUrlInput.getValue(), containerEl);
+          });
       });
-
-    // Status area for discovery feedback
-    const statusEl = wrapper.createDiv({ cls: 'vaultconnect-discovery-status' });
-
-    // Connect button
-    const btnContainer = wrapper.createDiv({ cls: 'vaultconnect-onboarding-actions' });
-    const connectBtn = btnContainer.createEl('button', { text: 'Connect', cls: 'mod-cta' });
-
-    connectBtn.addEventListener('click', () => {
-      void this.handleServerConnect(serverUrlInput.value, statusEl, connectBtn, wrapper);
-    });
-
-    // Allow Enter key to submit
-    inputContainer.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        connectBtn.click();
-      }
-    });
 
     // Auto-discover if serverUrl is already set (e.g., returning from "Change")
     if (this.plugin.settings.serverUrl) {
-      // Small delay to let the UI render first
-      setTimeout(() => connectBtn.click(), 100);
+      setTimeout(() => {
+        void this.handleServerConnect(serverUrlInput.getValue(), containerEl);
+      }, 100);
     }
   }
 
   private async handleServerConnect(
     url: string,
-    statusEl: HTMLElement,
-    connectBtn: HTMLButtonElement,
-    wrapper: HTMLElement
+    containerEl: HTMLElement
   ): Promise<void> {
-    statusEl.empty();
-    statusEl.removeClass('is-error', 'is-success');
-
     if (!url.trim()) {
-      statusEl.addClass('is-error');
-      statusEl.setText('Please enter a server URL');
+      new Notice('Please enter a server URL');
       return;
     }
 
-    // Show loading
-    connectBtn.disabled = true;
-    connectBtn.setText('Discovering...');
-    const spinner = statusEl.createDiv({ cls: 'vaultconnect-discovery-spinner' });
-    spinner.createDiv({ cls: 'spinner' });
-    spinner.createEl('span', { text: 'Looking up server configuration...' });
+    new Notice('Discovering server configuration...');
 
     try {
       const config = await this.discoveryService.discover(url);
@@ -174,86 +151,79 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         this.plugin.apiClient.setBaseURL(config.apiUrl);
       }
 
-      // Show success briefly then move to next stage
-      statusEl.empty();
-      statusEl.addClass('is-success');
-      statusEl.setText(`Connected to VaultConnect ${config.version}`);
+      new Notice(`Connected to VaultConnect ${config.version}`);
 
       // Short delay then refresh to next stage
       setTimeout(() => this.display(), 500);
     } catch (error) {
-      statusEl.empty();
-      statusEl.addClass('is-error');
-      statusEl.setText(error.message || 'Failed to discover server');
+      new Notice(error.message || 'Failed to discover server');
 
       // Show manual fallback
-      this.displayManualFallback(wrapper);
-    } finally {
-      connectBtn.disabled = false;
-      connectBtn.setText('Connect');
+      this.displayManualFallback(containerEl);
     }
   }
 
-  private displayManualFallback(wrapper: HTMLElement): void {
+  private displayManualFallback(containerEl: HTMLElement): void {
     // Check if fallback already shown
-    if (wrapper.querySelector('.vaultconnect-manual-fallback')) return;
+    if (containerEl.querySelector('.vaultconnect-manual-fallback')) return;
 
-    const fallback = wrapper.createDiv({ cls: 'vaultconnect-manual-fallback' });
-
+    const fallback = containerEl.createDiv({ cls: 'vaultconnect-manual-fallback' });
     const details = fallback.createEl('details');
     details.createEl('summary', { text: 'Manual configuration' });
-
     const content = details.createDiv({ cls: 'vaultconnect-manual-fields' });
 
-    // API URL
+    let apiUrlText: TextComponent;
+    let wsUrlText: TextComponent;
+
     new Setting(content)
       .setName('API URL')
       .setDesc('Direct API server URL')
       .addText(text => {
+        apiUrlText = text;
         text
           .setPlaceholder('https://api.vaultsync.morinclan.com/v1')
           .setValue(this.plugin.settings.apiBaseURL || '');
       });
 
-    // WebSocket URL
     new Setting(content)
       .setName('WebSocket URL')
       .setDesc('WebSocket server URL')
       .addText(text => {
+        wsUrlText = text;
         text
           .setPlaceholder('https://api.vaultsync.morinclan.com')
           .setValue(this.plugin.settings.wsBaseURL || '');
       });
 
-    // Save manual config button
-    const saveBtnContainer = content.createDiv({ cls: 'vaultconnect-onboarding-actions' });
-    const saveBtn = saveBtnContainer.createEl('button', { text: 'Save & continue', cls: 'mod-cta' });
-    saveBtn.addEventListener('click', () => {
-      const apiInput = content.querySelectorAll('input')[0] as HTMLInputElement;
-      const wsInput = content.querySelectorAll('input')[1] as HTMLInputElement;
+    new Setting(content)
+      .addButton(button => {
+        button
+          .setButtonText('Save & continue')
+          .setCta()
+          .onClick(() => {
+            const apiUrl = apiUrlText.getValue().trim();
+            const wsUrl = wsUrlText.getValue().trim();
 
-      const apiUrl = apiInput?.value?.trim();
-      const wsUrl = wsInput?.value?.trim();
+            if (!apiUrl) {
+              new Notice('API URL is required');
+              return;
+            }
 
-      if (!apiUrl) {
-        new Notice('API URL is required');
-        return;
-      }
+            this.plugin.settings.apiBaseURL = apiUrl;
+            this.plugin.settings.apiUrl = apiUrl;
+            this.plugin.settings.wsBaseURL = wsUrl || apiUrl;
+            this.plugin.settings.wsUrl = wsUrl || apiUrl;
+            this.plugin.settings.serverUrl = apiUrl;
 
-      this.plugin.settings.apiBaseURL = apiUrl;
-      this.plugin.settings.apiUrl = apiUrl;
-      this.plugin.settings.wsBaseURL = wsUrl || apiUrl;
-      this.plugin.settings.wsUrl = wsUrl || apiUrl;
-      this.plugin.settings.serverUrl = apiUrl;
-
-      void (async () => {
-        await this.plugin.saveSettings();
-        if (this.plugin.apiClient) {
-          this.plugin.apiClient.setBaseURL(apiUrl);
-        }
-        this.display();
-      })();
-    });
+            void (async () => {
+              await this.plugin.saveSettings();
+              if (this.plugin.apiClient) {
+                this.plugin.apiClient.setBaseURL(apiUrl);
+              }
+              this.display();
+            })();
+          });
+      });
   }
 
   // ===========================================================================
@@ -261,75 +231,68 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   // ===========================================================================
 
   private displayAuthStage(containerEl: HTMLElement): void {
-    const wrapper = containerEl.createDiv({ cls: 'vaultconnect-onboarding' });
+    this.displayStepIndicator(containerEl, 2);
 
-    // Step indicator
-    this.displayStepIndicator(wrapper, 2);
+    new Setting(containerEl)
+      .setName('Sign in')
+      .setHeading();
 
-    // Header
-    wrapper.createEl('h2', { text: 'Sign in', cls: 'vaultconnect-onboarding-header' });
-
-    // Show connected server info
-    const serverInfo = wrapper.createDiv({ cls: 'vaultconnect-server-info' });
     const serverLabel = this.plugin.settings.serverUrl || this.plugin.settings.apiBaseURL;
     const versionText = this.cachedServerConfig?.version ? ` (v${this.cachedServerConfig.version})` : '';
-    serverInfo.createEl('span', { text: `Server: ${serverLabel}${versionText}` });
 
-    const changeLink = serverInfo.createEl('a', { text: 'Change', cls: 'vaultconnect-change-link' });
-    changeLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      // Clear derived URLs but keep serverUrl for re-discovery
-      this.plugin.settings.apiBaseURL = '';
-      this.plugin.settings.apiUrl = '';
-      this.plugin.settings.wsBaseURL = '';
-      this.plugin.settings.wsUrl = '';
-      void (async () => {
-        await this.plugin.saveSettings();
-        // If we have a saved serverUrl, go to server stage pre-filled and auto-discover
-        this.display();
-      })();
-    });
-
-    wrapper.createEl('p', {
-      text: 'Sign in via your browser to connect your account.',
-      cls: 'setting-item-description'
-    });
-
-    // Sign in button
-    const btnContainer = wrapper.createDiv({ cls: 'vaultconnect-onboarding-actions' });
-    const signInBtn = btnContainer.createEl('button', { text: 'Sign in with browser', cls: 'mod-cta' });
-
-    signInBtn.addEventListener('click', () => {
-      if (!this.plugin.authService) {
-        new Notice('Auth service not available');
-        return;
-      }
-
-      new DeviceAuthModal(
-        this.app,
-        this.plugin.authService,
-        this.plugin.settings.apiBaseURL,
-        () => {
-          // On success, sync apiKey to settings
-          const authState = this.plugin.authService?.getAuthState();
-          if (authState?.apiKey) {
-            this.plugin.settings.apiKey = authState.apiKey;
-            this.plugin.settings.apiKeyExpires = authState.expiresAt;
-          }
-          void this.plugin.saveSettings().then(() => this.display());
-        },
-        () => {
-          // Cancelled
-        }
-      ).open();
-    });
-
-    if (this.cachedServerConfig?.googleOAuthEnabled) {
-      wrapper.createEl('p', {
-        text: 'Google sign-in is available on the authorization page.',
-        cls: 'setting-item-description vaultconnect-oauth-hint'
+    new Setting(containerEl)
+      .setName('Server')
+      .setDesc(serverLabel + versionText)
+      .addButton(button => {
+        button
+          .setButtonText('Change')
+          .onClick(() => {
+            this.plugin.settings.apiBaseURL = '';
+            this.plugin.settings.apiUrl = '';
+            this.plugin.settings.wsBaseURL = '';
+            this.plugin.settings.wsUrl = '';
+            void (async () => {
+              await this.plugin.saveSettings();
+              this.display();
+            })();
+          });
       });
-    }
+
+    const authDesc = this.cachedServerConfig?.googleOAuthEnabled
+      ? 'Sign in via your browser. Google sign-in is available.'
+      : 'Sign in via your browser to connect your account.';
+
+    new Setting(containerEl)
+      .setName('Authentication')
+      .setDesc(authDesc)
+      .addButton(button => {
+        button
+          .setButtonText('Sign in with browser')
+          .setCta()
+          .onClick(() => {
+            if (!this.plugin.authService) {
+              new Notice('Auth service not available');
+              return;
+            }
+
+            new DeviceAuthModal(
+              this.app,
+              this.plugin.authService,
+              this.plugin.settings.apiBaseURL,
+              () => {
+                const authState = this.plugin.authService?.getAuthState();
+                if (authState?.apiKey) {
+                  this.plugin.settings.apiKey = authState.apiKey;
+                  this.plugin.settings.apiKeyExpires = authState.expiresAt;
+                }
+                void this.plugin.saveSettings().then(() => this.display());
+              },
+              () => {
+                // Cancelled
+              }
+            ).open();
+          });
+      });
   }
 
   // ===========================================================================
@@ -337,113 +300,89 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   // ===========================================================================
 
   private displayVaultStage(containerEl: HTMLElement): void {
-    const wrapper = containerEl.createDiv({ cls: 'vaultconnect-onboarding' });
+    this.displayStepIndicator(containerEl, 3);
 
-    // Step indicator
-    this.displayStepIndicator(wrapper, 3);
+    new Setting(containerEl)
+      .setName('Select a vault')
+      .setDesc('Choose which vault to sync with this Obsidian vault.')
+      .setHeading();
 
-    // Header
-    wrapper.createEl('h2', { text: 'Select a vault', cls: 'vaultconnect-onboarding-header' });
+    new Setting(containerEl)
+      .setName('Signed in')
+      .addButton(button => {
+        button
+          .setButtonText('Sign out')
+          .setWarning()
+          .onClick(() => {
+            if (this.plugin.authService) {
+              void this.plugin.authService.clearApiKey().then(() => {
+                this.plugin.settings.apiKey = null;
+                this.plugin.settings.apiKeyExpires = null;
+                void this.plugin.saveSettings().then(() => this.display());
+              });
+            }
+          });
+      });
 
-    // Auth status
-    const authInfo = wrapper.createDiv({ cls: 'vaultconnect-auth-status-line' });
-    authInfo.createEl('span', { text: 'Signed in', cls: 'vaultconnect-status-ok' });
-
-    const logoutLink = authInfo.createEl('a', { text: 'Sign out', cls: 'vaultconnect-change-link' });
-    logoutLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (this.plugin.authService) {
-        void this.plugin.authService.clearApiKey().then(() => {
-          this.plugin.settings.apiKey = null;
-          this.plugin.settings.apiKeyExpires = null;
-          void this.plugin.saveSettings().then(() => this.display());
-        });
-      }
-    });
-
-    wrapper.createEl('p', {
-      text: 'Choose which vault to sync with this Obsidian vault.',
-      cls: 'setting-item-description'
-    });
-
-    // Vault list container
-    const vaultListEl = wrapper.createDiv({ cls: 'vaultconnect-vault-picker' });
-    const loadingEl = vaultListEl.createDiv({ cls: 'vaultconnect-vault-picker-loading' });
-    loadingEl.createDiv({ cls: 'spinner' });
-    loadingEl.createEl('span', { text: 'Loading vaults...' });
-
-    // Load vaults
-    void this.loadVaultsForPicker(vaultListEl, wrapper);
+    // Vault list - use Setting items for each vault
+    void this.loadVaultsForPicker(containerEl);
   }
 
-  private async loadVaultsForPicker(vaultListEl: HTMLElement, wrapper: HTMLElement): Promise<void> {
+  private async loadVaultsForPicker(containerEl: HTMLElement): Promise<void> {
     try {
       const vaults = await this.plugin.apiClient?.listVaults();
 
-      vaultListEl.empty();
-
       if (!vaults || vaults.length === 0) {
-        vaultListEl.createEl('p', {
-          text: 'No vaults found. Create a vault in the VaultConnect web UI first.',
-          cls: 'setting-item-description'
-        });
+        new Setting(containerEl)
+          .setName('No vaults found')
+          .setDesc('Create a vault in the VaultConnect web UI first.');
         return;
       }
 
-      // Render vault cards
       for (const vault of vaults) {
-        const card = vaultListEl.createDiv({ cls: 'vaultconnect-vault-card' });
+        const desc = `${vault.file_count || 0} files${vault.is_cross_tenant ? ' (Shared)' : ''}`;
 
-        const nameEl = card.createDiv({ cls: 'vaultconnect-vault-card-name' });
-        nameEl.setText(vault.name);
-
-        const infoEl = card.createDiv({ cls: 'vaultconnect-vault-card-info' });
-        infoEl.setText(`${vault.file_count || 0} files`);
-
-        if (vault.is_cross_tenant) {
-          const badge = card.createEl('span', { cls: 'vaultconnect-vault-card-badge' });
-          badge.setText('Shared');
-        }
-
-        card.addEventListener('click', () => {
-          void this.selectVaultAndFinish(vault, wrapper);
-        });
+        new Setting(containerEl)
+          .setName(vault.name)
+          .setDesc(desc)
+          .addButton(button => {
+            button
+              .setButtonText('Select')
+              .setCta()
+              .onClick(() => {
+                void this.selectVaultAndFinish(vault);
+              });
+          });
       }
 
-      // Refresh button
-      const refreshContainer = vaultListEl.createDiv({ cls: 'vaultconnect-onboarding-actions' });
-      const refreshBtn = refreshContainer.createEl('button', { text: 'Refresh list' });
-      refreshBtn.addEventListener('click', () => {
-        vaultListEl.empty();
-        const loading = vaultListEl.createDiv({ cls: 'vaultconnect-vault-picker-loading' });
-        loading.createDiv({ cls: 'spinner' });
-        loading.createEl('span', { text: 'Loading vaults...' });
-        void this.loadVaultsForPicker(vaultListEl, wrapper);
-      });
+      new Setting(containerEl)
+        .addButton(button => {
+          button
+            .setButtonText('Refresh list')
+            .onClick(() => {
+              this.display();
+            });
+        });
     } catch (error) {
-      vaultListEl.empty();
-      vaultListEl.createEl('p', {
-        text: `Failed to load vaults: ${error.message}`,
-        cls: 'setting-item-description vaultconnect-error-text'
-      });
+      new Setting(containerEl)
+        .setName('Error')
+        .setDesc(`Failed to load vaults: ${error.message}`);
     }
   }
 
-  private async selectVaultAndFinish(vault: VaultInfo, wrapper: HTMLElement): Promise<void> {
+  private async selectVaultAndFinish(vault: VaultInfo): Promise<void> {
     this.plugin.settings.selectedVaultId = vault.vault_id;
     this.plugin.settings.vaultId = vault.vault_id;
     await this.plugin.saveSettings();
 
     new Notice(`Vault "${vault.name}" selected! Connecting...`);
 
-    // Auto-connect now that onboarding is complete
     try {
       await this.plugin.connect();
     } catch (error) {
       logger.warn('Auto-connect after vault selection failed:', error);
     }
 
-    // Move to complete stage
     this.display();
   }
 
@@ -452,13 +391,8 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   // ===========================================================================
 
   private displayCompleteStage(containerEl: HTMLElement): void {
-    // Compact connection header
     this.displayConnectionHeader(containerEl);
-
-    // Sync actions
     this.displaySyncActions(containerEl);
-
-    // Show all setting sections
     this.displaySyncSection(containerEl);
     this.displaySelectiveSyncSection(containerEl);
     this.displayCollaborationSection(containerEl);
@@ -474,13 +408,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     const isAuthed = authState?.isAuthenticated ?? false;
     const vaultId = this.plugin.settings.selectedVaultId || this.plugin.settings.vaultId;
 
-    // Connection status row
     const statusDesc = isAuthed ? 'Signed in' : 'Not signed in';
     const vaultName = vaultId ? vaultId.substring(0, 8) + '...' : 'None';
 
     new Setting(containerEl)
       .setName('Status')
-      .setDesc(`${isAuthed ? '🟢' : '⚫'} ${statusDesc} | Vault: ${vaultName}`)
+      .setDesc(`${statusDesc} | Vault: ${vaultName}`)
       .addButton(button => {
         if (isAuthed) {
           button
@@ -488,7 +421,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
             .setWarning()
             .onClick(async () => {
               if (this.plugin.authService) {
-                // Disconnect first
                 if (this.plugin.isConnected) {
                   this.plugin.disconnect();
                 }
@@ -525,11 +457,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         }
       });
 
-    // Connect/disconnect button
     if (isAuthed && vaultId) {
       new Setting(containerEl)
         .setName('Connection')
-        .setDesc(this.plugin.isConnected ? '🟢 Connected to server' : '⚫ Not connected')
+        .setDesc(this.plugin.isConnected ? 'Connected to server' : 'Not connected')
         .addButton(button => {
           if (this.plugin.isConnected) {
             button
@@ -550,7 +481,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         });
     }
 
-    // API Key info (if authenticated)
     if (isAuthed && authState?.apiKey) {
       const maskedKey = authState.apiKey.substring(0, 12) + '****' + authState.apiKey.substring(authState.apiKey.length - 4);
 
@@ -577,14 +507,13 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       }
     }
 
-    // Vault selector
     this.displayVaultSelector(containerEl);
   }
 
   private displayVaultSelector(containerEl: HTMLElement): void {
     new Setting(containerEl).setName('Vault selection').setHeading();
 
-    let dropdownComponent: any;
+    let dropdownComponent: DropdownComponent = null as any;
 
     new Setting(containerEl)
       .setName('Vault')
@@ -669,13 +598,12 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       }
     }
 
-    // Device ID (read-only)
     new Setting(containerEl)
       .setName('Device ID')
       .setDesc('Unique identifier for this device')
       .addText(text => {
         text.setValue(this.plugin.settings.deviceId);
-        text.inputEl.disabled = true;
+        text.setDisabled(true);
       });
   }
 
@@ -701,7 +629,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
 
     const isConnected = this.plugin.isConnected;
 
-    // Push all
+    if (!isConnected) {
+      new Setting(containerEl)
+        .setDesc('Connect to the server first to use sync actions.');
+    }
+
     new Setting(containerEl)
       .setName('Push all')
       .setDesc('Upload all local files to the server')
@@ -722,7 +654,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           });
       });
 
-    // Pull all
     new Setting(containerEl)
       .setName('Pull all')
       .setDesc('Download all remote files to this device')
@@ -742,7 +673,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           });
       });
 
-    // Force sync
     new Setting(containerEl)
       .setName('Force sync')
       .setDesc('Compare all files and sync differences')
@@ -761,13 +691,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
             }
           });
       });
-
-    if (!isConnected) {
-      containerEl.createEl('p', {
-        text: 'Connect to the server first to use sync actions.',
-        cls: 'setting-item-description vaultconnect-sync-note'
-      });
-    }
   }
 
   // Full settings sections (shown in COMPLETE stage)
@@ -776,11 +699,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   private displaySyncSection(containerEl: HTMLElement): void {
     new Setting(containerEl).setName('Sync').setHeading();
 
-    const syncModeDesc = containerEl.createDiv({ cls: 'vaultsync-sync-mode-desc' });
-
     new Setting(containerEl)
       .setName('Sync mode')
-      .setDesc('Choose how files should be synchronized')
+      .setDesc(this.getSyncModeDescription(this.plugin.settings.syncMode))
       .addDropdown(dropdown => {
         dropdown
           .addOption(SyncMode.SMART_SYNC, 'Smart sync (recommended)')
@@ -791,12 +712,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.syncMode = value as SyncMode;
             await this.plugin.saveSettings();
-            this.updateSyncModeDescription(syncModeDesc, value as SyncMode);
             new Notice(`Sync mode changed to ${this.getSyncModeLabel(value as SyncMode)}`);
+            this.display();
           });
       });
-
-    this.updateSyncModeDescription(syncModeDesc, this.plugin.settings.syncMode);
 
     new Setting(containerEl)
       .setName('Auto sync')
@@ -831,20 +750,14 @@ export class VaultSyncSettingTab extends PluginSettingTab {
       });
   }
 
-  private updateSyncModeDescription(containerEl: HTMLElement, mode: SyncMode): void {
-    containerEl.empty();
-
+  private getSyncModeDescription(mode: SyncMode): string {
     const descriptions: Record<string, string> = {
-      [SyncMode.SMART_SYNC]: 'Bidirectional sync with automatic conflict detection. Changes are synced both ways, and conflicts are detected before overwriting.',
-      [SyncMode.PULL_ALL]: 'Download all remote files. Local changes are preserved as conflict copies if they differ from remote.',
-      [SyncMode.PUSH_ALL]: 'Upload all local files. Remote versions are overwritten with local content.',
-      [SyncMode.MANUAL]: 'No automatic sync. Use commands to manually sync files when needed.'
+      [SyncMode.SMART_SYNC]: 'Bidirectional sync with automatic conflict detection.',
+      [SyncMode.PULL_ALL]: 'Download all remote files. Local changes preserved as conflict copies.',
+      [SyncMode.PUSH_ALL]: 'Upload all local files. Remote versions are overwritten.',
+      [SyncMode.MANUAL]: 'No automatic sync. Use commands to manually sync.'
     };
-
-    containerEl.createEl('p', {
-      text: descriptions[mode],
-      cls: 'setting-item-description vaultsync-mode-description'
-    });
+    return descriptions[mode] || '';
   }
 
   private getSyncModeLabel(mode: SyncMode): string {
@@ -1146,15 +1059,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayAdvancedSection(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName('Advanced').setHeading();
+    new Setting(containerEl)
+      .setName('Advanced')
+      .setDesc('Changing these settings may affect plugin functionality.')
+      .setHeading();
 
-    const warningEl = containerEl.createDiv({ cls: 'vaultsync-warning' });
-    warningEl.createEl('p', {
-      text: 'Changing these settings may affect plugin functionality. Only modify if you know what you\'re doing.',
-      cls: 'setting-item-description'
-    });
-
-    // Server URL (user-facing)
     new Setting(containerEl)
       .setName('Server URL')
       .setDesc('The URL you entered during setup')
@@ -1168,7 +1077,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           });
       });
 
-    // API Base URL
     new Setting(containerEl)
       .setName('API base URL')
       .setDesc('API server URL (requires reconnection)')
@@ -1185,7 +1093,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         );
       });
 
-    // WebSocket Base URL
     new Setting(containerEl)
       .setName('Websocket base URL')
       .setDesc('Websocket server URL (requires reconnection)')
@@ -1202,20 +1109,16 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         );
       });
 
-    // Device ID (read-only)
     new Setting(containerEl)
       .setName('Device ID')
       .setDesc('Unique identifier for this device (read-only)')
       .addText(text => {
         text.setValue(this.plugin.settings.deviceId);
-        text.inputEl.disabled = true;
-        text.inputEl.addClass('vaultconnect-input-disabled');
+        text.setDisabled(true);
       });
 
-    // Initial Sync State Reset
     this.displayInitialSyncReset(containerEl);
 
-    // Debug mode
     new Setting(containerEl)
       .setName('Debug mode')
       .setDesc('Enable verbose logging for troubleshooting (check console)')
@@ -1229,7 +1132,6 @@ export class VaultSyncSettingTab extends PluginSettingTab {
           });
       });
 
-    // Export/Import/Reset at bottom of Advanced
     new Setting(containerEl)
       .setName('Export settings')
       .setDesc('Save current settings to a file')
@@ -1282,7 +1184,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         };
         const optionLabel = syncState.chosenOption ? (optionLabels[syncState.chosenOption] || syncState.chosenOption) : 'Unknown';
 
-        description = `Completed on ${dateStr} at ${timeStr} using "${optionLabel}" option. Reset to run initial sync wizard again.`;
+        description = `Completed ${dateStr} at ${timeStr} using "${optionLabel}". Reset to run wizard again.`;
       } else {
         description = 'No initial sync completed yet. Reset will clear any partial sync state.';
       }
