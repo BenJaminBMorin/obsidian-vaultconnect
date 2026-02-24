@@ -122,8 +122,10 @@ export interface SyncError {
 export interface ConflictInfo {
   id: string;
   path: string;
-  localContent: string;
-  remoteContent: string;
+  localContent?: string;   // In-memory only — stripped before persistence
+  remoteContent?: string;  // In-memory only — stripped before persistence
+  localHash?: string;      // Hash at conflict detection time
+  remoteHash?: string;     // Hash at conflict detection time
   localModified: Date;
   remoteModified: Date;
   conflictType: ConflictType;

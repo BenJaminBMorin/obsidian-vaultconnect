@@ -185,12 +185,11 @@ export class ConflictResolutionModal extends Modal {
     localHeader.addClass('vaultconnect-mb-md');
     localHeader.addClass('vaultconnect-text-accent');
 
-    const localContent = localPanel.createEl('pre', { cls: 'conflict-content' });
-    localContent.textContent = conflict.localContent || '(deleted)';
-    localContent.addClass('vaultconnect-code-block');
-    localContent.addClass('vaultconnect-max-h-300');
-    localContent.addClass('vaultconnect-overflow-auto');
-    localContent.addClass('vaultconnect-text-sm');
+    const localContentEl = localPanel.createEl('pre', { cls: 'conflict-content' });
+    localContentEl.addClass('vaultconnect-code-block');
+    localContentEl.addClass('vaultconnect-max-h-300');
+    localContentEl.addClass('vaultconnect-overflow-auto');
+    localContentEl.addClass('vaultconnect-text-sm');
 
     // Remote version
     const remotePanel = diffContainer.createDiv('conflict-panel');
@@ -203,12 +202,29 @@ export class ConflictResolutionModal extends Modal {
     remoteHeader.addClass('vaultconnect-mb-md');
     remoteHeader.addClass('vaultconnect-text-accent');
 
-    const remoteContent = remotePanel.createEl('pre', { cls: 'conflict-content' });
-    remoteContent.textContent = conflict.remoteContent || '(deleted)';
-    remoteContent.addClass('vaultconnect-code-block');
-    remoteContent.addClass('vaultconnect-max-h-300');
-    remoteContent.addClass('vaultconnect-overflow-auto');
-    remoteContent.addClass('vaultconnect-text-sm');
+    const remoteContentEl = remotePanel.createEl('pre', { cls: 'conflict-content' });
+    remoteContentEl.addClass('vaultconnect-code-block');
+    remoteContentEl.addClass('vaultconnect-max-h-300');
+    remoteContentEl.addClass('vaultconnect-overflow-auto');
+    remoteContentEl.addClass('vaultconnect-text-sm');
+
+    // If content is already in memory, show it immediately; otherwise fetch on-demand
+    if (conflict.localContent !== undefined && conflict.remoteContent !== undefined) {
+      localContentEl.textContent = conflict.localContent || '(deleted)';
+      remoteContentEl.textContent = conflict.remoteContent || '(deleted)';
+    } else {
+      localContentEl.textContent = 'Loading...';
+      remoteContentEl.textContent = 'Loading...';
+
+      this.conflictService.getConflictContent(conflict.id).then(({ localContent, remoteContent }) => {
+        localContentEl.textContent = localContent || '(deleted)';
+        remoteContentEl.textContent = remoteContent || '(deleted)';
+      }).catch((err: Error) => {
+        localContentEl.textContent = '(failed to load content)';
+        remoteContentEl.textContent = '(failed to load content)';
+        console.error('Failed to load conflict content:', err);
+      });
+    }
   }
 
   private renderResolutionButtons(container: HTMLElement, conflict: ConflictInfo) {
@@ -304,64 +320,85 @@ export class ConflictResolutionModal extends Modal {
     description.addClass('vaultconnect-mb-md');
     description.addClass('vaultconnect-text-muted');
 
-    // Merge editor
-    let mergedContent = this.createMergeTemplate(conflict);
+    // Show loading state while fetching content
+    const loadingEl = contentEl.createDiv('merge-loading');
+    loadingEl.textContent = 'Loading file content...';
+    loadingEl.addClass('vaultconnect-text-muted');
 
-    // Preview section
-    const previewContainer = contentEl.createDiv('merge-preview');
-    previewContainer.addClass('vaultconnect-mt-lg');
+    // Fetch content then render editor
+    const buildEditor = (localContent: string, remoteContent: string) => {
+      loadingEl.remove();
 
-    const previewHeader = previewContainer.createEl('h3', { text: 'Preview' });
-    previewHeader.addClass('vaultconnect-mb-md');
+      let mergedContent = this.createMergeTemplate(localContent, remoteContent);
 
-    const previewContent = previewContainer.createEl('div', { cls: 'merge-preview-content' });
-    previewContent.addClass('vaultconnect-panel');
-    previewContent.addClass('vaultconnect-p-md');
-    previewContent.addClass('vaultconnect-max-h-200');
-    previewContent.addClass('vaultconnect-overflow-auto');
-    previewContent.addClass('vaultconnect-code-block');
-    previewContent.textContent = mergedContent;
+      // Preview section
+      const previewContainer = contentEl.createDiv('merge-preview');
+      previewContainer.addClass('vaultconnect-mt-lg');
 
-    new Setting(contentEl)
-      .setName('Merged content')
-      .setDesc('Combine both versions as needed')
-      .addTextArea(text => {
-        text
-          .setValue(mergedContent)
-          .onChange(value => {
-            mergedContent = value;
-            previewContent.textContent = value;
-          });
-        text.inputEl.rows = 20;
-        text.inputEl.addClass('vaultconnect-w-full');
-        text.inputEl.addClass('vaultconnect-font-mono');
-        text.inputEl.addClass('vaultconnect-text-sm');
+      const previewHeader = previewContainer.createEl('h3', { text: 'Preview' });
+      previewHeader.addClass('vaultconnect-mb-md');
+
+      const previewContent = previewContainer.createEl('div', { cls: 'merge-preview-content' });
+      previewContent.addClass('vaultconnect-panel');
+      previewContent.addClass('vaultconnect-p-md');
+      previewContent.addClass('vaultconnect-max-h-200');
+      previewContent.addClass('vaultconnect-overflow-auto');
+      previewContent.addClass('vaultconnect-code-block');
+      previewContent.textContent = mergedContent;
+
+      new Setting(contentEl)
+        .setName('Merged content')
+        .setDesc('Combine both versions as needed')
+        .addTextArea(text => {
+          text
+            .setValue(mergedContent)
+            .onChange(value => {
+              mergedContent = value;
+              previewContent.textContent = value;
+            });
+          text.inputEl.rows = 20;
+          text.inputEl.addClass('vaultconnect-w-full');
+          text.inputEl.addClass('vaultconnect-font-mono');
+          text.inputEl.addClass('vaultconnect-text-sm');
+        });
+
+      // Buttons
+      const buttonContainer = contentEl.createDiv('modal-button-container');
+      buttonContainer.addClass('vaultconnect-mt-lg');
+      buttonContainer.addClass('vaultconnect-flex');
+      buttonContainer.addClass('vaultconnect-justify-end');
+      buttonContainer.addClass('vaultconnect-gap-md');
+
+      const backButton = buttonContainer.createEl('button', { text: 'Back' });
+      backButton.addEventListener('click', () => {
+        this.renderConflictView();
       });
 
-    // Buttons
-    const buttonContainer = contentEl.createDiv('modal-button-container');
-    buttonContainer.addClass('vaultconnect-mt-lg');
-    buttonContainer.addClass('vaultconnect-flex');
-    buttonContainer.addClass('vaultconnect-justify-end');
-    buttonContainer.addClass('vaultconnect-gap-md');
+      const saveButton = buttonContainer.createEl('button', {
+        text: 'Save merged version',
+        cls: 'mod-cta'
+      });
+      saveButton.addEventListener('click', () => {
+        void this.resolveConflict(conflict, ResolutionStrategy.MERGE_MANUAL, mergedContent);
+      });
+    };
 
-    const backButton = buttonContainer.createEl('button', { text: 'Back' });
-    backButton.addEventListener('click', () => {
-      this.renderConflictView();
-    });
-
-    const saveButton = buttonContainer.createEl('button', {
-      text: 'Save merged version',
-      cls: 'mod-cta'
-    });
-    saveButton.addEventListener('click', () => {
-      void this.resolveConflict(conflict, ResolutionStrategy.MERGE_MANUAL, mergedContent);
-    });
+    // If content is in memory, use it directly; otherwise fetch on-demand
+    if (conflict.localContent !== undefined && conflict.remoteContent !== undefined) {
+      buildEditor(conflict.localContent, conflict.remoteContent);
+    } else {
+      this.conflictService.getConflictContent(conflict.id).then(({ localContent, remoteContent }) => {
+        buildEditor(localContent, remoteContent);
+      }).catch((err: Error) => {
+        loadingEl.textContent = 'Failed to load file content. Please close and try again.';
+        console.error('Failed to load conflict content for merge:', err);
+      });
+    }
   }
 
-  private createMergeTemplate(conflict: ConflictInfo): string {
+  private createMergeTemplate(localContent: string, remoteContent: string): string {
     // Create a merge template with conflict markers
-    return `<<<<<<< LOCAL\n${conflict.localContent}\n=======\n${conflict.remoteContent}\n>>>>>>> REMOTE`;
+    return `<<<<<<< LOCAL\n${localContent}\n=======\n${remoteContent}\n>>>>>>> REMOTE`;
   }
 
   private async resolveConflict(

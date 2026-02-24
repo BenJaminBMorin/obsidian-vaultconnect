@@ -5498,12 +5498,23 @@ var SyncQueueService = class {
     this.config = config;
   }
   /**
-   * Initialize queue from storage
+   * Initialize queue from storage, cleaning up stale entries
    */
   async initialize() {
     const stored = await this.storage.get("syncQueue");
     if (stored && Array.isArray(stored)) {
-      this.queue = stored.filter((op) => op.status !== "processing");
+      const ONE_DAY = 24 * 60 * 60 * 1e3;
+      this.queue = stored.filter((op) => {
+        if (op.status === "processing")
+          return false;
+        if (op.status === "failed" && Date.now() - op.timestamp > ONE_DAY)
+          return false;
+        return true;
+      });
+      if (this.queue.length !== stored.length) {
+        console.debug(`Cleaned up ${stored.length - this.queue.length} stale queue entries`);
+        await this.persistQueue();
+      }
       console.debug(`Loaded ${this.queue.length} queued operations from storage`);
     }
   }
@@ -5539,6 +5550,7 @@ var SyncQueueService = class {
       }
       return a.timestamp - b.timestamp;
     });
+    this.enforceQueueCap();
     await this.persistQueue();
     this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getQueueStats());
     return id;
@@ -5660,13 +5672,37 @@ var SyncQueueService = class {
     return Math.min(delay, this.config.maxRetryDelayMs);
   }
   /**
-   * Persist queue to storage
+   * Persist queue to storage — content is stripped to prevent data.json bloat
    */
   async persistQueue() {
     try {
-      await this.storage.set("syncQueue", this.queue);
+      const stripped = this.queue.map((op) => ({
+        ...op,
+        content: void 0
+      }));
+      await this.storage.set("syncQueue", stripped);
     } catch (error) {
       console.error("Failed to persist sync queue:", error);
+    }
+  }
+  /**
+   * Enforce max queue size of 500. Evicts oldest failed ops first, then oldest pending.
+   */
+  enforceQueueCap() {
+    const MAX_QUEUE = 500;
+    if (this.queue.length <= MAX_QUEUE)
+      return;
+    const failed = this.queue.filter((op) => op.status === "failed").sort((a, b) => a.timestamp - b.timestamp);
+    while (this.queue.length > MAX_QUEUE && failed.length > 0) {
+      const op = failed.shift();
+      this.queue = this.queue.filter((q) => q.id !== op.id);
+    }
+    if (this.queue.length > MAX_QUEUE) {
+      const pending = this.queue.filter((op) => op.status === "pending").sort((a, b) => a.timestamp - b.timestamp);
+      while (this.queue.length > MAX_QUEUE && pending.length > 0) {
+        const op = pending.shift();
+        this.queue = this.queue.filter((q) => q.id !== op.id);
+      }
     }
   }
   /**
@@ -6588,10 +6624,10 @@ var FileSyncService = class {
 
 // src/services/SyncService.ts
 init_SelectiveSyncService();
-init_types();
 var SyncService = class {
   // Track last successful sync for incremental checks
-  constructor(vault, apiClient, eventBus, storage, config, fileSync) {
+  constructor(vault, apiClient, eventBus, storage, config, fileSync, conflictService) {
+    this.conflictService = null;
     this.vaultId = null;
     this.isRunning = false;
     this.periodicSyncInterval = null;
@@ -6635,6 +6671,7 @@ var SyncService = class {
       eventBus,
       storage
     );
+    this.conflictService = conflictService || null;
     this.setupEventHandlers();
   }
   /**
@@ -6947,27 +6984,32 @@ var SyncService = class {
     }
   }
   /**
-   * Handle conflict by creating a conflict record
+   * Handle conflict by delegating to ConflictService (or storing metadata-only)
    */
   async handleConflict(localFile, remoteFile) {
     try {
-      const localContent = await this.vault.read(localFile);
-      const remoteContent = await this.apiClient.getFileByPath(this.vaultId, localFile.path);
+      if (this.conflictService) {
+        const remoteModified = remoteFile.updated_at instanceof Date ? remoteFile.updated_at : new Date(remoteFile.updated_at);
+        await this.conflictService.checkFileConflict(localFile, remoteFile.hash, remoteModified);
+        return;
+      }
       const conflicts = await this.storage.get("conflicts") || [];
-      conflicts.push({
+      const deduped = conflicts.filter((c) => c.path !== localFile.path);
+      deduped.push({
         id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: localFile.path,
-        localContent,
-        remoteContent: remoteContent.content,
+        localHash: remoteFile.hash,
+        // best-effort — actual local hash requires read
+        remoteHash: remoteFile.hash,
         localModified: new Date(localFile.stat.mtime),
-        remoteModified: remoteFile.updated_at,
-        conflictType: "content" /* CONTENT */,
+        remoteModified: remoteFile.updated_at instanceof Date ? remoteFile.updated_at : new Date(remoteFile.updated_at),
+        conflictType: "content",
         autoResolvable: false
       });
-      await this.storage.set("conflicts", conflicts);
+      await this.storage.set("conflicts", deduped);
       this.eventBus.emit(EVENTS.CONFLICT_DETECTED, {
         path: localFile.path,
-        conflictId: conflicts[conflicts.length - 1].id
+        conflictId: deduped[deduped.length - 1].id
       });
       console.debug(`Conflict stored for ${localFile.path}`);
     } catch (error) {
@@ -8327,6 +8369,8 @@ var LargeFileService = class {
 var import_obsidian4 = require("obsidian");
 init_EventBus();
 init_types();
+var MAX_CONFLICTS = 50;
+var STALE_CONFLICT_MS = 7 * 24 * 60 * 60 * 1e3;
 var ConflictService = class {
   constructor(vault, apiClient, eventBus, storage) {
     this.vaultId = null;
@@ -8354,19 +8398,31 @@ var ConflictService = class {
     });
   }
   /**
-   * Load conflicts from storage
+   * Load conflicts from storage, migrating bloated data and cleaning up stale entries
    */
   async loadConflicts() {
     try {
       const storedConflicts = await this.storage.get("conflicts");
       if (storedConflicts && Array.isArray(storedConflicts)) {
+        let needsMigration = false;
         this.conflicts = new Map(
-          storedConflicts.map((c) => [c.id, {
-            ...c,
-            localModified: new Date(c.localModified),
-            remoteModified: new Date(c.remoteModified)
-          }])
+          storedConflicts.map((c) => {
+            if (c.localContent || c.remoteContent)
+              needsMigration = true;
+            return [c.id, {
+              ...c,
+              localContent: void 0,
+              remoteContent: void 0,
+              localModified: new Date(c.localModified),
+              remoteModified: new Date(c.remoteModified)
+            }];
+          })
         );
+        this.cleanupStaleConflicts();
+        if (needsMigration) {
+          console.debug("Migrating bloated conflict data \u2014 stripping stored content");
+          await this.saveConflicts();
+        }
         console.debug(`Loaded ${this.conflicts.size} conflicts from storage`);
       }
     } catch (error) {
@@ -8374,14 +8430,52 @@ var ConflictService = class {
     }
   }
   /**
-   * Save conflicts to storage
+   * Save conflicts to storage — content is always stripped before persistence
    */
   async saveConflicts() {
     try {
-      const conflictsArray = Array.from(this.conflicts.values());
+      const conflictsArray = Array.from(this.conflicts.values()).map((c) => ({
+        ...c,
+        localContent: void 0,
+        remoteContent: void 0
+      }));
       await this.storage.set("conflicts", conflictsArray);
     } catch (error) {
       console.error("Failed to save conflicts:", error);
+    }
+  }
+  /**
+   * Remove conflicts older than STALE_CONFLICT_MS and enforce cap
+   */
+  cleanupStaleConflicts() {
+    const now = Date.now();
+    for (const [id, conflict] of this.conflicts) {
+      if (now - new Date(conflict.localModified).getTime() > STALE_CONFLICT_MS) {
+        this.conflicts.delete(id);
+      }
+    }
+    this.enforceConflictCap();
+  }
+  /**
+   * Evict oldest conflicts when over MAX_CONFLICTS
+   */
+  enforceConflictCap() {
+    if (this.conflicts.size <= MAX_CONFLICTS)
+      return;
+    const sorted = Array.from(this.conflicts.entries()).sort((a, b) => new Date(a[1].localModified).getTime() - new Date(b[1].localModified).getTime());
+    while (this.conflicts.size > MAX_CONFLICTS) {
+      const [oldestId] = sorted.shift();
+      this.conflicts.delete(oldestId);
+    }
+  }
+  /**
+   * Remove any existing conflict for the same path (dedup)
+   */
+  deduplicateByPath(path) {
+    for (const [id, existing] of this.conflicts) {
+      if (existing.path === path) {
+        this.conflicts.delete(id);
+      }
     }
   }
   /**
@@ -8424,7 +8518,9 @@ var ConflictService = class {
                 remoteFile.hash,
                 remoteModified
               );
-              detectedConflicts.push(conflict);
+              if (conflict) {
+                detectedConflicts.push(conflict);
+              }
             }
           }
         }
@@ -8475,24 +8571,35 @@ var ConflictService = class {
     }
   }
   /**
-   * Create a content conflict record
+   * Create a content conflict record.
+   * Returns null if content is identical (auto-resolved).
    */
   async createContentConflict(localFile, localContent, remoteHash, remoteModified) {
     if (!this.vaultId) {
       throw new Error("Vault not initialized");
     }
     const remoteFile = await this.apiClient.getFileByPath(this.vaultId, localFile.path);
+    const localHash = await this.computeHash(localContent);
+    if (this.isAutoResolvable(localContent, remoteFile.content)) {
+      await this.updateSyncState(localFile.path, localContent);
+      console.debug(`Auto-resolved identical content conflict: ${localFile.path}`);
+      return null;
+    }
+    this.deduplicateByPath(localFile.path);
     const conflict = {
       id: this.generateConflictId(),
       path: localFile.path,
       localContent,
       remoteContent: remoteFile.content,
+      localHash,
+      remoteHash,
       localModified: new Date(localFile.stat.mtime),
       remoteModified,
       conflictType: "content" /* CONTENT */,
-      autoResolvable: this.isAutoResolvable(localContent, remoteFile.content)
+      autoResolvable: false
     };
     this.conflicts.set(conflict.id, conflict);
+    this.enforceConflictCap();
     await this.saveConflicts();
     this.eventBus.emit(EVENTS.CONFLICT_DETECTED, conflict);
     console.debug(`Content conflict detected: ${localFile.path}`);
@@ -8501,17 +8608,20 @@ var ConflictService = class {
   /**
    * Create a deletion conflict record
    */
-  async createDeletionConflict(filePath, _remoteHash, remoteModified) {
+  async createDeletionConflict(filePath, remoteHash, remoteModified) {
     if (!this.vaultId) {
       throw new Error("Vault not initialized");
     }
     const remoteFile = await this.apiClient.getFileByPath(this.vaultId, filePath);
+    this.deduplicateByPath(filePath);
     const conflict = {
       id: this.generateConflictId(),
       path: filePath,
       localContent: "",
       // File deleted locally
       remoteContent: remoteFile.content,
+      localHash: void 0,
+      remoteHash,
       localModified: /* @__PURE__ */ new Date(),
       // Deletion time
       remoteModified,
@@ -8520,16 +8630,43 @@ var ConflictService = class {
       // Deletion conflicts require manual resolution
     };
     this.conflicts.set(conflict.id, conflict);
+    this.enforceConflictCap();
     await this.saveConflicts();
     this.eventBus.emit(EVENTS.CONFLICT_DETECTED, conflict);
     console.debug(`Deletion conflict detected: ${filePath}`);
     return conflict;
   }
   /**
-   * Check if conflict is auto-resolvable
+   * Check if conflict is auto-resolvable (identical content)
    */
   isAutoResolvable(localContent, remoteContent) {
+    if (localContent === remoteContent)
+      return true;
+    if (!localContent || !remoteContent)
+      return false;
     return false;
+  }
+  /**
+   * Fetch conflict content on-demand for UI display.
+   * Returns in-memory content if available, otherwise reads from vault/API.
+   */
+  async getConflictContent(conflictId) {
+    const conflict = this.conflicts.get(conflictId);
+    if (!conflict || !this.vaultId)
+      throw new Error("Conflict not found");
+    if (conflict.localContent !== void 0 && conflict.remoteContent !== void 0) {
+      return { localContent: conflict.localContent, remoteContent: conflict.remoteContent };
+    }
+    const localFile = this.vault.getAbstractFileByPath(conflict.path);
+    const localContent = localFile instanceof import_obsidian4.TFile ? await this.vault.read(localFile) : "";
+    let remoteContent = "";
+    try {
+      const remoteFile = await this.apiClient.getFileByPath(this.vaultId, conflict.path);
+      remoteContent = remoteFile.content;
+    } catch (error) {
+      console.error(`Failed to fetch remote content for ${conflict.path}:`, error);
+    }
+    return { localContent, remoteContent };
   }
   /**
    * Generate unique conflict ID
@@ -9715,12 +9852,11 @@ var ConflictResolutionModal = class extends import_obsidian8.Modal {
     localHeader.addClass("vaultconnect-font-semibold");
     localHeader.addClass("vaultconnect-mb-md");
     localHeader.addClass("vaultconnect-text-accent");
-    const localContent = localPanel.createEl("pre", { cls: "conflict-content" });
-    localContent.textContent = conflict.localContent || "(deleted)";
-    localContent.addClass("vaultconnect-code-block");
-    localContent.addClass("vaultconnect-max-h-300");
-    localContent.addClass("vaultconnect-overflow-auto");
-    localContent.addClass("vaultconnect-text-sm");
+    const localContentEl = localPanel.createEl("pre", { cls: "conflict-content" });
+    localContentEl.addClass("vaultconnect-code-block");
+    localContentEl.addClass("vaultconnect-max-h-300");
+    localContentEl.addClass("vaultconnect-overflow-auto");
+    localContentEl.addClass("vaultconnect-text-sm");
     const remotePanel = diffContainer.createDiv("conflict-panel");
     remotePanel.addClass("vaultconnect-panel");
     remotePanel.addClass("vaultconnect-p-md");
@@ -9729,12 +9865,26 @@ var ConflictResolutionModal = class extends import_obsidian8.Modal {
     remoteHeader.addClass("vaultconnect-font-semibold");
     remoteHeader.addClass("vaultconnect-mb-md");
     remoteHeader.addClass("vaultconnect-text-accent");
-    const remoteContent = remotePanel.createEl("pre", { cls: "conflict-content" });
-    remoteContent.textContent = conflict.remoteContent || "(deleted)";
-    remoteContent.addClass("vaultconnect-code-block");
-    remoteContent.addClass("vaultconnect-max-h-300");
-    remoteContent.addClass("vaultconnect-overflow-auto");
-    remoteContent.addClass("vaultconnect-text-sm");
+    const remoteContentEl = remotePanel.createEl("pre", { cls: "conflict-content" });
+    remoteContentEl.addClass("vaultconnect-code-block");
+    remoteContentEl.addClass("vaultconnect-max-h-300");
+    remoteContentEl.addClass("vaultconnect-overflow-auto");
+    remoteContentEl.addClass("vaultconnect-text-sm");
+    if (conflict.localContent !== void 0 && conflict.remoteContent !== void 0) {
+      localContentEl.textContent = conflict.localContent || "(deleted)";
+      remoteContentEl.textContent = conflict.remoteContent || "(deleted)";
+    } else {
+      localContentEl.textContent = "Loading...";
+      remoteContentEl.textContent = "Loading...";
+      this.conflictService.getConflictContent(conflict.id).then(({ localContent, remoteContent }) => {
+        localContentEl.textContent = localContent || "(deleted)";
+        remoteContentEl.textContent = remoteContent || "(deleted)";
+      }).catch((err) => {
+        localContentEl.textContent = "(failed to load content)";
+        remoteContentEl.textContent = "(failed to load content)";
+        console.error("Failed to load conflict content:", err);
+      });
+    }
   }
   renderResolutionButtons(container, conflict) {
     const buttonContainer = container.createDiv("conflict-resolution-buttons");
@@ -9808,50 +9958,66 @@ var ConflictResolutionModal = class extends import_obsidian8.Modal {
     description.textContent = "Edit the content below to create your merged version:";
     description.addClass("vaultconnect-mb-md");
     description.addClass("vaultconnect-text-muted");
-    let mergedContent = this.createMergeTemplate(conflict);
-    const previewContainer = contentEl.createDiv("merge-preview");
-    previewContainer.addClass("vaultconnect-mt-lg");
-    const previewHeader = previewContainer.createEl("h3", { text: "Preview" });
-    previewHeader.addClass("vaultconnect-mb-md");
-    const previewContent = previewContainer.createEl("div", { cls: "merge-preview-content" });
-    previewContent.addClass("vaultconnect-panel");
-    previewContent.addClass("vaultconnect-p-md");
-    previewContent.addClass("vaultconnect-max-h-200");
-    previewContent.addClass("vaultconnect-overflow-auto");
-    previewContent.addClass("vaultconnect-code-block");
-    previewContent.textContent = mergedContent;
-    new import_obsidian8.Setting(contentEl).setName("Merged content").setDesc("Combine both versions as needed").addTextArea((text) => {
-      text.setValue(mergedContent).onChange((value2) => {
-        mergedContent = value2;
-        previewContent.textContent = value2;
+    const loadingEl = contentEl.createDiv("merge-loading");
+    loadingEl.textContent = "Loading file content...";
+    loadingEl.addClass("vaultconnect-text-muted");
+    const buildEditor = (localContent, remoteContent) => {
+      loadingEl.remove();
+      let mergedContent = this.createMergeTemplate(localContent, remoteContent);
+      const previewContainer = contentEl.createDiv("merge-preview");
+      previewContainer.addClass("vaultconnect-mt-lg");
+      const previewHeader = previewContainer.createEl("h3", { text: "Preview" });
+      previewHeader.addClass("vaultconnect-mb-md");
+      const previewContent = previewContainer.createEl("div", { cls: "merge-preview-content" });
+      previewContent.addClass("vaultconnect-panel");
+      previewContent.addClass("vaultconnect-p-md");
+      previewContent.addClass("vaultconnect-max-h-200");
+      previewContent.addClass("vaultconnect-overflow-auto");
+      previewContent.addClass("vaultconnect-code-block");
+      previewContent.textContent = mergedContent;
+      new import_obsidian8.Setting(contentEl).setName("Merged content").setDesc("Combine both versions as needed").addTextArea((text) => {
+        text.setValue(mergedContent).onChange((value2) => {
+          mergedContent = value2;
+          previewContent.textContent = value2;
+        });
+        text.inputEl.rows = 20;
+        text.inputEl.addClass("vaultconnect-w-full");
+        text.inputEl.addClass("vaultconnect-font-mono");
+        text.inputEl.addClass("vaultconnect-text-sm");
       });
-      text.inputEl.rows = 20;
-      text.inputEl.addClass("vaultconnect-w-full");
-      text.inputEl.addClass("vaultconnect-font-mono");
-      text.inputEl.addClass("vaultconnect-text-sm");
-    });
-    const buttonContainer = contentEl.createDiv("modal-button-container");
-    buttonContainer.addClass("vaultconnect-mt-lg");
-    buttonContainer.addClass("vaultconnect-flex");
-    buttonContainer.addClass("vaultconnect-justify-end");
-    buttonContainer.addClass("vaultconnect-gap-md");
-    const backButton = buttonContainer.createEl("button", { text: "Back" });
-    backButton.addEventListener("click", () => {
-      this.renderConflictView();
-    });
-    const saveButton = buttonContainer.createEl("button", {
-      text: "Save merged version",
-      cls: "mod-cta"
-    });
-    saveButton.addEventListener("click", () => {
-      void this.resolveConflict(conflict, "merge_manual" /* MERGE_MANUAL */, mergedContent);
-    });
+      const buttonContainer = contentEl.createDiv("modal-button-container");
+      buttonContainer.addClass("vaultconnect-mt-lg");
+      buttonContainer.addClass("vaultconnect-flex");
+      buttonContainer.addClass("vaultconnect-justify-end");
+      buttonContainer.addClass("vaultconnect-gap-md");
+      const backButton = buttonContainer.createEl("button", { text: "Back" });
+      backButton.addEventListener("click", () => {
+        this.renderConflictView();
+      });
+      const saveButton = buttonContainer.createEl("button", {
+        text: "Save merged version",
+        cls: "mod-cta"
+      });
+      saveButton.addEventListener("click", () => {
+        void this.resolveConflict(conflict, "merge_manual" /* MERGE_MANUAL */, mergedContent);
+      });
+    };
+    if (conflict.localContent !== void 0 && conflict.remoteContent !== void 0) {
+      buildEditor(conflict.localContent, conflict.remoteContent);
+    } else {
+      this.conflictService.getConflictContent(conflict.id).then(({ localContent, remoteContent }) => {
+        buildEditor(localContent, remoteContent);
+      }).catch((err) => {
+        loadingEl.textContent = "Failed to load file content. Please close and try again.";
+        console.error("Failed to load conflict content for merge:", err);
+      });
+    }
   }
-  createMergeTemplate(conflict) {
+  createMergeTemplate(localContent, remoteContent) {
     return `<<<<<<< LOCAL
-${conflict.localContent}
+${localContent}
 =======
-${conflict.remoteContent}
+${remoteContent}
 >>>>>>> REMOTE`;
   }
   async resolveConflict(conflict, strategy, mergedContent) {

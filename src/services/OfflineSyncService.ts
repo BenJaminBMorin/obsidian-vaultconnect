@@ -265,29 +265,33 @@ export class OfflineSyncService {
   }
 
   /**
-   * Store conflict information
+   * Store conflict information — metadata only (no full content in data.json)
    */
   private async storeConflict(operation: OfflineOperation, remoteFile: FileContent): Promise<void> {
     try {
       const conflicts = await this.storage.get<ConflictInfo[]>('conflicts') || [];
 
-      conflicts.push({
+      // Dedup by path — remove any existing conflict for same file
+      const deduped = conflicts.filter(c => c.path !== operation.path);
+
+      deduped.push({
         id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: operation.path,
-        localContent: operation.content || '',
-        remoteContent: remoteFile.content || '',
+        // Content stripped — will be fetched on-demand by ConflictResolutionModal
+        localHash: remoteFile.hash,
+        remoteHash: remoteFile.hash,
         localModified: new Date(operation.timestamp),
         remoteModified: new Date(remoteFile.updated_at),
         conflictType: ConflictType.CONTENT,
         autoResolvable: false
       });
 
-      await this.storage.set('conflicts', conflicts);
+      await this.storage.set('conflicts', deduped);
 
       // Emit conflict event
       this.eventBus.emit(EVENTS.CONFLICT_DETECTED, {
         path: operation.path,
-        conflictId: conflicts[conflicts.length - 1].id,
+        conflictId: deduped[deduped.length - 1].id,
         source: 'offline-sync'
       });
 

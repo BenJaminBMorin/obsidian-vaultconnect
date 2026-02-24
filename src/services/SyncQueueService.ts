@@ -49,12 +49,23 @@ export class SyncQueueService {
   }
 
   /**
-   * Initialize queue from storage
+   * Initialize queue from storage, cleaning up stale entries
    */
   async initialize(): Promise<void> {
     const stored = await this.storage.get<QueuedOperation[]>('syncQueue');
     if (stored && Array.isArray(stored)) {
-      this.queue = stored.filter(op => op.status !== 'processing');
+      const ONE_DAY = 24 * 60 * 60 * 1000;
+      this.queue = stored.filter(op => {
+        // Remove stale processing ops (interrupted)
+        if (op.status === 'processing') return false;
+        // Remove failed ops older than 24 hours
+        if (op.status === 'failed' && Date.now() - op.timestamp > ONE_DAY) return false;
+        return true;
+      });
+      if (this.queue.length !== stored.length) {
+        console.debug(`Cleaned up ${stored.length - this.queue.length} stale queue entries`);
+        await this.persistQueue();
+      }
       console.debug(`Loaded ${this.queue.length} queued operations from storage`);
     }
   }
@@ -106,6 +117,7 @@ export class SyncQueueService {
       return a.timestamp - b.timestamp;
     });
 
+    this.enforceQueueCap();
     await this.persistQueue();
     this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getQueueStats());
 
@@ -257,13 +269,45 @@ export class SyncQueueService {
   }
 
   /**
-   * Persist queue to storage
+   * Persist queue to storage — content is stripped to prevent data.json bloat
    */
   private async persistQueue(): Promise<void> {
     try {
-      await this.storage.set('syncQueue', this.queue);
+      const stripped = this.queue.map(op => ({
+        ...op,
+        content: undefined
+      }));
+      await this.storage.set('syncQueue', stripped);
     } catch (error) {
       console.error('Failed to persist sync queue:', error);
+    }
+  }
+
+  /**
+   * Enforce max queue size of 500. Evicts oldest failed ops first, then oldest pending.
+   */
+  private enforceQueueCap(): void {
+    const MAX_QUEUE = 500;
+    if (this.queue.length <= MAX_QUEUE) return;
+
+    // Remove failed ops first (oldest first)
+    const failed = this.queue
+      .filter(op => op.status === 'failed')
+      .sort((a, b) => a.timestamp - b.timestamp);
+    while (this.queue.length > MAX_QUEUE && failed.length > 0) {
+      const op = failed.shift()!;
+      this.queue = this.queue.filter(q => q.id !== op.id);
+    }
+
+    // If still over cap, remove oldest pending
+    if (this.queue.length > MAX_QUEUE) {
+      const pending = this.queue
+        .filter(op => op.status === 'pending')
+        .sort((a, b) => a.timestamp - b.timestamp);
+      while (this.queue.length > MAX_QUEUE && pending.length > 0) {
+        const op = pending.shift()!;
+        this.queue = this.queue.filter(q => q.id !== op.id);
+      }
     }
   }
 

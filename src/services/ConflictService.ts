@@ -4,6 +4,9 @@ import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { ConflictInfo, ConflictType, ConflictResolution, ResolutionStrategy } from '../types';
 
+const MAX_CONFLICTS = 50;
+const STALE_CONFLICT_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
 /**
  * Service for detecting and managing file conflicts
  */
@@ -13,10 +16,10 @@ export class ConflictService {
   private eventBus: EventBus;
   private storage: StorageManager;
   private vaultId: string | null = null;
-  
+
   // Track conflicts
   private conflicts: Map<string, ConflictInfo> = new Map();
-  
+
   // Cross-tenant vault info
   private isCrossTenant: boolean = false;
   private vaultPermission: 'read' | 'write' | 'admin' = 'admin';
@@ -44,10 +47,10 @@ export class ConflictService {
     this.vaultId = vaultId;
     this.isCrossTenant = isCrossTenant;
     this.vaultPermission = permission;
-    
-    // Load conflicts from storage
+
+    // Load conflicts from storage (includes migration + cleanup)
     await this.loadConflicts();
-    
+
     console.debug('ConflictService initialized for vault:', vaultId, {
       isCrossTenant,
       permission
@@ -55,19 +58,30 @@ export class ConflictService {
   }
 
   /**
-   * Load conflicts from storage
+   * Load conflicts from storage, migrating bloated data and cleaning up stale entries
    */
   private async loadConflicts(): Promise<void> {
     try {
       const storedConflicts = await this.storage.get<ConflictInfo[]>('conflicts');
       if (storedConflicts && Array.isArray(storedConflicts)) {
+        let needsMigration = false;
         this.conflicts = new Map(
-          storedConflicts.map(c => [c.id, {
-            ...c,
-            localModified: new Date(c.localModified),
-            remoteModified: new Date(c.remoteModified)
-          }])
+          storedConflicts.map(c => {
+            if (c.localContent || c.remoteContent) needsMigration = true;
+            return [c.id, {
+              ...c,
+              localContent: undefined,
+              remoteContent: undefined,
+              localModified: new Date(c.localModified),
+              remoteModified: new Date(c.remoteModified)
+            }];
+          })
         );
+        this.cleanupStaleConflicts();
+        if (needsMigration) {
+          console.debug('Migrating bloated conflict data — stripping stored content');
+          await this.saveConflicts();
+        }
         console.debug(`Loaded ${this.conflicts.size} conflicts from storage`);
       }
     } catch (error) {
@@ -76,14 +90,55 @@ export class ConflictService {
   }
 
   /**
-   * Save conflicts to storage
+   * Save conflicts to storage — content is always stripped before persistence
    */
   private async saveConflicts(): Promise<void> {
     try {
-      const conflictsArray = Array.from(this.conflicts.values());
+      const conflictsArray = Array.from(this.conflicts.values()).map(c => ({
+        ...c,
+        localContent: undefined,
+        remoteContent: undefined
+      }));
       await this.storage.set('conflicts', conflictsArray);
     } catch (error) {
       console.error('Failed to save conflicts:', error);
+    }
+  }
+
+  /**
+   * Remove conflicts older than STALE_CONFLICT_MS and enforce cap
+   */
+  private cleanupStaleConflicts(): void {
+    const now = Date.now();
+    for (const [id, conflict] of this.conflicts) {
+      if (now - new Date(conflict.localModified).getTime() > STALE_CONFLICT_MS) {
+        this.conflicts.delete(id);
+      }
+    }
+    this.enforceConflictCap();
+  }
+
+  /**
+   * Evict oldest conflicts when over MAX_CONFLICTS
+   */
+  private enforceConflictCap(): void {
+    if (this.conflicts.size <= MAX_CONFLICTS) return;
+    const sorted = Array.from(this.conflicts.entries())
+      .sort((a, b) => new Date(a[1].localModified).getTime() - new Date(b[1].localModified).getTime());
+    while (this.conflicts.size > MAX_CONFLICTS) {
+      const [oldestId] = sorted.shift()!;
+      this.conflicts.delete(oldestId);
+    }
+  }
+
+  /**
+   * Remove any existing conflict for the same path (dedup)
+   */
+  private deduplicateByPath(path: string): void {
+    for (const [id, existing] of this.conflicts) {
+      if (existing.path === path) {
+        this.conflicts.delete(id);
+      }
     }
   }
 
@@ -110,7 +165,7 @@ export class ConflictService {
       // Check each local file for conflicts
       for (const localFile of localFiles) {
         const remoteFile = remoteFileMap.get(localFile.path);
-        
+
         if (remoteFile) {
           // File exists both locally and remotely
           const conflict = await this.checkFileConflict(
@@ -118,7 +173,7 @@ export class ConflictService {
             remoteFile.hash,
             remoteFile.updated_at
           );
-          
+
           if (conflict) {
             detectedConflicts.push(conflict);
           }
@@ -128,18 +183,18 @@ export class ConflictService {
       // Check for deletion conflicts (files that exist remotely but not locally)
       for (const remoteFile of remoteFiles) {
         const localFile = this.vault.getAbstractFileByPath(remoteFile.path);
-        
+
         if (!localFile) {
           // File exists remotely but not locally - potential deletion conflict
           const lastSyncTimestamp = await this.storage.get<Record<string, number>>('lastSyncTimestamps');
           const wasTracked = lastSyncTimestamp && lastSyncTimestamp[remoteFile.path];
-          
+
           if (wasTracked) {
             // File was previously synced but now deleted locally
             // Check if remote was also modified since last sync
             const lastSync = new Date(lastSyncTimestamp[remoteFile.path]);
             const remoteModified = new Date(remoteFile.updated_at);
-            
+
             if (remoteModified > lastSync) {
               // Remote was modified after local deletion - conflict
               const conflict = await this.createDeletionConflict(
@@ -147,7 +202,9 @@ export class ConflictService {
                 remoteFile.hash,
                 remoteModified
               );
-              detectedConflicts.push(conflict);
+              if (conflict) {
+                detectedConflicts.push(conflict);
+              }
             }
           }
         }
@@ -182,7 +239,7 @@ export class ConflictService {
       // Check if file was synced before
       const lastSyncTimestamps = await this.storage.get<Record<string, number>>('lastSyncTimestamps');
       const fileHashes = await this.storage.get<Record<string, string>>('fileHashes');
-      
+
       const lastSyncTime = lastSyncTimestamps?.[localFile.path];
       const lastSyncHash = fileHashes?.[localFile.path];
 
@@ -220,34 +277,49 @@ export class ConflictService {
   }
 
   /**
-   * Create a content conflict record
+   * Create a content conflict record.
+   * Returns null if content is identical (auto-resolved).
    */
   private async createContentConflict(
     localFile: TFile,
     localContent: string,
     remoteHash: string,
     remoteModified: Date
-  ): Promise<ConflictInfo> {
+  ): Promise<ConflictInfo | null> {
     if (!this.vaultId) {
       throw new Error('Vault not initialized');
     }
 
     // Fetch remote content
     const remoteFile = await this.apiClient.getFileByPath(this.vaultId, localFile.path);
+    const localHash = await this.computeHash(localContent);
+
+    // Auto-resolve if content is identical
+    if (this.isAutoResolvable(localContent, remoteFile.content)) {
+      await this.updateSyncState(localFile.path, localContent);
+      console.debug(`Auto-resolved identical content conflict: ${localFile.path}`);
+      return null;
+    }
+
+    // Dedup: remove any existing conflict for this path
+    this.deduplicateByPath(localFile.path);
 
     const conflict: ConflictInfo = {
       id: this.generateConflictId(),
       path: localFile.path,
       localContent,
       remoteContent: remoteFile.content,
+      localHash,
+      remoteHash,
       localModified: new Date(localFile.stat.mtime),
       remoteModified,
       conflictType: ConflictType.CONTENT,
-      autoResolvable: this.isAutoResolvable(localContent, remoteFile.content)
+      autoResolvable: false
     };
 
     // Store conflict
     this.conflicts.set(conflict.id, conflict);
+    this.enforceConflictCap();
     await this.saveConflicts();
 
     // Emit event
@@ -262,21 +334,26 @@ export class ConflictService {
    */
   private async createDeletionConflict(
     filePath: string,
-    _remoteHash: string,
+    remoteHash: string,
     remoteModified: Date
-  ): Promise<ConflictInfo> {
+  ): Promise<ConflictInfo | null> {
     if (!this.vaultId) {
       throw new Error('Vault not initialized');
     }
 
-    // Fetch remote content
+    // Fetch remote content (kept in memory only for potential UI display)
     const remoteFile = await this.apiClient.getFileByPath(this.vaultId, filePath);
+
+    // Dedup: remove any existing conflict for this path
+    this.deduplicateByPath(filePath);
 
     const conflict: ConflictInfo = {
       id: this.generateConflictId(),
       path: filePath,
       localContent: '', // File deleted locally
       remoteContent: remoteFile.content,
+      localHash: undefined,
+      remoteHash,
       localModified: new Date(), // Deletion time
       remoteModified,
       conflictType: ConflictType.DELETION,
@@ -285,6 +362,7 @@ export class ConflictService {
 
     // Store conflict
     this.conflicts.set(conflict.id, conflict);
+    this.enforceConflictCap();
     await this.saveConflicts();
 
     // Emit event
@@ -295,12 +373,40 @@ export class ConflictService {
   }
 
   /**
-   * Check if conflict is auto-resolvable
+   * Check if conflict is auto-resolvable (identical content)
    */
   private isAutoResolvable(localContent: string, remoteContent: string): boolean {
-    // Simple heuristic: if one version is a subset of the other, it might be auto-resolvable
-    // For now, we'll mark all conflicts as not auto-resolvable to be safe
+    if (localContent === remoteContent) return true;
+    if (!localContent || !remoteContent) return false;
     return false;
+  }
+
+  /**
+   * Fetch conflict content on-demand for UI display.
+   * Returns in-memory content if available, otherwise reads from vault/API.
+   */
+  async getConflictContent(conflictId: string): Promise<{ localContent: string; remoteContent: string }> {
+    const conflict = this.conflicts.get(conflictId);
+    if (!conflict || !this.vaultId) throw new Error('Conflict not found');
+
+    // If content is still in memory (freshly created conflict), return it
+    if (conflict.localContent !== undefined && conflict.remoteContent !== undefined) {
+      return { localContent: conflict.localContent, remoteContent: conflict.remoteContent };
+    }
+
+    // Otherwise, fetch on demand
+    const localFile = this.vault.getAbstractFileByPath(conflict.path);
+    const localContent = localFile instanceof TFile ? await this.vault.read(localFile) : '';
+
+    let remoteContent = '';
+    try {
+      const remoteFile = await this.apiClient.getFileByPath(this.vaultId, conflict.path);
+      remoteContent = remoteFile.content;
+    } catch (error) {
+      console.error(`Failed to fetch remote content for ${conflict.path}:`, error);
+    }
+
+    return { localContent, remoteContent };
   }
 
   /**
@@ -371,7 +477,7 @@ export class ConflictService {
   async removeConflict(conflictId: string): Promise<void> {
     this.conflicts.delete(conflictId);
     await this.saveConflicts();
-    
+
     this.eventBus.emit(EVENTS.CONFLICT_RESOLVED, { conflictId });
   }
 
@@ -400,7 +506,7 @@ export class ConflictService {
     // For cross-tenant vaults, always use remote as source of truth
     if (this.isCrossTenant) {
       console.debug('Cross-tenant vault detected - using remote as source of truth');
-      
+
       // If read-only permission, always keep remote
       if (this.vaultPermission === 'read') {
         console.debug('Read-only permission - forcing KEEP_REMOTE strategy');
@@ -459,10 +565,10 @@ export class ConflictService {
     if (localFile instanceof TFile) {
       // Upload local version to remote
       const content = await this.vault.read(localFile);
-      
+
       // Check if remote file exists
       const exists = await this.apiClient.fileExists(this.vaultId, conflict.path);
-      
+
       if (exists) {
         // Update remote file
         const remoteFile = await this.apiClient.getFileByPath(this.vaultId, conflict.path);
@@ -481,7 +587,7 @@ export class ConflictService {
       // Local file was deleted, delete from remote too
       const remoteFile = await this.apiClient.getFileByPath(this.vaultId, conflict.path);
       await this.apiClient.deleteFile(this.vaultId, remoteFile.file_id);
-      
+
       // Clear sync state
       await this.clearFileSyncState(conflict.path);
     } else {
@@ -583,7 +689,7 @@ export class ConflictService {
 
     // Upload merged content to remote
     const exists = await this.apiClient.fileExists(this.vaultId, conflict.path);
-    
+
     if (exists) {
       const remoteFile = await this.apiClient.getFileByPath(this.vaultId, conflict.path);
       await this.apiClient.updateFile(this.vaultId, remoteFile.file_id, {
@@ -605,7 +711,7 @@ export class ConflictService {
    */
   async resolveAllConflicts(strategy: ResolutionStrategy): Promise<void> {
     const conflicts = Array.from(this.conflicts.values());
-    
+
     console.debug(`Resolving ${conflicts.length} conflicts with strategy: ${strategy}`);
 
     const errors: Array<{ conflictId: string; error: string }> = [];

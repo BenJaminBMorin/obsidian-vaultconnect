@@ -6,7 +6,8 @@ import { FileWatcherService, FileChangeEvent } from './FileWatcherService';
 import { SyncQueueService, QueuedOperation } from './SyncQueueService';
 import { FileSyncService } from './FileSyncService';
 import { SelectiveSyncService } from './SelectiveSyncService';
-import { FileInfo, ConflictInfo, ConflictType } from '../types';
+import { ConflictService } from './ConflictService';
+import { ConflictInfo, FileInfo } from '../types';
 
 /**
  * Sync mode
@@ -60,7 +61,8 @@ export class SyncService {
   private fileWatcher: FileWatcherService;
   private syncQueue: SyncQueueService;
   private fileSync: FileSyncService;
-  
+  private conflictService: ConflictService | null = null;
+
   private config: SyncConfig;
   private vaultId: string | null = null;
   private isRunning: boolean = false;
@@ -74,7 +76,8 @@ export class SyncService {
     eventBus: EventBus,
     storage: StorageManager,
     config: SyncConfig,
-    fileSync?: FileSyncService
+    fileSync?: FileSyncService,
+    conflictService?: ConflictService
   ) {
     this.vault = vault;
     this.apiClient = apiClient;
@@ -121,6 +124,8 @@ export class SyncService {
       eventBus,
       storage
     );
+
+    this.conflictService = conflictService || null;
 
     this.setupEventHandlers();
   }
@@ -534,32 +539,43 @@ export class SyncService {
   }
 
   /**
-   * Handle conflict by creating a conflict record
+   * Handle conflict by delegating to ConflictService (or storing metadata-only)
    */
   private async handleConflict(localFile: TFile, remoteFile: FileInfo): Promise<void> {
     try {
-      const localContent = await this.vault.read(localFile);
-      const remoteContent = await this.apiClient.getFileByPath(this.vaultId!, localFile.path);
+      // Delegate to ConflictService when available (preferred path)
+      if (this.conflictService) {
+        const remoteModified = remoteFile.updated_at instanceof Date
+          ? remoteFile.updated_at
+          : new Date(remoteFile.updated_at);
+        await this.conflictService.checkFileConflict(localFile, remoteFile.hash, remoteModified);
+        return;
+      }
 
-      // Store conflict information
+      // Fallback: store metadata-only conflict (no full content in data.json)
       const conflicts = await this.storage.get<ConflictInfo[]>('conflicts') || [];
-      conflicts.push({
+
+      // Dedup by path
+      const deduped = conflicts.filter(c => c.path !== localFile.path);
+
+      deduped.push({
         id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: localFile.path,
-        localContent,
-        remoteContent: remoteContent.content,
+        localHash: remoteFile.hash, // best-effort — actual local hash requires read
+        remoteHash: remoteFile.hash,
         localModified: new Date(localFile.stat.mtime),
-        remoteModified: remoteFile.updated_at,
-        conflictType: ConflictType.CONTENT,
+        remoteModified: remoteFile.updated_at instanceof Date
+          ? remoteFile.updated_at
+          : new Date(remoteFile.updated_at),
+        conflictType: 'content' as any,
         autoResolvable: false
       });
 
-      await this.storage.set('conflicts', conflicts);
+      await this.storage.set('conflicts', deduped);
 
-      // Emit conflict event
       this.eventBus.emit(EVENTS.CONFLICT_DETECTED, {
         path: localFile.path,
-        conflictId: conflicts[conflicts.length - 1].id
+        conflictId: deduped[deduped.length - 1].id
       });
 
       console.debug(`Conflict stored for ${localFile.path}`);
