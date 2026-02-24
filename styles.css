@@ -726,25 +726,7 @@ select:focus-visible {
   color: var(--text-muted);
 }
 
-/* VaultConnect Vault Selector */
-.vaultconnect-vault-selector {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  width: 100%;
-  min-width: 0;
-}
-
-.vaultconnect-vault-dropdown {
-  flex: 1;
-  min-width: 0;
-}
-
-.vaultconnect-refresh-btn {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
+/* VaultConnect Loading */
 .vaultconnect-loading {
   display: none;
   font-size: 0.9em;
@@ -1502,43 +1484,40 @@ select:focus-visible {
    Mobile Responsive Fixes
    ======================================== */
 
-/* Ensure setting items don't overflow on narrow screens */
-.vaultconnect-onboarding .setting-item,
-.setting-item {
+/* Prevent setting items from overflowing on mobile */
+.is-mobile .setting-item {
   flex-wrap: wrap;
 }
 
-/* Setting control elements need room to breathe on mobile */
-.setting-item .setting-item-control {
+.is-mobile .setting-item-control {
+  min-width: 0;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+/* Dropdowns should not overflow container */
+.is-mobile .setting-item-control select {
+  max-width: 100%;
   min-width: 0;
 }
 
-/* Vault selector responsive behavior */
-@media (max-width: 500px) {
-  .vaultconnect-vault-selector {
-    flex-wrap: wrap;
-  }
+/* Text inputs should fit within the control area */
+.is-mobile .setting-item-control input[type="text"],
+.is-mobile .setting-item-control input[type="number"] {
+  max-width: 100%;
+  min-width: 0;
+}
 
-  .vaultconnect-vault-dropdown {
-    width: 100%;
-    flex-basis: 100%;
-  }
+.is-mobile .vaultconnect-onboarding {
+  padding: 12px 0;
+}
 
-  .vaultconnect-refresh-btn {
-    flex-basis: auto;
-  }
+.is-mobile .vaultconnect-onboarding-header {
+  font-size: 1.2em;
+}
 
-  .vaultconnect-onboarding {
-    padding: 12px 0;
-  }
-
-  .vaultconnect-onboarding-header {
-    font-size: 1.2em;
-  }
-
-  .vaultconnect-server-info {
-    flex-wrap: wrap;
-    gap: 6px;
-  }
+.is-mobile .vaultconnect-server-info {
+  flex-wrap: wrap;
+  gap: 6px;
 }
 

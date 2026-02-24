@@ -584,82 +584,77 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   private displayVaultSelector(containerEl: HTMLElement): void {
     new Setting(containerEl).setName('Vault selection').setHeading();
 
-    const vaultSetting = new Setting(containerEl)
-      .setName('Vault')
-      .setDesc('Select the vault to sync with');
+    let dropdownComponent: any;
 
-    const controlsContainer = vaultSetting.controlEl.createDiv({ cls: 'vaultconnect-vault-selector' });
-    const dropdown = controlsContainer.createEl('select', { cls: 'dropdown vaultconnect-vault-dropdown' });
-    const refreshButton = controlsContainer.createEl('button', { cls: 'vaultconnect-refresh-btn' });
-    refreshButton.setText('Refresh');
-    const loadingEl = controlsContainer.createEl('span', { text: 'Loading...', cls: 'vaultconnect-loading' });
+    new Setting(containerEl)
+      .setName('Vault')
+      .setDesc('Select the vault to sync with')
+      .addDropdown(dropdown => {
+        dropdownComponent = dropdown;
+        dropdown.addOption('', 'Loading...');
+        dropdown.setDisabled(true);
+        dropdown.onChange(async (value) => {
+          if (value) {
+            this.plugin.settings.selectedVaultId = value;
+            this.plugin.settings.vaultId = value;
+            await this.plugin.saveSettings();
+            new Notice('Vault selected. Disconnect and reconnect to sync with this vault.');
+          }
+        });
+      })
+      .addButton(button => {
+        button
+          .setButtonText('Refresh')
+          .onClick(() => { void loadVaults(); });
+      });
 
     const loadVaults = async () => {
       if (!this.plugin.settings.apiKey && !this.plugin.authService?.isAuthenticated()) {
-        dropdown.empty();
-        dropdown.createEl('option', { text: 'Sign in first', value: '' });
-        dropdown.disabled = true;
-        refreshButton.disabled = true;
+        dropdownComponent.selectEl.empty();
+        dropdownComponent.addOption('', 'Sign in first');
+        dropdownComponent.setDisabled(true);
         return;
       }
 
       try {
-        loadingEl.addClass('is-visible');
-        refreshButton.disabled = true;
-        dropdown.disabled = true;
+        dropdownComponent.setDisabled(true);
 
         const vaults = await this.plugin.apiClient?.listVaults();
 
-        dropdown.empty();
+        dropdownComponent.selectEl.empty();
 
         if (!vaults || vaults.length === 0) {
-          dropdown.createEl('option', { text: 'No vaults found', value: '' });
+          dropdownComponent.addOption('', 'No vaults found');
         } else {
-          dropdown.createEl('option', { text: 'Select a vault...', value: '' });
+          dropdownComponent.addOption('', 'Select a vault...');
+
+          const currentVaultId = this.plugin.settings.selectedVaultId || this.plugin.settings.vaultId;
 
           vaults.forEach((vault: VaultInfo) => {
-            const option = dropdown.createEl('option', {
-              text: `${vault.name} (${vault.file_count || 0} files)`,
-              value: vault.vault_id
-            });
-            const currentVaultId = this.plugin.settings.selectedVaultId || this.plugin.settings.vaultId;
+            dropdownComponent.addOption(
+              vault.vault_id,
+              `${vault.name} (${vault.file_count || 0} files)`
+            );
             if (vault.vault_id === currentVaultId) {
-              option.selected = true;
+              dropdownComponent.setValue(currentVaultId);
             }
           });
         }
 
-        dropdown.disabled = false;
+        dropdownComponent.setDisabled(false);
       } catch (error) {
         logger.error('Failed to load vaults:', error);
-        dropdown.empty();
-        dropdown.createEl('option', { text: 'Error loading vaults', value: '' });
-      } finally {
-        loadingEl.removeClass('is-visible');
-        refreshButton.disabled = false;
+        dropdownComponent.selectEl.empty();
+        dropdownComponent.addOption('', 'Error loading vaults');
       }
     };
-
-    dropdown.addEventListener('change', () => {
-      void (async () => {
-        const selectedVaultId = dropdown.value;
-        if (selectedVaultId) {
-          this.plugin.settings.selectedVaultId = selectedVaultId;
-          this.plugin.settings.vaultId = selectedVaultId;
-          await this.plugin.saveSettings();
-          new Notice(`Vault selected. Disconnect and reconnect to sync with this vault.`);
-        }
-      })();
-    });
-
-    refreshButton.addEventListener('click', () => { void loadVaults(); });
 
     if (this.plugin.settings.apiKey || this.plugin.authService?.isAuthenticated()) {
       void loadVaults();
     } else {
-      dropdown.createEl('option', { text: 'Sign in first', value: '' });
-      dropdown.disabled = true;
-      refreshButton.disabled = true;
+      dropdownComponent.selectEl.empty();
+      dropdownComponent.addOption('', 'Sign in first');
+      dropdownComponent.setDisabled(true);
     }
 
     // Cross-tenant vault status
