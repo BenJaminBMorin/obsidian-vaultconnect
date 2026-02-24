@@ -8637,14 +8637,15 @@ var ConflictService = class {
     return conflict;
   }
   /**
-   * Check if conflict is auto-resolvable (identical content)
+   * Check if conflict is auto-resolvable (identical content after normalization)
    */
   isAutoResolvable(localContent, remoteContent) {
     if (localContent === remoteContent)
       return true;
     if (!localContent || !remoteContent)
       return false;
-    return false;
+    const normalize = (s) => s.replace(/\r\n/g, "\n").replace(/[ \t]+$/gm, "").trimEnd();
+    return normalize(localContent) === normalize(remoteContent);
   }
   /**
    * Fetch conflict content on-demand for UI display.
