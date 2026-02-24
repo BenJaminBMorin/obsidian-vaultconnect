@@ -1441,6 +1441,47 @@ select:focus-visible {
 }
 
 /* ========================================
+   Copy/Move Modal
+   ======================================== */
+
+.vaultconnect-copymove-modal {
+  padding: 16px 0;
+}
+
+.vaultconnect-copymove-summary {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background-color: var(--background-secondary);
+  border-radius: 6px;
+}
+
+.vaultconnect-copymove-loading {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+}
+
+.vaultconnect-copymove-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.vaultconnect-copymove-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 8px 0;
+  min-height: 18px;
+}
+
+.vaultconnect-copymove-status--error {
+  color: var(--text-error);
+}
+
+/* ========================================
    Mobile Responsive Fixes
    ======================================== */
 

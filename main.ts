@@ -10,6 +10,7 @@ import { UploadProgressModal } from './src/ui/UploadProgressModal';
 import { ConflictListView, CONFLICT_LIST_VIEW_TYPE } from './src/ui/ConflictListView';
 import { ConflictResolutionModal } from './src/ui/ConflictResolutionModal';
 import { SearchModal } from './src/ui/SearchModal';
+import { CopyMoveModal } from './src/ui/CopyMoveModal';
 import { APIClient } from './src/api/APIClient';
 import { EventBus, EVENTS } from './src/core/EventBus';
 import { StorageManager } from './src/core/StorageManager';
@@ -114,6 +115,9 @@ export default class VaultSyncPlugin extends Plugin {
 
 		// Register file events
 		this.registerFileEvents();
+
+		// Register context menus (copy/move to vault)
+		this.registerContextMenus();
 
 		// Register all commands
 		this.registerCommands();
@@ -544,6 +548,94 @@ export default class VaultSyncPlugin extends Plugin {
 				}
 			})
 		);
+	}
+
+	/**
+	 * Register context menu items for copy/move to vault
+	 */
+	private registerContextMenus(): void {
+		// File context menu (right-click on a file)
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu, file) => {
+				const activeVaultId = this.settings.selectedVaultId || this.settings.vaultId;
+				if (!this.apiClient || !this.vaultService || !activeVaultId) return;
+
+				const filePaths: string[] = [];
+
+				if (file instanceof TFile) {
+					filePaths.push(file.path);
+				} else if (file instanceof TAbstractFile) {
+					// It's a folder — collect all files inside
+					const folder = this.app.vault.getAbstractFileByPath(file.path);
+					if (folder) {
+						this.collectFilesInFolder(folder, filePaths);
+					}
+				}
+
+				if (filePaths.length === 0) return;
+
+				menu.addSeparator();
+
+				menu.addItem((item) => {
+					item
+						.setTitle('Copy to vault...')
+						.setIcon('copy')
+						.onClick(() => {
+							new CopyMoveModal(
+								this.app,
+								this.apiClient!,
+								this.vaultService!,
+								{
+									operation: 'copy',
+									sourceVaultId: activeVaultId,
+									filePaths
+								},
+								() => {
+									new Notice('Copy complete');
+								}
+							).open();
+						});
+				});
+
+				menu.addItem((item) => {
+					item
+						.setTitle('Move to vault...')
+						.setIcon('folder-input')
+						.onClick(() => {
+							new CopyMoveModal(
+								this.app,
+								this.apiClient!,
+								this.vaultService!,
+								{
+									operation: 'move',
+									sourceVaultId: activeVaultId,
+									filePaths
+								},
+								() => {
+									new Notice('Move complete — files will sync shortly');
+								}
+							).open();
+						});
+				});
+			})
+		);
+	}
+
+	/**
+	 * Recursively collect all file paths in a folder
+	 */
+	private collectFilesInFolder(abstractFile: TAbstractFile, paths: string[]): void {
+		if (abstractFile instanceof TFile) {
+			paths.push(abstractFile.path);
+		} else {
+			// TFolder — iterate children
+			const children = (abstractFile as any).children;
+			if (Array.isArray(children)) {
+				for (const child of children) {
+					this.collectFilesInFolder(child, paths);
+				}
+			}
+		}
 	}
 
 	shouldSyncFile(file: TFile): boolean {

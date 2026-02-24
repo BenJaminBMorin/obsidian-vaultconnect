@@ -70,7 +70,11 @@ export const API_ENDPOINTS = {
   CONFLICT: (conflictId: string) => `/conflicts/${conflictId}`,
 
   // Search
-  SEMANTIC_SEARCH: '/search/semantic'
+  SEMANTIC_SEARCH: '/search/semantic',
+
+  // Copy/Move
+  COPY_FILES: (vaultId: string) => `/vaults/${vaultId}/files/copy`,
+  MOVE_FILES: (vaultId: string) => `/vaults/${vaultId}/files/move`
 };
 
 export const WS_EVENTS = {

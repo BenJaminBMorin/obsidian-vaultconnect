@@ -126,6 +126,28 @@ export interface SemanticSearchResponse {
   executionTimeMs: number;
 }
 
+// Copy/Move response types
+export interface CopyFilesResponse {
+  success: boolean;
+  copiedCount: number;
+  files: Array<{
+    file_id: string;
+    path: string;
+    created_at: string;
+  }>;
+}
+
+export interface MoveFilesResponse {
+  success: boolean;
+  movedCount: number;
+  files: Array<{
+    file_id: string;
+    old_path: string;
+    new_path: string;
+    updated_at: string;
+  }>;
+}
+
 // E2E Encryption response types
 export interface E2EKeyPairResponse {
   publicKey: string;
@@ -740,6 +762,52 @@ export class APIClient {
       {
         method: 'POST',
         body: JSON.stringify(params)
+      }
+    );
+  }
+
+  // Copy/Move
+
+  /**
+   * Copy files to another vault
+   */
+  async copyFiles(
+    sourceVaultId: string,
+    fileIds: string[],
+    destinationPath: string,
+    destinationVaultId?: string
+  ): Promise<CopyFilesResponse> {
+    return this.request<CopyFilesResponse>(
+      API_ENDPOINTS.COPY_FILES(sourceVaultId),
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          fileIds,
+          destinationPath,
+          destinationVaultId
+        })
+      }
+    );
+  }
+
+  /**
+   * Move files to another vault
+   */
+  async moveFiles(
+    sourceVaultId: string,
+    fileIds: string[],
+    destinationPath: string,
+    destinationVaultId?: string
+  ): Promise<MoveFilesResponse> {
+    return this.request<MoveFilesResponse>(
+      API_ENDPOINTS.MOVE_FILES(sourceVaultId),
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          fileIds,
+          destinationPath,
+          destinationVaultId
+        })
       }
     );
   }
