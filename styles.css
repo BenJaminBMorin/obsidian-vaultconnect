@@ -326,25 +326,25 @@
   }
 }
 
-/* Button Enhancements */
-button.mod-cta {
+/* Button Enhancements (scoped to VaultConnect modals/settings) */
+.vaultconnect-settings button.mod-cta,
+.vaultconnect-copymove-modal button.mod-cta,
+.vaultconnect-search-modal button.mod-cta {
   transition: all 0.2s ease;
 }
 
-button.mod-cta:hover {
+.vaultconnect-settings button.mod-cta:hover,
+.vaultconnect-copymove-modal button.mod-cta:hover,
+.vaultconnect-search-modal button.mod-cta:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-button.mod-cta:active {
+.vaultconnect-settings button.mod-cta:active,
+.vaultconnect-copymove-modal button.mod-cta:active,
+.vaultconnect-search-modal button.mod-cta:active {
   transform: translateY(0);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
 }
 
 /* Progress Indicators */
@@ -390,22 +390,6 @@ button:disabled {
   }
   100% {
     left: 100%;
-  }
-}
-
-/* Toast Notifications Enhancement */
-.notice {
-  animation: vaultsync-slide-in 0.3s ease;
-}
-
-@keyframes vaultsync-slide-in {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
   }
 }
 
@@ -533,25 +517,6 @@ button:disabled {
 .vaultsync-tooltip:hover::after {
   opacity: 1;
   transform: translateX(-50%) translateY(-4px);
-}
-
-/* Focus States */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--interactive-accent);
-  outline-offset: 2px;
-}
-
-/* Accessibility - Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
 }
 
 /* Device Authorization Modal Styles */

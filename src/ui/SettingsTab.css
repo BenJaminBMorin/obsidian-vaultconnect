@@ -1,47 +1,36 @@
 /* VaultSync Settings Tab Styles */
+/* All selectors scoped to .vaultconnect-settings to avoid bleeding into Obsidian */
 
-.vaultsync-settings-header {
+.vaultconnect-settings .vaultsync-settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1em;
 }
 
-.vaultsync-settings-actions {
+.vaultconnect-settings .vaultsync-settings-actions {
   display: flex;
   gap: 0.5em;
 }
 
-.vaultsync-settings-actions button {
+.vaultconnect-settings .vaultsync-settings-actions button {
   padding: 0.4em 0.8em;
   font-size: 0.9em;
-  transition: all 0.2s ease;
 }
 
-.vaultsync-settings-actions button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.vaultsync-auth-required {
+.vaultconnect-settings .vaultsync-auth-required {
   padding: 1em;
   background: var(--background-secondary);
   border-radius: 8px;
   margin: 1em 0;
   border: 1px solid var(--background-modifier-border);
-  transition: all 0.2s ease;
 }
 
-.vaultsync-auth-required:hover {
-  border-color: var(--interactive-accent);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.vaultsync-auth-required p {
+.vaultconnect-settings .vaultsync-auth-required p {
   margin: 0.5em 0;
 }
 
-.vaultsync-warning {
+.vaultconnect-settings .vaultsync-warning {
   padding: 0.8em;
   background: var(--background-modifier-error);
   border-left: 3px solid var(--text-error);
@@ -49,100 +38,22 @@
   margin-bottom: 1em;
 }
 
-.vaultsync-warning p {
+.vaultconnect-settings .vaultsync-warning p {
   margin: 0;
   color: var(--text-error);
 }
 
-.vaultsync-sync-mode-desc {
-  margin-top: -0.5em;
-  margin-bottom: 1em;
-}
-
-.vaultsync-mode-description {
+.vaultconnect-settings .vaultsync-mode-description {
   padding: 0.8em;
   background: var(--background-secondary);
   border-left: 3px solid var(--interactive-accent);
   border-radius: 4px;
   font-size: 0.9em;
   line-height: 1.4;
-  animation: vaultsync-fade-in 0.3s ease;
-}
-
-/* Input validation styles */
-input[type="text"]:invalid,
-input[type="number"]:invalid {
-  border-color: var(--text-error) !important;
-}
-
-input[type="text"]:valid,
-input[type="number"]:valid {
-  border-color: var(--background-modifier-border);
-}
-
-/* Help text styling */
-.setting-item-description {
-  font-size: 0.9em;
-  opacity: 0.8;
-  line-height: 1.4;
-}
-
-/* Section headers */
-.vaultsync-settings-header h2 {
-  margin: 0;
-}
-
-h3 {
-  margin-top: 2em;
-  margin-bottom: 0.5em;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-/* Improved toggle styling */
-.checkbox-container {
-  display: flex;
-  align-items: center;
-}
-
-/* Better spacing for settings */
-.setting-item {
-  padding: 1em 0;
-  border-bottom: 1px solid var(--background-modifier-border-hover);
-}
-
-.setting-item:last-child {
-  border-bottom: none;
-}
-
-/* Responsive design for smaller screens */
-@media (max-width: 768px) {
-  .vaultsync-settings-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .vaultsync-settings-actions {
-    margin-top: 0.5em;
-    width: 100%;
-  }
-  
-  .vaultsync-settings-actions button {
-    flex: 1;
-  }
-}
-
-/* Enhanced Visual Feedback */
-.setting-item {
-  transition: background-color 0.2s ease;
-}
-
-.setting-item:hover {
-  background-color: var(--background-modifier-hover);
 }
 
 /* Status Indicators */
-.vaultsync-status-indicator {
+.vaultconnect-settings .vaultsync-status-indicator {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
@@ -152,22 +63,22 @@ h3 {
   font-weight: 500;
 }
 
-.vaultsync-status-indicator.connected {
+.vaultconnect-settings .vaultsync-status-indicator.connected {
   background-color: rgba(76, 175, 80, 0.1);
   color: var(--text-success);
 }
 
-.vaultsync-status-indicator.disconnected {
+.vaultconnect-settings .vaultsync-status-indicator.disconnected {
   background-color: rgba(158, 158, 158, 0.1);
   color: var(--text-muted);
 }
 
-.vaultsync-status-indicator.error {
+.vaultconnect-settings .vaultsync-status-indicator.error {
   background-color: rgba(244, 67, 54, 0.1);
   color: var(--text-error);
 }
 
-.vaultsync-status-dot {
+.vaultconnect-settings .vaultsync-status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -176,90 +87,27 @@ h3 {
 }
 
 @keyframes vaultsync-pulse-dot {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-/* Input Enhancement */
-input[type="text"],
-input[type="number"],
-select {
-  transition: all 0.2s ease;
-}
-
-input[type="text"]:focus,
-input[type="number"]:focus,
-select:focus {
-  border-color: var(--interactive-accent);
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
-}
-
-/* Toggle Switch Enhancement */
-.checkbox-container input[type="checkbox"] {
-  transition: all 0.2s ease;
-}
-
-/* Section Dividers */
-h3 {
-  position: relative;
-  padding-left: 12px;
-}
-
-h3::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 1.2em;
-  background-color: var(--interactive-accent);
-  border-radius: 2px;
-}
-
-/* Info Boxes */
-.vaultsync-info-box {
-  padding: 0.8em;
-  background: var(--background-secondary);
-  border-left: 3px solid var(--text-accent);
-  border-radius: 4px;
-  margin: 1em 0;
-  font-size: 0.9em;
-  line-height: 1.4;
-}
-
-.vaultsync-success-box {
-  border-left-color: var(--text-success);
-  background: rgba(76, 175, 80, 0.05);
-}
-
-/* Fade-in animation */
-@keyframes vaultsync-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Sync action buttons — compact row layout */
+.vaultconnect-settings .setting-item-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 /* Cross-Tenant Vault Indicators */
-.vaultsync-vault-status {
+.vaultconnect-settings .vaultsync-vault-status {
   margin: 1em 0;
   padding: 1em;
   background: var(--background-secondary);
   border-radius: 8px;
   border: 1px solid var(--background-modifier-border);
-  animation: vaultsync-fade-in 0.3s ease;
 }
 
-.vaultsync-cross-tenant-badge {
+.vaultconnect-settings .vaultsync-cross-tenant-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
@@ -273,7 +121,7 @@ h3::before {
   margin-bottom: 0.5em;
 }
 
-.vaultsync-owned-vault-badge {
+.vaultconnect-settings .vaultsync-owned-vault-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
@@ -287,24 +135,49 @@ h3::before {
   margin-bottom: 0.5em;
 }
 
-.vaultsync-vault-status .setting-item-description {
-  margin-top: 0.5em;
-  padding-left: 0.5em;
-  border-left: 2px solid var(--background-modifier-border);
-}
-
-/* Read-only file indicator in file explorer */
-.nav-file-title[data-cross-tenant="true"]::after {
-  content: "🔗";
-  margin-left: 0.5em;
-  opacity: 0.6;
+/* Info/Success Boxes */
+.vaultconnect-settings .vaultsync-info-box {
+  padding: 0.8em;
+  background: var(--background-secondary);
+  border-left: 3px solid var(--text-accent);
+  border-radius: 4px;
+  margin: 1em 0;
   font-size: 0.9em;
+  line-height: 1.4;
 }
 
-.nav-file-title[data-cross-tenant="true"][data-permission="read"]::after {
-  content: "🔗👁️";
+.vaultconnect-settings .vaultsync-success-box {
+  border-left-color: var(--text-success);
+  background: rgba(76, 175, 80, 0.05);
 }
 
-.nav-file-title[data-cross-tenant="true"][data-permission="write"]::after {
-  content: "🔗✏️";
+/* Error text */
+.vaultconnect-text-error {
+  color: var(--text-error) !important;
+}
+
+/* Input validation (scoped) */
+.vaultconnect-settings .vaultsync-input-error {
+  border-color: var(--text-error) !important;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .vaultconnect-settings .vaultsync-settings-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .vaultconnect-settings .vaultsync-settings-actions {
+    margin-top: 0.5em;
+    width: 100%;
+  }
+
+  .vaultconnect-settings .vaultsync-settings-actions button {
+    flex: 1;
+  }
+
+  .vaultconnect-settings .setting-item-control {
+    justify-content: flex-end;
+  }
 }

@@ -12970,6 +12970,8 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
+    containerEl.addClass("vaultconnect-settings");
+    this.plugin.syncPaused = true;
     const stage = this.getStage();
     switch (stage) {
       case "NEEDS_SERVER":
@@ -12985,6 +12987,9 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
         this.displayCompleteStage(containerEl);
         break;
     }
+  }
+  hide() {
+    this.plugin.syncPaused = false;
   }
   // ===========================================================================
   // Stage: NEEDS_SERVER
@@ -13366,38 +13371,43 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
     const isConnected = this.plugin.isConnected;
     if (!isConnected) {
       new import_obsidian18.Setting(containerEl).setDesc("Connect to the server first to use sync actions.");
+      return;
     }
-    new import_obsidian18.Setting(containerEl).setName("Push all").setDesc("Upload all local files to the server").addButton((button) => {
-      button.setButtonText("Push all").setCta().setDisabled(!isConnected).onClick(async () => {
+    new import_obsidian18.Setting(containerEl).setDesc("Sync is paused while settings are open. Use these buttons to sync manually.").addButton((button) => {
+      button.setButtonText("Push all").setCta().onClick(async () => {
         button.setButtonText("Pushing...");
         button.setDisabled(true);
+        this.plugin.syncPaused = false;
         try {
           await this.plugin.performPushAll();
         } finally {
+          this.plugin.syncPaused = true;
           button.setButtonText("Push all");
           button.setDisabled(false);
         }
       });
-    });
-    new import_obsidian18.Setting(containerEl).setName("Pull all").setDesc("Download all remote files to this device").addButton((button) => {
-      button.setButtonText("Pull all").setDisabled(!isConnected).onClick(async () => {
+    }).addButton((button) => {
+      button.setButtonText("Pull all").onClick(async () => {
         button.setButtonText("Pulling...");
         button.setDisabled(true);
+        this.plugin.syncPaused = false;
         try {
           await this.plugin.performPullAll();
         } finally {
+          this.plugin.syncPaused = true;
           button.setButtonText("Pull all");
           button.setDisabled(false);
         }
       });
-    });
-    new import_obsidian18.Setting(containerEl).setName("Force sync").setDesc("Compare all files and sync differences").addButton((button) => {
-      button.setButtonText("Force sync").setDisabled(!isConnected).onClick(async () => {
+    }).addButton((button) => {
+      button.setButtonText("Force sync").onClick(async () => {
         button.setButtonText("Syncing...");
         button.setDisabled(true);
+        this.plugin.syncPaused = false;
         try {
           await this.plugin.performForceSync();
         } finally {
+          this.plugin.syncPaused = true;
           button.setButtonText("Force sync");
           button.setDisabled(false);
         }
@@ -13992,8 +14002,12 @@ var VaultSyncPlugin = class extends import_obsidian21.Plugin {
     this.fileChangeDebounce = /* @__PURE__ */ new Map();
     // Notification batching
     this.notificationBatch = /* @__PURE__ */ new Map();
-    this.BATCH_DELAY_MS = 2e3;
-    // 2 second delay for batching
+    this.BATCH_DELAY_MS = 3e3;
+    // 3 second delay for batching
+    // Suppress notifications during initial connection/reconnection
+    this.suppressNotifications = false;
+    // Pause sync while settings tab is open
+    this.syncPaused = false;
     // Services
     this.apiClient = null;
     // Public for settings tab
@@ -14674,15 +14688,14 @@ ${data.error}`, 1e4);
         reconnectionDelayMax: 5e3,
         reconnectionAttempts: Infinity
       });
+      this.suppressNotifications = true;
       this.socket.on("connect", () => {
         void (async () => {
           logger.debug("Connected to VaultConnect");
           this.isConnected = true;
           this.updateStatusBar("connected");
           if (completedInitialSync) {
-            new import_obsidian21.Notice("Initial sync complete! Connected to vault connect");
-          } else {
-            new import_obsidian21.Notice("Connected to vault connect");
+            new import_obsidian21.Notice("Connected \u2014 initial sync complete");
           }
           if (this.socket) {
             const activeVaultId = this.settings.selectedVaultId || this.settings.vaultId;
@@ -14695,6 +14708,9 @@ ${data.error}`, 1e4);
             logger.debug("[VaultConnect] Triggering reconnection sync check...");
             await this.syncService.handleReconnection();
           }
+          setTimeout(() => {
+            this.suppressNotifications = false;
+          }, 5e3);
         })();
       });
       this.socket.on("disconnect", () => {
@@ -14704,7 +14720,6 @@ ${data.error}`, 1e4);
       });
       this.socket.on("subscribed", (data) => {
         logger.debug("Subscribed to vault:", data);
-        new import_obsidian21.Notice("Subscribed to vault sync");
       });
       this.socket.on("sync_event", (data) => {
         void (async () => {
@@ -14740,14 +14755,13 @@ ${data.error}`, 1e4);
     }
     this.isConnected = false;
     this.updateStatusBar("disconnected");
-    new import_obsidian21.Notice("Disconnected from vault connect");
   }
   /**
    * Batch notifications to avoid notification spam during bulk operations
    * Collects multiple operations of the same type and shows a single consolidated notification
    */
   batchNotification(operation, filePath) {
-    if (!this.settings.notifyOnSync) {
+    if (!this.settings.notifyOnSync || this.suppressNotifications) {
       return;
     }
     const batch = this.notificationBatch.get(operation);
@@ -14798,6 +14812,10 @@ ${data.error}`, 1e4);
     }
   }
   async handleRemoteChange(data) {
+    if (this.syncPaused) {
+      logger.debug(`[VaultConnect] Sync paused, skipping remote change: ${data.file_path}`);
+      return;
+    }
     try {
       const { file_path, operation, device_id, old_path } = data;
       if (device_id === this.settings.deviceId) {

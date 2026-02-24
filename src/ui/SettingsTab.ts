@@ -59,6 +59,10 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+    containerEl.addClass('vaultconnect-settings');
+
+    // Pause sync while settings are open
+    this.plugin.syncPaused = true;
 
     const stage = this.getStage();
 
@@ -76,6 +80,11 @@ export class VaultSyncSettingTab extends PluginSettingTab {
         this.displayCompleteStage(containerEl);
         break;
     }
+  }
+
+  hide(): void {
+    // Resume sync when settings are closed
+    this.plugin.syncPaused = false;
   }
 
   // ===========================================================================
@@ -632,60 +641,56 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     if (!isConnected) {
       new Setting(containerEl)
         .setDesc('Connect to the server first to use sync actions.');
+      return;
     }
 
+    // Note: sync is paused while settings are open — these buttons override that
     new Setting(containerEl)
-      .setName('Push all')
-      .setDesc('Upload all local files to the server')
+      .setDesc('Sync is paused while settings are open. Use these buttons to sync manually.')
       .addButton(button => {
         button
           .setButtonText('Push all')
           .setCta()
-          .setDisabled(!isConnected)
           .onClick(async () => {
             button.setButtonText('Pushing...');
             button.setDisabled(true);
+            this.plugin.syncPaused = false;
             try {
               await this.plugin.performPushAll();
             } finally {
+              this.plugin.syncPaused = true;
               button.setButtonText('Push all');
               button.setDisabled(false);
             }
           });
-      });
-
-    new Setting(containerEl)
-      .setName('Pull all')
-      .setDesc('Download all remote files to this device')
+      })
       .addButton(button => {
         button
           .setButtonText('Pull all')
-          .setDisabled(!isConnected)
           .onClick(async () => {
             button.setButtonText('Pulling...');
             button.setDisabled(true);
+            this.plugin.syncPaused = false;
             try {
               await this.plugin.performPullAll();
             } finally {
+              this.plugin.syncPaused = true;
               button.setButtonText('Pull all');
               button.setDisabled(false);
             }
           });
-      });
-
-    new Setting(containerEl)
-      .setName('Force sync')
-      .setDesc('Compare all files and sync differences')
+      })
       .addButton(button => {
         button
           .setButtonText('Force sync')
-          .setDisabled(!isConnected)
           .onClick(async () => {
             button.setButtonText('Syncing...');
             button.setDisabled(true);
+            this.plugin.syncPaused = false;
             try {
               await this.plugin.performForceSync();
             } finally {
+              this.plugin.syncPaused = true;
               button.setButtonText('Force sync');
               button.setDisabled(false);
             }

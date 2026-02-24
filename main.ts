@@ -49,7 +49,13 @@ export default class VaultSyncPlugin extends Plugin {
 
 	// Notification batching
 	private notificationBatch: Map<string, { files: string[], timeout: NodeJS.Timeout }> = new Map();
-	private readonly BATCH_DELAY_MS = 2000; // 2 second delay for batching
+	private readonly BATCH_DELAY_MS = 3000; // 3 second delay for batching
+
+	// Suppress notifications during initial connection/reconnection
+	private suppressNotifications: boolean = false;
+
+	// Pause sync while settings tab is open
+	syncPaused: boolean = false;
 
 	// Services
 	apiClient: APIClient | null = null; // Public for settings tab
@@ -897,18 +903,20 @@ export default class VaultSyncPlugin extends Plugin {
 				reconnectionAttempts: Infinity
 			});
 
+			// Suppress notifications during initial connection burst
+			this.suppressNotifications = true;
+
 			this.socket.on('connect', () => {
 				void (async () => {
 				logger.debug('Connected to VaultConnect');
 				this.isConnected = true;
 				this.updateStatusBar('connected');
-				
-				// Show appropriate success message
+
+				// Single quiet connection message
 				if (completedInitialSync) {
-					new Notice('Initial sync complete! Connected to vault connect');
-				} else {
-					new Notice('Connected to vault connect');
+					new Notice('Connected — initial sync complete');
 				}
+				// Skip notice for routine reconnections — status bar is enough
 
 				// Subscribe to vault
 				if (this.socket) {
@@ -924,6 +932,9 @@ export default class VaultSyncPlugin extends Plugin {
 					logger.debug('[VaultConnect] Triggering reconnection sync check...');
 					await this.syncService.handleReconnection();
 				}
+
+				// Re-enable notifications after a short delay for the initial burst to settle
+				setTimeout(() => { this.suppressNotifications = false; }, 5000);
 				})();
 			});
 
@@ -935,7 +946,6 @@ export default class VaultSyncPlugin extends Plugin {
 
 			this.socket.on('subscribed', (data: { vault_id: string }) => {
 				logger.debug('Subscribed to vault:', data);
-				new Notice('Subscribed to vault sync');
 			});
 
 			this.socket.on('sync_event', (data: SyncEventData) => {
@@ -980,7 +990,6 @@ export default class VaultSyncPlugin extends Plugin {
 
 		this.isConnected = false;
 		this.updateStatusBar('disconnected');
-		new Notice('Disconnected from vault connect');
 	}
 
 	/**
@@ -988,8 +997,8 @@ export default class VaultSyncPlugin extends Plugin {
 	 * Collects multiple operations of the same type and shows a single consolidated notification
 	 */
 	private batchNotification(operation: string, filePath: string): void {
-		// Check if sync notifications are enabled
-		if (!this.settings.notifyOnSync) {
+		// Check if sync notifications are enabled or suppressed
+		if (!this.settings.notifyOnSync || this.suppressNotifications) {
 			return;
 		}
 
@@ -1052,6 +1061,12 @@ export default class VaultSyncPlugin extends Plugin {
 	}
 
 	async handleRemoteChange(data: SyncEventData) {
+		// Queue changes while sync is paused (settings open) — don't process them
+		if (this.syncPaused) {
+			logger.debug(`[VaultConnect] Sync paused, skipping remote change: ${data.file_path}`);
+			return;
+		}
+
 		try {
 			const { file_path, operation, device_id, old_path } = data;
 
