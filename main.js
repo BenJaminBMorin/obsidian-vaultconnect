@@ -10458,8 +10458,11 @@ var CopyMoveModal = class extends import_obsidian11.Modal {
         this.updateActionButton();
       });
     });
-    new import_obsidian11.Setting(contentEl).setName("Destination folder").setDesc("Optional folder path in the destination vault (leave empty for root)").addText((text) => {
-      text.setPlaceholder("e.g., imported/notes").onChange((value2) => {
+    if (this.options.defaultDestination) {
+      this.destinationPath = this.options.defaultDestination;
+    }
+    new import_obsidian11.Setting(contentEl).setName("Destination folder").setDesc("Folder path in the destination vault (leave empty for root)").addText((text) => {
+      text.setPlaceholder("e.g., imported/notes").setValue(this.destinationPath).onChange((value2) => {
         this.destinationPath = value2.trim().replace(/^\/+|\/+$/g, "");
       });
     });
@@ -14417,9 +14420,11 @@ ${data.error}`, 1e4);
         if (!this.apiClient || !this.vaultService || !activeVaultId)
           return;
         const filePaths = [];
+        let folderName;
         if (file instanceof import_obsidian21.TFile) {
           filePaths.push(file.path);
         } else if (file instanceof import_obsidian21.TAbstractFile) {
+          folderName = file.path;
           const folder = this.app.vault.getAbstractFileByPath(file.path);
           if (folder) {
             this.collectFilesInFolder(folder, filePaths);
@@ -14437,7 +14442,8 @@ ${data.error}`, 1e4);
               {
                 operation: "copy",
                 sourceVaultId: activeVaultId,
-                filePaths
+                filePaths,
+                defaultDestination: folderName
               },
               () => {
                 new import_obsidian21.Notice("Copy complete");
@@ -14454,7 +14460,8 @@ ${data.error}`, 1e4);
               {
                 operation: "move",
                 sourceVaultId: activeVaultId,
-                filePaths
+                filePaths,
+                defaultDestination: folderName
               },
               () => {
                 new import_obsidian21.Notice("Move complete \u2014 files will sync shortly");

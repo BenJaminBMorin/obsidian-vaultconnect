@@ -567,11 +567,13 @@ export default class VaultSyncPlugin extends Plugin {
 				if (!this.apiClient || !this.vaultService || !activeVaultId) return;
 
 				const filePaths: string[] = [];
+				let folderName: string | undefined;
 
 				if (file instanceof TFile) {
 					filePaths.push(file.path);
 				} else if (file instanceof TAbstractFile) {
-					// It's a folder — collect all files inside
+					// It's a folder — collect all files inside and remember folder name
+					folderName = file.path;
 					const folder = this.app.vault.getAbstractFileByPath(file.path);
 					if (folder) {
 						this.collectFilesInFolder(folder, filePaths);
@@ -594,7 +596,8 @@ export default class VaultSyncPlugin extends Plugin {
 								{
 									operation: 'copy',
 									sourceVaultId: activeVaultId,
-									filePaths
+									filePaths,
+									defaultDestination: folderName
 								},
 								() => {
 									new Notice('Copy complete');
@@ -615,7 +618,8 @@ export default class VaultSyncPlugin extends Plugin {
 								{
 									operation: 'move',
 									sourceVaultId: activeVaultId,
-									filePaths
+									filePaths,
+									defaultDestination: folderName
 								},
 								() => {
 									new Notice('Move complete — files will sync shortly');

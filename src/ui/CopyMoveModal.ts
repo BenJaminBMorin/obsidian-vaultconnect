@@ -11,6 +11,8 @@ interface CopyMoveOptions {
   sourceVaultId: string;
   /** Local file paths being operated on */
   filePaths: string[];
+  /** Pre-fill the destination folder (e.g. source folder name) */
+  defaultDestination?: string;
 }
 
 /**
@@ -104,13 +106,19 @@ export class CopyMoveModal extends Modal {
         });
       });
 
+    // Pre-fill destination from folder name if provided
+    if (this.options.defaultDestination) {
+      this.destinationPath = this.options.defaultDestination;
+    }
+
     // Destination path
     new Setting(contentEl)
       .setName('Destination folder')
-      .setDesc('Optional folder path in the destination vault (leave empty for root)')
+      .setDesc('Folder path in the destination vault (leave empty for root)')
       .addText(text => {
         text
           .setPlaceholder('e.g., imported/notes')
+          .setValue(this.destinationPath)
           .onChange(value => {
             this.destinationPath = value.trim().replace(/^\/+|\/+$/g, '');
           });
