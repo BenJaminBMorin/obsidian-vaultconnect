@@ -12665,16 +12665,23 @@ var AuthService = class {
     const pollInterval = deviceCodeData.interval * 1e3;
     const expiresAt = Date.now() + deviceCodeData.expires_in * 1e3;
     return new Promise((resolve, reject) => {
+      let settled = false;
       const poll = async () => {
+        if (settled)
+          return;
         try {
           if (Date.now() >= expiresAt) {
+            settled = true;
             clearInterval(intervalId);
+            cleanup();
             reject(new Error("Authorization timed out. Please try again."));
             return;
           }
           const tokenData = await this.pollForToken(apiBaseUrl, deviceCodeData.device_code);
           if (tokenData) {
+            settled = true;
             clearInterval(intervalId);
+            cleanup();
             const tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1e3);
             await this.storeApiKey(tokenData.access_token, tokenExpiresAt);
             resolve({
@@ -12684,9 +12691,20 @@ var AuthService = class {
             });
           }
         } catch (error) {
+          settled = true;
           clearInterval(intervalId);
+          cleanup();
           reject(error instanceof Error ? error : new Error(String(error)));
         }
+      };
+      const onVisibilityChange = () => {
+        if (document.visibilityState === "visible" && !settled) {
+          void poll();
+        }
+      };
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      const cleanup = () => {
+        document.removeEventListener("visibilitychange", onVisibilityChange);
       };
       const intervalId = setInterval(() => {
         void poll();

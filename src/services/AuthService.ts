@@ -323,11 +323,16 @@ export class AuthService {
     const expiresAt = Date.now() + deviceCodeData.expires_in * 1000;
 
     return new Promise((resolve, reject) => {
+      let settled = false;
+
       const poll = async () => {
+        if (settled) return;
         try {
           // Check if expired
           if (Date.now() >= expiresAt) {
+            settled = true;
             clearInterval(intervalId);
+            cleanup();
             reject(new Error('Authorization timed out. Please try again.'));
             return;
           }
@@ -337,7 +342,9 @@ export class AuthService {
 
           if (tokenData) {
             // Got the token!
+            settled = true;
             clearInterval(intervalId);
+            cleanup();
 
             // Calculate expiration date
             const tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
@@ -352,9 +359,24 @@ export class AuthService {
             });
           }
         } catch (error) {
+          settled = true;
           clearInterval(intervalId);
+          cleanup();
           reject(error instanceof Error ? error : new Error(String(error)));
         }
+      };
+
+      // When user returns from browser (especially on mobile where setInterval
+      // may be suspended), trigger an immediate poll so auth completes instantly
+      const onVisibilityChange = () => {
+        if (document.visibilityState === 'visible' && !settled) {
+          void poll();
+        }
+      };
+      document.addEventListener('visibilitychange', onVisibilityChange);
+
+      const cleanup = () => {
+        document.removeEventListener('visibilitychange', onVisibilityChange);
       };
 
       // Start polling
