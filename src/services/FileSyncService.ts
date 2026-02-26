@@ -652,10 +652,17 @@ export class FileSyncService {
    */
   async hasLocalChanges(file: TFile): Promise<boolean> {
     try {
-      const content = await this.vault.read(file);
+      // Read content the same way uploadFile does to ensure consistent hashing
+      let content: string;
+      if (this.isBinaryFile(file.path)) {
+        const arrayBuffer = await this.vault.readBinary(file);
+        content = this.arrayBufferToBase64(arrayBuffer);
+      } else {
+        content = await this.vault.read(file);
+      }
       const currentHash = await this.computeHash(content);
       const storedHash = this.fileHashes.get(file.path);
-      
+
       return !storedHash || currentHash !== storedHash;
     } catch (error) {
       console.error(`Failed to check local changes for ${file.path}:`, error);
