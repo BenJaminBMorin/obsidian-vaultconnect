@@ -45,8 +45,6 @@ export default class VaultSyncPlugin extends Plugin {
 	ribbonIconEl: HTMLElement | null = null;
 	isConnected: boolean = false;
 	isSyncing: boolean = false;
-	private fileChangeDebounce: Map<string, NodeJS.Timeout> = new Map();
-
 	// Notification batching
 	private notificationBatch: Map<string, { files: string[], timeout: NodeJS.Timeout }> = new Map();
 	private readonly BATCH_DELAY_MS = 3000; // 3 second delay for batching
@@ -649,119 +647,6 @@ export default class VaultSyncPlugin extends Plugin {
 		}
 	}
 
-	shouldSyncFile(file: TFile): boolean {
-		const path = file.path;
-
-		// Check if file is in excluded folders
-		for (const folder of this.settings.excludedFolders) {
-			if (path.startsWith(folder + '/') || path === folder) {
-				return false;
-			}
-		}
-
-		// If there are included folders specified, check if path is in one of them
-		if (this.settings.includedFolders.length > 0) {
-			for (const folder of this.settings.includedFolders) {
-				if (path.startsWith(folder + '/') || path === folder) {
-					return true;
-				}
-			}
-			// Path is not in any included folder
-			return false;
-		}
-
-		// No included folders specified, so sync everything that's not excluded
-		return true;
-	}
-
-	handleFileChange(file: TFile, action: 'create' | 'modify' | 'delete') {
-		if (!this.isConnected || !this.settings.autoSync) {
-			return;
-		}
-
-		// Debounce file changes to avoid excessive sync
-		const existingTimeout = this.fileChangeDebounce.get(file.path);
-		if (existingTimeout) {
-			clearTimeout(existingTimeout);
-		}
-
-		const timeout = setTimeout(() => {
-			void (async () => {
-				this.fileChangeDebounce.delete(file.path);
-				await this.syncFile(file, action);
-			})();
-		}, 1000); // 1 second debounce
-
-		this.fileChangeDebounce.set(file.path, timeout);
-	}
-
-	handleFileRename(file: TFile, oldPath: string) {
-		if (!this.isConnected || !this.settings.autoSync) {
-			return;
-		}
-
-		// Handle rename as delete old + create new
-		void this.syncFileRename(oldPath, file.path);
-	}
-
-	async syncFile(file: TFile, action: 'create' | 'modify' | 'delete') {
-		try {
-			this.isSyncing = true;
-			this.updateStatusBar('syncing');
-
-			let content = '';
-			let hash = '';
-
-			if (action !== 'delete') {
-				content = await this.app.vault.read(file);
-				hash = await this.computeHash(content);
-			}
-
-			if (this.socket && this.socket.connected) {
-				this.socket.emit('file_update', {
-					vault_id: this.settings.vaultId,
-					file_path: file.path,
-					content: content,
-					hash: hash,
-					action: action,
-					timestamp: Date.now()
-				});
-			}
-
-			this.isSyncing = false;
-			this.updateStatusBar('connected');
-		} catch (error) {
-			logger.error('Error syncing file:', error);
-			new Notice(`Failed to sync ${file.path}: ${error.message}`);
-			this.isSyncing = false;
-			this.updateStatusBar('error');
-		}
-	}
-
-	syncFileRename(oldPath: string, newPath: string) {
-		try {
-			if (this.socket && this.socket.connected) {
-				this.socket.emit('file_rename', {
-					vault_id: this.settings.vaultId,
-					old_path: oldPath,
-					new_path: newPath,
-					timestamp: Date.now()
-				});
-			}
-		} catch (error) {
-			logger.error('Error syncing file rename:', error);
-			new Notice(`Failed to sync rename: ${error.message}`);
-		}
-	}
-
-	async computeHash(content: string): Promise<string> {
-		const encoder = new TextEncoder();
-		const data = encoder.encode(content);
-		const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-		const hashArray = Array.from(new Uint8Array(hashBuffer));
-		return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-	}
-
 	/**
 	 * Show initial sync wizard for first-time connection
 	 * Analyzes files and presents sync options to the user
@@ -1220,26 +1105,6 @@ export default class VaultSyncPlugin extends Plugin {
 		const { file_path } = data;
 		new Notice(`Conflict detected in ${file_path}. Please resolve manually.`, 10000);
 		// TODO: Implement conflict resolution UI
-	}
-
-	async forceSyncAll() {
-		if (!this.isConnected) {
-			new Notice('Not connected to vault connect');
-			return;
-		}
-
-		new Notice('Starting full sync...');
-		const files = this.app.vault.getFiles(); // Changed from getMarkdownFiles() to getFiles()
-		let synced = 0;
-
-		for (const file of files) {
-			if (this.shouldSyncFile(file)) {
-				await this.syncFile(file, 'modify');
-				synced++;
-			}
-		}
-
-		new Notice(`Synced ${synced} files`);
 	}
 
 	/**

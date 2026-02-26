@@ -4,7 +4,6 @@ import { EventBus } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { QueuedOperation } from './SyncQueueService';
 import { LargeFileService } from './LargeFileService';
-import { logger } from '../utils/logger';
 
 /**
  * File sync status
@@ -419,26 +418,6 @@ export class FileSyncService {
   }
 
   /**
-   * Preserve file timestamps to prevent sync conflicts
-   * Sets the file's mtime and ctime to match the server's timestamps
-   */
-  private preserveFileTimestamps(
-    file: TFile,
-    createdAt: string,
-    updatedAt: string
-  ): void {
-    try {
-      // Note: Obsidian's API doesn't provide a way to set file timestamps.
-      // The file's mtime will be updated when we write to it.
-      // Timestamp preservation is handled at the metadata level instead.
-      logger.debug(`[Timestamp Preservation] Skipped for ${file.path} - using Obsidian's file modification time`);
-    } catch (error) {
-      // Log but don't fail the sync if timestamp preservation fails
-      logger.warn(`[Timestamp Preservation] Failed to preserve timestamps for ${file.path}:`, error);
-    }
-  }
-
-  /**
    * Download file from remote
    */
   async downloadFile(filePath: string): Promise<FileSyncResult> {
@@ -468,17 +447,6 @@ export class FileSyncService {
 
       if (localFile instanceof TFile) {
         // Update existing file
-        console.debug(`[Download Debug] About to modify ${filePath}`);
-        console.debug(`[Download Debug] Remote hash: ${remoteFile.hash}`);
-        console.debug(`[Download Debug] Remote content length: ${remoteFile.content.length}`);
-        console.debug(`[Download Debug] Remote content preview: ${remoteFile.content.substring(0, 100)}`);
-
-        // Read current local content before modify
-        const beforeContent = await this.vault.read(localFile);
-        const beforeHash = await this.computeHash(beforeContent);
-        console.debug(`[Download Debug] Local hash BEFORE modify: ${beforeHash}`);
-        console.debug(`[Download Debug] Local content length BEFORE: ${beforeContent.length}`);
-
         if (isBinary) {
           // Binary files: decode base64 and use modifyBinary
           const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
@@ -487,16 +455,6 @@ export class FileSyncService {
           // Text files: use modify directly
           await this.vault.modify(localFile, remoteFile.content);
         }
-
-        // Verify the content was actually written
-        const afterContent = await this.vault.read(localFile);
-        const afterHash = await this.computeHash(afterContent);
-        console.debug(`[Download Debug] Local hash AFTER modify: ${afterHash}`);
-        console.debug(`[Download Debug] Local content length AFTER: ${afterContent.length}`);
-        console.debug(`[Download Debug] Hash matches remote? ${afterHash === remoteFile.hash}`);
-
-        // Preserve original file timestamps to prevent sync conflicts
-        this.preserveFileTimestamps(localFile, remoteFile.created_at, remoteFile.updated_at);
       } else {
         // Create new file - ensure parent folders exist
         const folderPath = filePath.substring(0, filePath.lastIndexOf('/'));
@@ -530,8 +488,6 @@ export class FileSyncService {
           createdFile = await this.vault.create(filePath, remoteFile.content);
         }
 
-        // Preserve original file timestamps to prevent sync conflicts
-        this.preserveFileTimestamps(createdFile, remoteFile.created_at, remoteFile.updated_at);
       }
 
       } finally {
