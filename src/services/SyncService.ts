@@ -481,10 +481,32 @@ export class SyncService {
             const hasRemoteChanges = await this.fileSync.hasRemoteChanges(localFile.path);
 
             if (hasLocalChanges && hasRemoteChanges) {
-              // Conflict detected - queue for manual resolution
-              console.debug(`Conflict detected: ${localFile.path}`);
-              await this.handleConflict(localFile, remoteFile);
-              result.errors.push(`${localFile.path}: Conflict detected`);
+              // When there's no stored hash (first time tracking this file, e.g.
+              // binary files that were previously excluded by getMarkdownFiles),
+              // compare local and remote hashes directly instead of declaring conflict.
+              const storedHash = this.fileSync.getStoredHash(localFile.path);
+              if (!storedHash) {
+                const localHash = await this.fileSync.computeLocalHash(localFile);
+                if (localHash === remoteFile.hash) {
+                  // Content already matches — adopt the hash, no sync needed
+                  console.debug(`Adopting hash for previously untracked file: ${localFile.path}`);
+                  this.fileSync.setStoredHash(localFile.path, localHash);
+                } else {
+                  // Content genuinely differs — download remote version
+                  console.debug(`Untracked file differs from remote, downloading: ${localFile.path}`);
+                  const syncResult = await this.fileSync.downloadFile(localFile.path);
+                  if (syncResult.success) {
+                    result.filesDownloaded++;
+                  } else {
+                    result.errors.push(`${localFile.path}: ${syncResult.error}`);
+                  }
+                }
+              } else {
+                // Genuine conflict - both sides changed since last sync
+                console.debug(`Conflict detected: ${localFile.path}`);
+                await this.handleConflict(localFile, remoteFile);
+                result.errors.push(`${localFile.path}: Conflict detected`);
+              }
             } else if (hasLocalChanges) {
               // Only local changes - upload
               const syncResult = await this.fileSync.uploadFile(localFile);

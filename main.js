@@ -6398,6 +6398,25 @@ var FileSyncService = class {
     return this.fileHashes.get(path) || null;
   }
   /**
+   * Set stored hash for a file (used when adopting previously untracked files)
+   */
+  setStoredHash(path, hash) {
+    this.fileHashes.set(path, hash);
+  }
+  /**
+   * Compute the current local hash for a file (reads from disk)
+   */
+  async computeLocalHash(file) {
+    let content;
+    if (this.isBinaryFile(file.path)) {
+      const arrayBuffer = await this.vault.readBinary(file);
+      content = this.arrayBufferToBase64(arrayBuffer);
+    } else {
+      content = await this.vault.read(file);
+    }
+    return this.computeHash(content);
+  }
+  /**
    * Process queued operation
    */
   async processQueuedOperation(operation) {
@@ -6916,9 +6935,26 @@ var SyncService = class {
             const hasLocalChanges = await this.fileSync.hasLocalChanges(localFile);
             const hasRemoteChanges = await this.fileSync.hasRemoteChanges(localFile.path);
             if (hasLocalChanges && hasRemoteChanges) {
-              console.debug(`Conflict detected: ${localFile.path}`);
-              await this.handleConflict(localFile, remoteFile);
-              result.errors.push(`${localFile.path}: Conflict detected`);
+              const storedHash = this.fileSync.getStoredHash(localFile.path);
+              if (!storedHash) {
+                const localHash = await this.fileSync.computeLocalHash(localFile);
+                if (localHash === remoteFile.hash) {
+                  console.debug(`Adopting hash for previously untracked file: ${localFile.path}`);
+                  this.fileSync.setStoredHash(localFile.path, localHash);
+                } else {
+                  console.debug(`Untracked file differs from remote, downloading: ${localFile.path}`);
+                  const syncResult = await this.fileSync.downloadFile(localFile.path);
+                  if (syncResult.success) {
+                    result.filesDownloaded++;
+                  } else {
+                    result.errors.push(`${localFile.path}: ${syncResult.error}`);
+                  }
+                }
+              } else {
+                console.debug(`Conflict detected: ${localFile.path}`);
+                await this.handleConflict(localFile, remoteFile);
+                result.errors.push(`${localFile.path}: Conflict detected`);
+              }
             } else if (hasLocalChanges) {
               const syncResult = await this.fileSync.uploadFile(localFile);
               if (syncResult.success) {

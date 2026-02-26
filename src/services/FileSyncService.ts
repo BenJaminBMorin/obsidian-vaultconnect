@@ -760,6 +760,27 @@ export class FileSyncService {
   }
 
   /**
+   * Set stored hash for a file (used when adopting previously untracked files)
+   */
+  setStoredHash(path: string, hash: string): void {
+    this.fileHashes.set(path, hash);
+  }
+
+  /**
+   * Compute the current local hash for a file (reads from disk)
+   */
+  async computeLocalHash(file: TFile): Promise<string> {
+    let content: string;
+    if (this.isBinaryFile(file.path)) {
+      const arrayBuffer = await this.vault.readBinary(file);
+      content = this.arrayBufferToBase64(arrayBuffer);
+    } else {
+      content = await this.vault.read(file);
+    }
+    return this.computeHash(content);
+  }
+
+  /**
    * Process queued operation
    */
   async processQueuedOperation(operation: QueuedOperation): Promise<FileSyncResult> {
