@@ -692,7 +692,7 @@ export class APIClient {
     }
   ): Promise<void> {
     await this.request<void>(
-      API_ENDPOINTS.CONFLICT(conflictId),
+      API_ENDPOINTS.CONFLICT_RESOLVE(conflictId),
       {
         method: 'POST',
         body: JSON.stringify(resolution)
@@ -820,7 +820,7 @@ export class APIClient {
   async healthCheck(): Promise<boolean> {
     try {
       const response = await requestUrl({
-        url: `${this.baseURL}/health`,
+        url: `${this.baseURL.replace(/\/v1\/?$/, '')}/health`,
         method: 'GET',
         throw: false
       });

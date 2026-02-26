@@ -62,12 +62,11 @@ export const API_ENDPOINTS = {
   FILE_CONTENT: (vaultId: string, filePath: string) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}`,
   
   // Sync
-  FILE_HASH: (vaultId: string, filePath: string) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}/hash`,
-  DELTA: (vaultId: string, filePath: string) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}/delta`,
-  
+  FILE_HASH: (vaultId: string, filePath: string) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}?hash_only=true`,
+
   // Conflicts
   CONFLICTS: (vaultId: string) => `/vaults/${vaultId}/conflicts`,
-  CONFLICT: (conflictId: string) => `/conflicts/${conflictId}`,
+  CONFLICT_RESOLVE: (conflictId: string) => `/vaults/conflicts/${conflictId}/resolve`,
 
   // Search
   SEMANTIC_SEARCH: '/search/semantic',

@@ -578,11 +578,10 @@ var init_constants = __esm({
       FILE: (vaultId, fileId) => `/vaults/${vaultId}/files/${fileId}`,
       FILE_CONTENT: (vaultId, filePath) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}`,
       // Sync
-      FILE_HASH: (vaultId, filePath) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}/hash`,
-      DELTA: (vaultId, filePath) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}/delta`,
+      FILE_HASH: (vaultId, filePath) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}?hash_only=true`,
       // Conflicts
       CONFLICTS: (vaultId) => `/vaults/${vaultId}/conflicts`,
-      CONFLICT: (conflictId) => `/conflicts/${conflictId}`,
+      CONFLICT_RESOLVE: (conflictId) => `/vaults/conflicts/${conflictId}/resolve`,
       // Search
       SEMANTIC_SEARCH: "/search/semantic",
       // Copy/Move
@@ -10979,7 +10978,7 @@ Content-Type: application/octet-stream\r
    */
   async resolveConflict(conflictId, resolution) {
     await this.request(
-      API_ENDPOINTS.CONFLICT(conflictId),
+      API_ENDPOINTS.CONFLICT_RESOLVE(conflictId),
       {
         method: "POST",
         body: JSON.stringify(resolution)
@@ -11076,7 +11075,7 @@ Content-Type: application/octet-stream\r
   async healthCheck() {
     try {
       const response = await (0, import_obsidian12.requestUrl)({
-        url: `${this.baseURL}/health`,
+        url: `${this.baseURL.replace(/\/v1\/?$/, "")}/health`,
         method: "GET",
         throw: false
       });
