@@ -380,6 +380,26 @@ export class APIClient {
   }
 
   /**
+   * Get files deleted from the server since a specific timestamp.
+   * Used by sync to discover server-side deletions and remove local copies.
+   */
+  async getDeletedFiles(vaultId: string, since: Date): Promise<Array<{ file_path: string; deleted_at: string; deleted_by: string }>> {
+    try {
+      const response = await this.requestWithRetry<{
+        deletions: Array<{ file_path: string; deleted_at: string; deleted_by: string }>;
+        count: number;
+      }>(
+        API_ENDPOINTS.FILE_DELETIONS(vaultId, since.toISOString())
+      );
+      return response.deletions || [];
+    } catch (error) {
+      // If endpoint doesn't exist (old server), return empty — graceful degradation
+      logger.warn('Failed to fetch server deletions (server may not support this yet)', error);
+      return [];
+    }
+  }
+
+  /**
    * Get file by path
    * Note: Does NOT retry on 404 errors since they're expected when file doesn't exist
    */

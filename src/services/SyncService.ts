@@ -451,6 +451,22 @@ export class SyncService {
       console.debug(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
       const remoteFileMap = new Map(remoteFiles.map(f => [f.path, f]));
 
+      // Fetch server-side deletions to prevent re-uploading deleted files.
+      // Use lastSyncTimestamp if available, otherwise look back 30 days (covers force sync).
+      const serverDeletedPaths = new Set<string>();
+      try {
+        const since = this.lastSyncTimestamp || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+        const deletions = await this.apiClient.getDeletedFiles(this.vaultId, since);
+        for (const d of deletions) {
+          serverDeletedPaths.add(d.file_path);
+        }
+        if (serverDeletedPaths.size > 0) {
+          console.debug(`[VaultSync] ${serverDeletedPaths.size} server-side deletions since ${since.toISOString()}`);
+        }
+      } catch (e) {
+        console.debug('[VaultSync] Could not fetch server deletions (server may not support this yet)');
+      }
+
       // Get all local files (including binary — getMarkdownFiles() only returns .md)
       const localFiles = this.vault.getFiles();
       const localFileMap = new Map(localFiles.map(f => [f.path, f]));
@@ -468,12 +484,26 @@ export class SyncService {
           const remoteFile = remoteFileMap.get(localFile.path);
 
           if (!remoteFile) {
-            // File only exists locally - upload it
-            const syncResult = await this.fileSync.uploadFile(localFile);
-            if (syncResult.success) {
-              result.filesUploaded++;
+            // File only exists locally — check if it was deleted on the server
+            if (serverDeletedPaths.has(localFile.path)) {
+              // Server intentionally deleted this file — delete local copy
+              console.debug(`[VaultSync] Deleting local file (server-side deletion): ${localFile.path}`);
+              try {
+                await this.vault.delete(localFile);
+                this.fileSync.addLocallyDeleted(localFile.path);
+                result.filesDeleted++;
+              } catch (deleteErr) {
+                const msg = deleteErr instanceof Error ? deleteErr.message : String(deleteErr);
+                result.errors.push(`${localFile.path}: Failed to delete local copy: ${msg}`);
+              }
             } else {
-              result.errors.push(`${localFile.path}: ${syncResult.error}`);
+              // Genuinely new local file — upload it
+              const syncResult = await this.fileSync.uploadFile(localFile);
+              if (syncResult.success) {
+                result.filesUploaded++;
+              } else {
+                result.errors.push(`${localFile.path}: ${syncResult.error}`);
+              }
             }
           } else {
             // File exists both locally and remotely - check for conflicts

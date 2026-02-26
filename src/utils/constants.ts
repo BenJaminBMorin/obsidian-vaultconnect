@@ -63,6 +63,7 @@ export const API_ENDPOINTS = {
   
   // Sync
   FILE_HASH: (vaultId: string, filePath: string) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}?hash_only=true`,
+  FILE_DELETIONS: (vaultId: string, since: string) => `/vaults/${vaultId}/files/deletions?since=${encodeURIComponent(since)}`,
 
   // Conflicts
   CONFLICTS: (vaultId: string) => `/vaults/${vaultId}/conflicts`,

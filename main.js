@@ -579,6 +579,7 @@ var init_constants = __esm({
       FILE_CONTENT: (vaultId, filePath) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}`,
       // Sync
       FILE_HASH: (vaultId, filePath) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}?hash_only=true`,
+      FILE_DELETIONS: (vaultId, since) => `/vaults/${vaultId}/files/deletions?since=${encodeURIComponent(since)}`,
       // Conflicts
       CONFLICTS: (vaultId) => `/vaults/${vaultId}/conflicts`,
       CONFLICT_RESOLVE: (conflictId) => `/vaults/conflicts/${conflictId}/resolve`,
@@ -6563,6 +6564,13 @@ var FileSyncService = class {
     return this.readOnlyFiles.has(path);
   }
   /**
+   * Mark a file path as locally deleted (prevents re-downloading)
+   */
+  addLocallyDeleted(path) {
+    this.locallyDeletedFiles.add(path);
+    void this.saveSyncState();
+  }
+  /**
    * Check if a file was locally deleted (should not be re-downloaded)
    */
   isLocallyDeleted(path) {
@@ -6914,6 +6922,19 @@ var SyncService = class {
       const remoteFiles = await this.apiClient.listFiles(this.vaultId);
       console.debug(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
       const remoteFileMap = new Map(remoteFiles.map((f) => [f.path, f]));
+      const serverDeletedPaths = /* @__PURE__ */ new Set();
+      try {
+        const since = this.lastSyncTimestamp || new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
+        const deletions = await this.apiClient.getDeletedFiles(this.vaultId, since);
+        for (const d of deletions) {
+          serverDeletedPaths.add(d.file_path);
+        }
+        if (serverDeletedPaths.size > 0) {
+          console.debug(`[VaultSync] ${serverDeletedPaths.size} server-side deletions since ${since.toISOString()}`);
+        }
+      } catch (e) {
+        console.debug("[VaultSync] Could not fetch server deletions (server may not support this yet)");
+      }
       const localFiles = this.vault.getFiles();
       const localFileMap = new Map(localFiles.map((f) => [f.path, f]));
       const totalFiles = Math.max(localFiles.length, remoteFiles.length);
@@ -6925,11 +6946,23 @@ var SyncService = class {
         try {
           const remoteFile = remoteFileMap.get(localFile.path);
           if (!remoteFile) {
-            const syncResult = await this.fileSync.uploadFile(localFile);
-            if (syncResult.success) {
-              result.filesUploaded++;
+            if (serverDeletedPaths.has(localFile.path)) {
+              console.debug(`[VaultSync] Deleting local file (server-side deletion): ${localFile.path}`);
+              try {
+                await this.vault.delete(localFile);
+                this.fileSync.addLocallyDeleted(localFile.path);
+                result.filesDeleted++;
+              } catch (deleteErr) {
+                const msg = deleteErr instanceof Error ? deleteErr.message : String(deleteErr);
+                result.errors.push(`${localFile.path}: Failed to delete local copy: ${msg}`);
+              }
             } else {
-              result.errors.push(`${localFile.path}: ${syncResult.error}`);
+              const syncResult = await this.fileSync.uploadFile(localFile);
+              if (syncResult.success) {
+                result.filesUploaded++;
+              } else {
+                result.errors.push(`${localFile.path}: ${syncResult.error}`);
+              }
             }
           } else {
             const hasLocalChanges = await this.fileSync.hasLocalChanges(localFile);
@@ -10978,6 +11011,21 @@ var APIClient = class {
       created_at: new Date(f.created_at),
       updated_at: new Date(f.updated_at)
     }));
+  }
+  /**
+   * Get files deleted from the server since a specific timestamp.
+   * Used by sync to discover server-side deletions and remove local copies.
+   */
+  async getDeletedFiles(vaultId, since) {
+    try {
+      const response = await this.requestWithRetry(
+        API_ENDPOINTS.FILE_DELETIONS(vaultId, since.toISOString())
+      );
+      return response.deletions || [];
+    } catch (error) {
+      logger.warn("Failed to fetch server deletions (server may not support this yet)", error);
+      return [];
+    }
   }
   /**
    * Get file by path

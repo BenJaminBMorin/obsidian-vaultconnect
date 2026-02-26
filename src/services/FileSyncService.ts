@@ -966,6 +966,14 @@ export class FileSyncService {
   }
 
   /**
+   * Mark a file path as locally deleted (prevents re-downloading)
+   */
+  addLocallyDeleted(path: string): void {
+    this.locallyDeletedFiles.add(path);
+    void this.saveSyncState();
+  }
+
+  /**
    * Check if a file was locally deleted (should not be re-downloaded)
    */
   isLocallyDeleted(path: string): boolean {
