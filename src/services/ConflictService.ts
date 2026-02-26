@@ -830,9 +830,16 @@ export class ConflictService {
    */
   private generateConflictCopyPath(originalPath: string): string {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    const parts = originalPath.split('.');
-    const ext = parts.pop();
-    const base = parts.join('.');
-    return `${base}.conflict-${timestamp}.${ext}`;
+    const dotIndex = originalPath.lastIndexOf('.');
+
+    // Handle extensionless files — avoid creating hidden files like ".conflict-..."
+    if (dotIndex <= 0 || dotIndex <= originalPath.lastIndexOf('/')) {
+      // No extension (or dot is part of a directory name), append suffix directly
+      return `${originalPath}.conflict-${timestamp}`;
+    }
+
+    const base = originalPath.substring(0, dotIndex);
+    const ext = originalPath.substring(dotIndex); // includes the dot
+    return `${base}.conflict-${timestamp}${ext}`;
   }
 }

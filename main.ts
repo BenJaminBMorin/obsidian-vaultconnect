@@ -76,6 +76,7 @@ export default class VaultSyncPlugin extends Plugin {
 	// Key: file path, Value: timestamp of upload completion
 	private recentUploads: Map<string, number> = new Map();
 	private readonly UPLOAD_ECHO_WINDOW_MS = 10000; // 10 second window to detect echoes
+	private recentUploadsCleanupInterval: NodeJS.Timeout | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -231,15 +232,16 @@ export default class VaultSyncPlugin extends Plugin {
 		this.eventBus.on(EVENTS.SYNC_COMPLETED, (result: { path?: string; operation?: string }) => {
 			if (result?.path && result?.operation === 'upload') {
 				this.recentUploads.set(result.path, Date.now());
-				// Clean up old entries periodically
-				if (this.recentUploads.size > 100) {
-					const cutoff = Date.now() - this.UPLOAD_ECHO_WINDOW_MS;
-					for (const [path, time] of this.recentUploads) {
-						if (time < cutoff) this.recentUploads.delete(path);
-					}
-				}
 			}
 		});
+
+		// Periodic TTL-based cleanup of stale recentUploads entries (every 30s)
+		this.recentUploadsCleanupInterval = setInterval(() => {
+			const cutoff = Date.now() - this.UPLOAD_ECHO_WINDOW_MS;
+			for (const [path, time] of this.recentUploads) {
+				if (time < cutoff) this.recentUploads.delete(path);
+			}
+		}, 30000);
 
 		logger.debug('Services initialized');
 	}
@@ -493,6 +495,10 @@ export default class VaultSyncPlugin extends Plugin {
 		this.notificationBatch.clear();
 
 		// Clear recent uploads tracking
+		if (this.recentUploadsCleanupInterval) {
+			clearInterval(this.recentUploadsCleanupInterval);
+			this.recentUploadsCleanupInterval = null;
+		}
 		this.recentUploads.clear();
 
 		// Clear event bus to remove all remaining listeners

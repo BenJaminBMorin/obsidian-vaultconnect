@@ -46,6 +46,9 @@ export class OfflineManager {
   private isInitialized: boolean = false;
   private vaultId: string | null = null;
 
+  // Event listener cleanup functions
+  private eventCleanups: Array<() => void> = [];
+
   constructor(
     vault: Vault,
     apiClient: APIClient,
@@ -144,7 +147,7 @@ export class OfflineManager {
    */
   private setupEventListeners(): void {
     // Listen for file changes to queue during offline mode
-    this.eventBus.on(EVENTS.FILE_SYNCED, (event: FileSyncEvent) => {
+    const unsubFileSynced = this.eventBus.on(EVENTS.FILE_SYNCED, (event: FileSyncEvent) => {
       void (async () => {
         if (this.offlineDetection.isOffline()) {
           // Queue the operation
@@ -152,15 +155,17 @@ export class OfflineManager {
         }
       })();
     });
+    this.eventCleanups.push(unsubFileSynced);
 
     // Listen for offline mode changes to disable real-time features
-    this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, (offline: boolean) => {
+    const unsubOfflineChanged = this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, (offline: boolean) => {
       if (offline) {
         this.disableRealtimeFeatures();
       } else {
         this.enableRealtimeFeatures();
       }
     });
+    this.eventCleanups.push(unsubOfflineChanged);
   }
 
   /**
@@ -345,6 +350,13 @@ export class OfflineManager {
    */
   destroy(): void {
     this.stop();
+
+    // Clean up event listeners
+    for (const unsub of this.eventCleanups) {
+      unsub();
+    }
+    this.eventCleanups = [];
+
     this.offlineDetection.destroy();
     this.offlineQueue.destroy();
   }

@@ -158,15 +158,21 @@ export class FileWatcherService {
     if (!this.isWatching) return;
 
     if (file instanceof TFile) {
+      // Capture the path immediately — the TFile reference may become stale
+      // after Obsidian finishes the delete operation (P21).
+      const filePath = file.path;
+
       // Skip if this file is being written by a download
-      if (this.isPathIgnored(file.path)) {
-        console.debug(`[FileWatcher] Skipping delete event for ignored path: ${file.path}`);
+      if (this.isPathIgnored(filePath)) {
+        console.debug(`[FileWatcher] Skipping delete event for ignored path: ${filePath}`);
         return;
       }
 
       if (this.shouldSyncFile(file)) {
-        // For delete, we don't debounce as the file is already gone
-        this.emitFileChange(file, 'delete');
+        // For delete, we don't debounce as the file is already gone.
+        // Pass the captured path as pathOverride so the event uses the
+        // stable string instead of the potentially stale TFile reference.
+        this.emitFileChange(file, 'delete', undefined, filePath);
       }
     }
   }
@@ -208,16 +214,19 @@ export class FileWatcherService {
   }
 
   /**
-   * Emit file change event
+   * Emit file change event.
+   * @param pathOverride - If provided, used instead of file.path (for delete events
+   *   where the TFile reference may become stale after deletion).
    */
   private emitFileChange(
     file: TFile,
     action: 'create' | 'modify' | 'delete' | 'rename',
-    oldPath?: string
+    oldPath?: string,
+    pathOverride?: string
   ): void {
     const event: FileChangeEvent = {
       file,
-      path: file.path,
+      path: pathOverride ?? file.path,
       action,
       oldPath,
       timestamp: Date.now()

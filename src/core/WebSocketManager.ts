@@ -55,6 +55,9 @@ export class WebSocketManager {
   // Debug mode
   private debugMode: boolean = false;
 
+  // Cached device ID — persists across reconnections
+  private cachedDeviceId: string | null = null;
+
   constructor(
     authService: AuthService,
     eventBus: EventBus,
@@ -360,26 +363,34 @@ export class WebSocketManager {
   // Private methods
 
   /**
-   * Build WebSocket URL with authentication
+   * Build WebSocket URL with authentication.
+   *
+   * NOTE: The native browser WebSocket API does not support custom headers,
+   * so the token must be passed as a query parameter. This is a known
+   * limitation of the browser WebSocket API. The connection uses WSS
+   * (TLS-encrypted), so the token is not exposed on the wire. However,
+   * it may appear in server access logs — ensure the server is configured
+   * to redact query parameters from logs.
    */
   private buildWebSocketUrl(apiKey: string): string {
     // Convert HTTP(S) URL to WS(S)
     const wsUrl = this.wsBaseURL.replace(/^http/, 'ws');
-    
-    // Add authentication as query parameter
+
+    // Add authentication as query parameter (see NOTE above)
     const url = new URL(wsUrl);
     url.searchParams.set('token', apiKey);
-    
+
     return url.toString();
   }
 
   /**
-   * Get device ID
+   * Get device ID — cached so the same ID persists across reconnections
    */
   private getDeviceId(): string {
-    // Generate or retrieve device ID
-    // This should be stored in plugin settings
-    return `device_${Date.now()}`;
+    if (!this.cachedDeviceId) {
+      this.cachedDeviceId = `device_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    }
+    return this.cachedDeviceId;
   }
 
   /**
@@ -571,19 +582,29 @@ export class WebSocketManager {
         return;
       }
 
+      let settled = false;
+      let pollTimer: NodeJS.Timeout | null = null;
+
       const timeout = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        if (pollTimer) clearTimeout(pollTimer);
         reject(new Error('Connection timeout'));
       }, 10000); // 10 second timeout
 
       const checkConnection = () => {
+        if (settled) return;
+
         if (this.ws?.readyState === WebSocket.OPEN) {
+          settled = true;
           clearTimeout(timeout);
           resolve();
         } else if (this.ws?.readyState === WebSocket.CLOSED || this.ws?.readyState === WebSocket.CLOSING) {
+          settled = true;
           clearTimeout(timeout);
           reject(new Error('Connection failed'));
         } else {
-          setTimeout(checkConnection, 100);
+          pollTimer = setTimeout(checkConnection, 100);
         }
       };
 

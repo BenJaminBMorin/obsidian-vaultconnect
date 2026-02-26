@@ -68,13 +68,19 @@ export class AuthService {
   }
 
   /**
-   * Store API key
+   * Store API key.
+   *
+   * SECURITY NOTE: The API key is stored in plain text in Obsidian's data.json.
+   * This is a known limitation of the Obsidian plugin API — there is no secure
+   * keychain or encrypted storage mechanism available to plugins. The data.json
+   * file is local to the user's machine and has the same access permissions as
+   * the vault itself.
    */
   async storeApiKey(apiKey: string, expiresAt: Date): Promise<void> {
     this.apiKey = apiKey;
     this.expiresAt = expiresAt;
 
-    // Save to plugin data
+    // Save to plugin data (stored in plain text in data.json — see SECURITY NOTE above)
     const settings = await this.plugin.loadData() || {};
     settings.apiKey = apiKey;
     settings.apiKeyExpires = expiresAt.toISOString();

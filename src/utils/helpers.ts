@@ -165,7 +165,23 @@ export function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Retry function with exponential backoff
+ * Check if an error represents a non-retryable client error (4xx except 429).
+ * Returns true if the error should NOT be retried.
+ */
+function isNonRetryableClientError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  // Match "HTTP 4xx" patterns but exclude 429 (Too Many Requests)
+  const httpStatusMatch = message.match(/HTTP\s+(\d{3})/);
+  if (httpStatusMatch) {
+    const status = parseInt(httpStatusMatch[1], 10);
+    return status >= 400 && status < 500 && status !== 429;
+  }
+  return false;
+}
+
+/**
+ * Retry function with exponential backoff.
+ * Does not retry 4xx client errors (except 429 Too Many Requests).
  */
 export async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -179,6 +195,11 @@ export async function retryWithBackoff<T>(
       return await fn();
     } catch (error) {
       lastError = error;
+
+      // Don't retry 4xx client errors (except 429) — they won't succeed on retry
+      if (isNonRetryableClientError(error)) {
+        throw error;
+      }
 
       if (attempt < maxAttempts - 1) {
         const delay = getBackoffDelay(attempt, baseDelay);

@@ -167,16 +167,21 @@ export interface E2EGrantResponse {
   encryptedVaultKey: string;
 }
 
+// Default request timeout in milliseconds (30 seconds)
+const DEFAULT_REQUEST_TIMEOUT_MS = 30000;
+
 /**
  * API Client for VaultSync REST API
  */
 export class APIClient {
   private authService: AuthService;
   private baseURL: string;
+  private requestTimeoutMs: number;
 
-  constructor(authService: AuthService, baseURL: string) {
+  constructor(authService: AuthService, baseURL: string, requestTimeoutMs: number = DEFAULT_REQUEST_TIMEOUT_MS) {
     this.authService = authService;
     this.baseURL = baseURL;
+    this.requestTimeoutMs = requestTimeoutMs;
   }
 
   /**
@@ -215,7 +220,10 @@ export class APIClient {
       throw: false
     };
 
-    const response = await requestUrl(requestParams);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Request timeout after ${this.requestTimeoutMs}ms: ${method} ${endpoint}`)), this.requestTimeoutMs);
+    });
+    const response = await Promise.race([requestUrl(requestParams), timeoutPromise]);
 
     // Log HTTP request using the logger's http method
     logger.http(method, endpoint, response.status);

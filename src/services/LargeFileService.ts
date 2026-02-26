@@ -243,32 +243,56 @@ export class LargeFileService {
   }
 
   /**
-   * Create chunks from content
+   * Create chunks from content using byte-based boundaries.
+   * Uses TextEncoder to measure actual byte lengths so that multi-byte
+   * characters (e.g. emoji, CJK) are not split mid-character.
    */
   private createChunks(content: string): ChunkInfo[] {
     const chunks: ChunkInfo[] = [];
-    const chunkSize = this.config.chunkSize;
+    const chunkSize = this.config.chunkSize; // target chunk size in bytes
+    const encoder = new TextEncoder();
+    const fullBytes = encoder.encode(content);
+    const totalBytes = fullBytes.byteLength;
 
-    let start = 0;
+    let byteOffset = 0;
+    let charOffset = 0;
     let index = 0;
 
-    while (start < content.length) {
-      const end = Math.min(start + chunkSize, content.length);
-      const chunkContent = content.substring(start, end);
-      const size = new Blob([chunkContent]).size;
-      
+    while (charOffset < content.length) {
+      // Find the character boundary closest to the target byte size
+      let bytesInChunk = 0;
+      let chunkEnd = charOffset;
+
+      while (chunkEnd < content.length && bytesInChunk < chunkSize) {
+        // Get the code point to correctly handle surrogate pairs
+        const codePoint = content.codePointAt(chunkEnd)!;
+        const charLen = codePoint > 0xFFFF ? 2 : 1; // surrogate pair = 2 JS chars
+        const charBytes = encoder.encode(String.fromCodePoint(codePoint)).byteLength;
+
+        if (bytesInChunk + charBytes > chunkSize && bytesInChunk > 0) {
+          // Adding this character would exceed chunk size, stop here
+          break;
+        }
+
+        bytesInChunk += charBytes;
+        chunkEnd += charLen;
+      }
+
+      const chunkContent = content.substring(charOffset, chunkEnd);
+
       chunks.push({
         index,
-        start,
-        end,
-        size,
+        start: charOffset,
+        end: chunkEnd,
+        size: bytesInChunk,
         hash: this.hashChunk(chunkContent)
       });
-      
-      start = end;
+
+      byteOffset += bytesInChunk;
+      charOffset = chunkEnd;
       index++;
     }
-    
+
     return chunks;
   }
 
