@@ -359,8 +359,8 @@ export class SyncService {
       console.debug('Starting full sync...');
       this.eventBus.emit(EVENTS.SYNC_STARTED);
 
-      const files = this.vault.getMarkdownFiles();
-      
+      const files = this.vault.getFiles();
+
       for (const file of files) {
         if (!this.fileWatcher.shouldSyncFile(file)) {
           continue;
@@ -451,8 +451,8 @@ export class SyncService {
       console.debug(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
       const remoteFileMap = new Map(remoteFiles.map(f => [f.path, f]));
 
-      // Get all local files
-      const localFiles = this.vault.getMarkdownFiles();
+      // Get all local files (including binary — getMarkdownFiles() only returns .md)
+      const localFiles = this.vault.getFiles();
       const localFileMap = new Map(localFiles.map(f => [f.path, f]));
 
       const totalFiles = Math.max(localFiles.length, remoteFiles.length);
@@ -466,7 +466,7 @@ export class SyncService {
 
         try {
           const remoteFile = remoteFileMap.get(localFile.path);
-          
+
           if (!remoteFile) {
             // File only exists locally - upload it
             const syncResult = await this.fileSync.uploadFile(localFile);
@@ -763,8 +763,8 @@ export class SyncService {
       console.debug('Starting push all...');
       this.eventBus.emit(EVENTS.SYNC_STARTED);
 
-      // Get all local files
-      const localFiles = this.vault.getMarkdownFiles();
+      // Get all local files (including binary — getMarkdownFiles() only returns .md)
+      const localFiles = this.vault.getFiles();
       const totalFiles = localFiles.length;
 
       for (const localFile of localFiles) {
@@ -1007,7 +1007,7 @@ export class SyncService {
    * Get sync scope preview
    */
   getSyncScopePreview() {
-    const files = this.vault.getMarkdownFiles();
+    const files = this.vault.getFiles();
     return this.selectiveSyncService.getSyncScopePreview(files);
   }
 
@@ -1210,8 +1210,8 @@ export class SyncService {
     const remoteFiles = await this.apiClient.listFiles(this.vaultId);
     const remoteFileMap = new Map(remoteFiles.map(f => [f.path, f]));
 
-    // Get local files
-    const localFiles = this.vault.getMarkdownFiles();
+    // Get local files (including binary — getMarkdownFiles() only returns .md)
+    const localFiles = this.vault.getFiles();
     const syncableLocalFiles = localFiles.filter(f => this.fileWatcher.shouldSyncFile(f));
 
     let needsSync = false;

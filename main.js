@@ -5415,8 +5415,15 @@ var FileWatcherService = class {
   handleDelete(file) {
     if (!this.isWatching)
       return;
-    if (file instanceof import_obsidian.TFile && this.shouldSyncFile(file)) {
-      this.emitFileChange(file, "delete");
+    if (file instanceof import_obsidian.TFile) {
+      const filePath = file.path;
+      if (this.isPathIgnored(filePath)) {
+        console.debug(`[FileWatcher] Skipping delete event for ignored path: ${filePath}`);
+        return;
+      }
+      if (this.shouldSyncFile(file)) {
+        this.emitFileChange(file, "delete", void 0, filePath);
+      }
     }
   }
   /**
@@ -5445,12 +5452,14 @@ var FileWatcherService = class {
     this.debounceTimers.set(key, timer);
   }
   /**
-   * Emit file change event
+   * Emit file change event.
+   * @param pathOverride - If provided, used instead of file.path (for delete events
+   *   where the TFile reference may become stale after deletion).
    */
-  emitFileChange(file, action, oldPath) {
+  emitFileChange(file, action, oldPath, pathOverride) {
     const event = {
       file,
-      path: file.path,
+      path: pathOverride != null ? pathOverride : file.path,
       action,
       oldPath,
       timestamp: Date.now()
@@ -5497,6 +5506,9 @@ var SyncQueueService = class {
     this.queue = [];
     this.processing = /* @__PURE__ */ new Set();
     this.isProcessing = false;
+    // Event-driven signal: resolved when work is enqueued or processing should wake
+    this.wakeSignal = Promise.resolve();
+    this.wakeResolve = null;
     this.eventBus = eventBus;
     this.storage = storage;
     this.config = config;
@@ -5557,6 +5569,7 @@ var SyncQueueService = class {
     this.enforceQueueCap();
     await this.persistQueue();
     this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getQueueStats());
+    this.wake();
     return id;
   }
   /**
@@ -5594,6 +5607,7 @@ var SyncQueueService = class {
    */
   stopProcessing() {
     this.isProcessing = false;
+    this.wake();
     console.debug("SyncQueueService: Stopped processing");
   }
   /**
@@ -5602,12 +5616,12 @@ var SyncQueueService = class {
   async processQueue() {
     while (this.isProcessing) {
       if (this.processing.size >= this.config.maxConcurrent) {
-        await this.sleep(100);
+        await this.sleepOrWake(1e3);
         continue;
       }
       const operation = this.getNextOperation();
       if (!operation) {
-        await this.sleep(100);
+        await this.sleepOrWake(5e3);
         continue;
       }
       operation.status = "processing";
@@ -5762,6 +5776,7 @@ var SyncQueueService = class {
     if (failedOps.length > 0) {
       await this.persistQueue();
       this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getQueueStats());
+      this.wake();
       console.debug(`Retrying ${failedOps.length} failed operations`);
     }
   }
@@ -5772,10 +5787,31 @@ var SyncQueueService = class {
     return `op_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
   /**
-   * Sleep helper
+   * Sleep helper with early wake support.
+   * Returns a promise that resolves after `ms` milliseconds OR when wake() is called.
    */
-  sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+  sleepOrWake(ms) {
+    this.wakeSignal = new Promise((resolve) => {
+      this.wakeResolve = resolve;
+    });
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        resolve();
+      }, ms);
+      this.wakeSignal.then(() => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
+  /**
+   * Wake the processing loop immediately (called when new work is enqueued)
+   */
+  wake() {
+    if (this.wakeResolve) {
+      this.wakeResolve();
+      this.wakeResolve = null;
+    }
   }
   /**
    * Check if queue is empty
@@ -5793,107 +5829,6 @@ var SyncQueueService = class {
 
 // src/services/FileSyncService.ts
 var import_obsidian2 = require("obsidian");
-
-// src/utils/logger.ts
-var Logger = class _Logger {
-  constructor(config = {}) {
-    var _a, _b, _c;
-    this.config = {
-      level: (_a = config.level) != null ? _a : 3 /* INFO */,
-      prefix: (_b = config.prefix) != null ? _b : "[VaultConnect]",
-      enableTimestamps: (_c = config.enableTimestamps) != null ? _c : true
-    };
-  }
-  /**
-   * Update logger configuration
-   */
-  setLevel(level) {
-    this.config.level = level;
-  }
-  setPrefix(prefix) {
-    this.config.prefix = prefix;
-  }
-  setEnableTimestamps(enable) {
-    this.config.enableTimestamps = enable;
-  }
-  /**
-   * Format log message with prefix and timestamp
-   */
-  format(level, ...args) {
-    const parts2 = [];
-    if (this.config.enableTimestamps) {
-      const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, -1);
-      parts2.push(`[${timestamp}]`);
-    }
-    parts2.push(`${this.config.prefix}[${level}]`);
-    parts2.push(...args);
-    return parts2;
-  }
-  /**
-   * Log error messages (always shown unless NONE)
-   */
-  error(...args) {
-    if (this.config.level >= 1 /* ERROR */) {
-      console.error(...this.format("ERROR", ...args));
-    }
-  }
-  /**
-   * Log warning messages
-   */
-  warn(...args) {
-    if (this.config.level >= 2 /* WARN */) {
-      console.warn(...this.format("WARN", ...args));
-    }
-  }
-  /**
-   * Log info messages (default level)
-   */
-  info(...args) {
-    if (this.config.level >= 3 /* INFO */) {
-      console.debug(...this.format("INFO", ...args));
-    }
-  }
-  /**
-   * Log debug messages (verbose)
-   */
-  debug(...args) {
-    if (this.config.level >= 4 /* DEBUG */) {
-      console.debug(...this.format("DEBUG", ...args));
-    }
-  }
-  /**
-   * Log trace messages (very verbose)
-   */
-  trace(...args) {
-    if (this.config.level >= 5 /* TRACE */) {
-      console.debug(...this.format("TRACE", ...args));
-    }
-  }
-  /**
-   * Log HTTP requests (special case for 404s)
-   */
-  http(method, url2, status, ...args) {
-    if (status === 404) {
-      this.debug(`${method} ${url2} ${status}`, ...args);
-    } else if (status >= 400) {
-      this.warn(`${method} ${url2} ${status}`, ...args);
-    } else {
-      this.trace(`${method} ${url2} ${status}`, ...args);
-    }
-  }
-  /**
-   * Create a child logger with a different prefix
-   */
-  child(prefix) {
-    return new _Logger({
-      ...this.config,
-      prefix: `${this.config.prefix}${prefix}`
-    });
-  }
-};
-var logger = new Logger();
-
-// src/services/FileSyncService.ts
 var FileSyncService = class {
   constructor(vault, apiClient, eventBus, storage, largeFileService) {
     this.largeFileService = null;
@@ -5908,6 +5843,9 @@ var FileSyncService = class {
     this.readOnlyFiles = /* @__PURE__ */ new Set();
     // Track locally deleted files (to prevent re-downloading them)
     this.locallyDeletedFiles = /* @__PURE__ */ new Set();
+    // Callbacks for ignoring paths during downloads (prevents sync loops)
+    this.ignorePathFn = null;
+    this.unignorePathFn = null;
     // Cross-tenant vault info
     this.isCrossTenant = false;
     this.vaultPermission = "admin";
@@ -5916,6 +5854,14 @@ var FileSyncService = class {
     this.eventBus = eventBus;
     this.storage = storage;
     this.largeFileService = largeFileService || null;
+  }
+  /**
+   * Set callbacks for ignoring/unignoring paths during downloads to prevent sync loops.
+   * Typically wired to FileWatcherService.ignorePath/unignorePath.
+   */
+  setIgnorePathCallbacks(ignorePath, unignorePath) {
+    this.ignorePathFn = ignorePath;
+    this.unignorePathFn = unignorePath;
   }
   /**
    * Initialize service
@@ -6199,17 +6145,6 @@ var FileSyncService = class {
     return bytes.buffer;
   }
   /**
-   * Preserve file timestamps to prevent sync conflicts
-   * Sets the file's mtime and ctime to match the server's timestamps
-   */
-  preserveFileTimestamps(file, createdAt, updatedAt) {
-    try {
-      logger.debug(`[Timestamp Preservation] Skipped for ${file.path} - using Obsidian's file modification time`);
-    } catch (error) {
-      logger.warn(`[Timestamp Preservation] Failed to preserve timestamps for ${file.path}:`, error);
-    }
-  }
-  /**
    * Download file from remote
    */
   async downloadFile(filePath) {
@@ -6221,51 +6156,46 @@ var FileSyncService = class {
       const remoteFile = await this.apiClient.getFileByPath(this.vaultId, filePath);
       const localFile = this.vault.getAbstractFileByPath(filePath);
       const isBinary2 = this.isBinaryFile(filePath);
-      if (localFile instanceof import_obsidian2.TFile) {
-        console.debug(`[Download Debug] About to modify ${filePath}`);
-        console.debug(`[Download Debug] Remote hash: ${remoteFile.hash}`);
-        console.debug(`[Download Debug] Remote content length: ${remoteFile.content.length}`);
-        console.debug(`[Download Debug] Remote content preview: ${remoteFile.content.substring(0, 100)}`);
-        const beforeContent = await this.vault.read(localFile);
-        const beforeHash = await this.computeHash(beforeContent);
-        console.debug(`[Download Debug] Local hash BEFORE modify: ${beforeHash}`);
-        console.debug(`[Download Debug] Local content length BEFORE: ${beforeContent.length}`);
-        if (isBinary2) {
-          const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
-          await this.vault.modifyBinary(localFile, arrayBuffer);
+      if (this.ignorePathFn) {
+        this.ignorePathFn(filePath);
+      }
+      try {
+        if (localFile instanceof import_obsidian2.TFile) {
+          if (isBinary2) {
+            const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
+            await this.vault.modifyBinary(localFile, arrayBuffer);
+          } else {
+            await this.vault.modify(localFile, remoteFile.content);
+          }
         } else {
-          await this.vault.modify(localFile, remoteFile.content);
-        }
-        const afterContent = await this.vault.read(localFile);
-        const afterHash = await this.computeHash(afterContent);
-        console.debug(`[Download Debug] Local hash AFTER modify: ${afterHash}`);
-        console.debug(`[Download Debug] Local content length AFTER: ${afterContent.length}`);
-        console.debug(`[Download Debug] Hash matches remote? ${afterHash === remoteFile.hash}`);
-        this.preserveFileTimestamps(localFile, remoteFile.created_at, remoteFile.updated_at);
-      } else {
-        const folderPath = filePath.substring(0, filePath.lastIndexOf("/"));
-        if (folderPath && !this.vault.getAbstractFileByPath(folderPath)) {
-          const folders = folderPath.split("/");
-          let currentPath = "";
-          for (const folder of folders) {
-            currentPath = currentPath ? `${currentPath}/${folder}` : folder;
-            const existing = this.vault.getAbstractFileByPath(currentPath);
-            if (!existing) {
-              await this.vault.createFolder(currentPath);
-            } else if (existing instanceof import_obsidian2.TFile) {
-              console.error(`Path conflict: Cannot create folder "${currentPath}" because a file with that name exists`);
-              throw new Error(`Path conflict: File exists at "${currentPath}" but folder is needed for "${filePath}"`);
+          const folderPath = filePath.substring(0, filePath.lastIndexOf("/"));
+          if (folderPath && !this.vault.getAbstractFileByPath(folderPath)) {
+            const folders = folderPath.split("/");
+            let currentPath = "";
+            for (const folder of folders) {
+              currentPath = currentPath ? `${currentPath}/${folder}` : folder;
+              const existing = this.vault.getAbstractFileByPath(currentPath);
+              if (!existing) {
+                await this.vault.createFolder(currentPath);
+              } else if (existing instanceof import_obsidian2.TFile) {
+                console.error(`Path conflict: Cannot create folder "${currentPath}" because a file with that name exists`);
+                throw new Error(`Path conflict: File exists at "${currentPath}" but folder is needed for "${filePath}"`);
+              }
             }
           }
+          let createdFile;
+          if (isBinary2) {
+            const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
+            createdFile = await this.vault.createBinary(filePath, arrayBuffer);
+          } else {
+            createdFile = await this.vault.create(filePath, remoteFile.content);
+          }
         }
-        let createdFile;
-        if (isBinary2) {
-          const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
-          createdFile = await this.vault.createBinary(filePath, arrayBuffer);
-        } else {
-          createdFile = await this.vault.create(filePath, remoteFile.content);
+      } finally {
+        if (this.unignorePathFn) {
+          const unignore = this.unignorePathFn;
+          setTimeout(() => unignore(filePath), 500);
         }
-        this.preserveFileTimestamps(createdFile, remoteFile.created_at, remoteFile.updated_at);
       }
       this.fileHashes.set(filePath, remoteFile.hash);
       this.lastSyncTimestamps.set(filePath, Date.now());
@@ -6371,7 +6301,13 @@ var FileSyncService = class {
    */
   async hasLocalChanges(file) {
     try {
-      const content = await this.vault.read(file);
+      let content;
+      if (this.isBinaryFile(file.path)) {
+        const arrayBuffer = await this.vault.readBinary(file);
+        content = this.arrayBufferToBase64(arrayBuffer);
+      } else {
+        content = await this.vault.read(file);
+      }
       const currentHash = await this.computeHash(content);
       const storedHash = this.fileHashes.get(file.path);
       return !storedHash || currentHash !== storedHash;
@@ -6381,7 +6317,9 @@ var FileSyncService = class {
     }
   }
   /**
-   * Check if file has changed remotely
+   * Check if file has changed remotely.
+   * Throws on network errors so callers can distinguish "no changes" from "couldn't check".
+   * Returns false only when the file doesn't exist remotely (404) or hashes match.
    */
   async hasRemoteChanges(filePath) {
     if (!this.vaultId) {
@@ -6401,8 +6339,7 @@ var FileSyncService = class {
       if (error.message && error.message.includes("404")) {
         return false;
       }
-      console.error(`Failed to check remote changes for ${filePath}:`, error);
-      return false;
+      throw error;
     }
   }
   /**
@@ -6541,6 +6478,40 @@ var FileSyncService = class {
     await this.saveSyncState();
   }
   /**
+   * Prune stale entries from fileHashes, lastSyncTimestamps, syncStatus,
+   * and locallyDeletedFiles that reference paths no longer present in the vault
+   * or on the remote. Call after each successful sync cycle.
+   *
+   * @param existingPaths - Set of file paths that currently exist (locally or remotely)
+   */
+  pruneDeletedFiles(existingPaths) {
+    let pruned = 0;
+    for (const path of this.fileHashes.keys()) {
+      if (!existingPaths.has(path)) {
+        this.fileHashes.delete(path);
+        this.lastSyncTimestamps.delete(path);
+        this.syncStatus.delete(path);
+        pruned++;
+      }
+    }
+    for (const path of this.lastSyncTimestamps.keys()) {
+      if (!existingPaths.has(path)) {
+        this.lastSyncTimestamps.delete(path);
+        pruned++;
+      }
+    }
+    for (const path of this.locallyDeletedFiles) {
+      if (!existingPaths.has(path)) {
+        this.locallyDeletedFiles.delete(path);
+        pruned++;
+      }
+    }
+    if (pruned > 0) {
+      console.debug(`Pruned ${pruned} stale sync state entries`);
+      void this.saveSyncState();
+    }
+  }
+  /**
    * Get all locally deleted files
    */
   getLocallyDeletedFiles() {
@@ -6629,14 +6600,17 @@ var FileSyncService = class {
 // src/services/SyncService.ts
 init_SelectiveSyncService();
 var SyncService = class {
-  // Track last successful sync for incremental checks
   constructor(vault, apiClient, eventBus, storage, config, fileSync, conflictService) {
     this.conflictService = null;
     this.vaultId = null;
     this.isRunning = false;
+    this.isSyncing = false;
     this.periodicSyncInterval = null;
     this.lastSyncCheck = 0;
     this.lastSyncTimestamp = null;
+    // Track last successful sync for incremental checks
+    // Store unsubscribe functions for event listeners so they can be cleaned up
+    this.eventUnsubscribers = [];
     this.vault = vault;
     this.apiClient = apiClient;
     this.eventBus = eventBus;
@@ -6676,13 +6650,17 @@ var SyncService = class {
       storage
     );
     this.conflictService = conflictService || null;
+    this.fileSync.setIgnorePathCallbacks(
+      (path) => this.fileWatcher.ignorePath(path),
+      (path) => this.fileWatcher.unignorePath(path)
+    );
     this.setupEventHandlers();
   }
   /**
    * Setup event handlers
    */
   setupEventHandlers() {
-    this.eventBus.on(EVENTS.FILE_SYNCED, (event) => {
+    const unsubFileSynced = this.eventBus.on(EVENTS.FILE_SYNCED, (event) => {
       void (async () => {
         if (this.config.autoSync && this.config.mode === "smart_sync" /* SMART_SYNC */) {
           console.debug(`[SyncService] Processing file change: ${event.action} ${event.path}`);
@@ -6694,13 +6672,15 @@ var SyncService = class {
         }
       })();
     });
-    this.eventBus.on(EVENTS.SYNC_STARTED, (operation) => {
+    this.eventUnsubscribers.push(unsubFileSynced);
+    const unsubSyncStarted = this.eventBus.on(EVENTS.SYNC_STARTED, (operation) => {
       void (async () => {
         if (operation) {
           await this.processSyncOperation(operation);
         }
       })();
     });
+    this.eventUnsubscribers.push(unsubSyncStarted);
   }
   /**
    * Initialize sync service
@@ -6749,6 +6729,18 @@ var SyncService = class {
     this.stopPeriodicSyncCheck();
     this.isRunning = false;
     console.debug("SyncService stopped");
+  }
+  /**
+   * Destroy the service, removing all event listeners and stopping all timers.
+   * Call this from the plugin's onunload() to prevent leaked listeners.
+   */
+  destroy() {
+    this.stop();
+    for (const unsub of this.eventUnsubscribers) {
+      unsub();
+    }
+    this.eventUnsubscribers = [];
+    console.debug("SyncService destroyed \u2014 all listeners removed");
   }
   /**
    * Handle file change event
@@ -6828,7 +6820,7 @@ var SyncService = class {
     try {
       console.debug("Starting full sync...");
       this.eventBus.emit(EVENTS.SYNC_STARTED);
-      const files = this.vault.getMarkdownFiles();
+      const files = this.vault.getFiles();
       for (const file of files) {
         if (!this.fileWatcher.shouldSyncFile(file)) {
           continue;
@@ -6869,6 +6861,19 @@ var SyncService = class {
    * Smart Sync: Bidirectional sync with conflict detection
    */
   async smartSync() {
+    if (this.isSyncing) {
+      console.debug("[VaultSync] smartSync already in progress, skipping");
+      return {
+        success: true,
+        filesProcessed: 0,
+        filesUploaded: 0,
+        filesDownloaded: 0,
+        filesDeleted: 0,
+        errors: [],
+        duration: 0
+      };
+    }
+    this.isSyncing = true;
     const startTime = Date.now();
     const result = {
       success: true,
@@ -6880,6 +6885,7 @@ var SyncService = class {
       duration: 0
     };
     if (!this.vaultId) {
+      this.isSyncing = false;
       throw new Error("Vault not initialized");
     }
     try {
@@ -6889,7 +6895,7 @@ var SyncService = class {
       const remoteFiles = await this.apiClient.listFiles(this.vaultId);
       console.debug(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
       const remoteFileMap = new Map(remoteFiles.map((f) => [f.path, f]));
-      const localFiles = this.vault.getMarkdownFiles();
+      const localFiles = this.vault.getFiles();
       const localFileMap = new Map(localFiles.map((f) => [f.path, f]));
       const totalFiles = Math.max(localFiles.length, remoteFiles.length);
       let processed = 0;
@@ -6976,6 +6982,12 @@ var SyncService = class {
       }
       result.success = result.errors.length === 0;
       result.duration = Date.now() - startTime;
+      const existingPaths = /* @__PURE__ */ new Set();
+      for (const f of localFiles)
+        existingPaths.add(f.path);
+      for (const f of remoteFiles)
+        existingPaths.add(f.path);
+      this.fileSync.pruneDeletedFiles(existingPaths);
       console.debug(`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
       return result;
@@ -6985,6 +6997,8 @@ var SyncService = class {
       result.errors.push(error instanceof Error ? error.message : String(error));
       this.eventBus.emit(EVENTS.SYNC_ERROR, error);
       return result;
+    } finally {
+      this.isSyncing = false;
     }
   }
   /**
@@ -6998,12 +7012,13 @@ var SyncService = class {
         return;
       }
       const conflicts = await this.storage.get("conflicts") || [];
+      const localContent = await this.vault.read(localFile);
+      const localHash = await this.fileSync.computeHash(localContent);
       const deduped = conflicts.filter((c) => c.path !== localFile.path);
       deduped.push({
         id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: localFile.path,
-        localHash: remoteFile.hash,
-        // best-effort — actual local hash requires read
+        localHash,
         remoteHash: remoteFile.hash,
         localModified: new Date(localFile.stat.mtime),
         remoteModified: remoteFile.updated_at instanceof Date ? remoteFile.updated_at : new Date(remoteFile.updated_at),
@@ -7118,7 +7133,7 @@ var SyncService = class {
     try {
       console.debug("Starting push all...");
       this.eventBus.emit(EVENTS.SYNC_STARTED);
-      const localFiles = this.vault.getMarkdownFiles();
+      const localFiles = this.vault.getFiles();
       const totalFiles = localFiles.length;
       for (const localFile of localFiles) {
         if (!this.fileWatcher.shouldSyncFile(localFile)) {
@@ -7316,7 +7331,7 @@ var SyncService = class {
    * Get sync scope preview
    */
   getSyncScopePreview() {
-    const files = this.vault.getMarkdownFiles();
+    const files = this.vault.getFiles();
     return this.selectiveSyncService.getSyncScopePreview(files);
   }
   /**
@@ -7474,7 +7489,7 @@ var SyncService = class {
     }
     const remoteFiles = await this.apiClient.listFiles(this.vaultId);
     const remoteFileMap = new Map(remoteFiles.map((f) => [f.path, f]));
-    const localFiles = this.vault.getMarkdownFiles();
+    const localFiles = this.vault.getFiles();
     const syncableLocalFiles = localFiles.filter((f) => this.fileWatcher.shouldSyncFile(f));
     let needsSync = false;
     let driftCount = 0;
@@ -8038,25 +8053,42 @@ var LargeFileService = class {
     };
   }
   /**
-   * Create chunks from content
+   * Create chunks from content using byte-based boundaries.
+   * Uses TextEncoder to measure actual byte lengths so that multi-byte
+   * characters (e.g. emoji, CJK) are not split mid-character.
    */
   createChunks(content) {
     const chunks = [];
     const chunkSize = this.config.chunkSize;
-    let start = 0;
+    const encoder = new TextEncoder();
+    const fullBytes = encoder.encode(content);
+    const totalBytes = fullBytes.byteLength;
+    let byteOffset = 0;
+    let charOffset = 0;
     let index = 0;
-    while (start < content.length) {
-      const end = Math.min(start + chunkSize, content.length);
-      const chunkContent = content.substring(start, end);
-      const size = new Blob([chunkContent]).size;
+    while (charOffset < content.length) {
+      let bytesInChunk = 0;
+      let chunkEnd = charOffset;
+      while (chunkEnd < content.length && bytesInChunk < chunkSize) {
+        const codePoint = content.codePointAt(chunkEnd);
+        const charLen = codePoint > 65535 ? 2 : 1;
+        const charBytes = encoder.encode(String.fromCodePoint(codePoint)).byteLength;
+        if (bytesInChunk + charBytes > chunkSize && bytesInChunk > 0) {
+          break;
+        }
+        bytesInChunk += charBytes;
+        chunkEnd += charLen;
+      }
+      const chunkContent = content.substring(charOffset, chunkEnd);
       chunks.push({
         index,
-        start,
-        end,
-        size,
+        start: charOffset,
+        end: chunkEnd,
+        size: bytesInChunk,
         hash: this.hashChunk(chunkContent)
       });
-      start = end;
+      byteOffset += bytesInChunk;
+      charOffset = chunkEnd;
       index++;
     }
     return chunks;
@@ -8376,7 +8408,8 @@ init_types();
 var MAX_CONFLICTS = 50;
 var STALE_CONFLICT_MS = 7 * 24 * 60 * 60 * 1e3;
 var ConflictService = class {
-  constructor(vault, apiClient, eventBus, storage) {
+  constructor(vault, apiClient, eventBus, storage, fileSyncService) {
+    this.fileSyncService = null;
     this.vaultId = null;
     // Track conflicts
     this.conflicts = /* @__PURE__ */ new Map();
@@ -8387,6 +8420,7 @@ var ConflictService = class {
     this.apiClient = apiClient;
     this.eventBus = eventBus;
     this.storage = storage;
+    this.fileSyncService = fileSyncService || null;
   }
   /**
    * Initialize service
@@ -8537,11 +8571,82 @@ var ConflictService = class {
     }
   }
   /**
+   * Check if a file is binary based on its extension
+   */
+  isBinaryFile(filePath) {
+    const binaryExtensions = [
+      // Images
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".gif",
+      ".bmp",
+      ".ico",
+      ".svg",
+      ".webp",
+      ".tiff",
+      ".tif",
+      // Documents
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".xls",
+      ".xlsx",
+      ".ppt",
+      ".pptx",
+      // Archives
+      ".zip",
+      ".rar",
+      ".7z",
+      ".tar",
+      ".gz",
+      ".bz2",
+      // Audio/Video
+      ".mp3",
+      ".mp4",
+      ".avi",
+      ".mov",
+      ".wmv",
+      ".flv",
+      ".wav",
+      ".ogg",
+      // Executables
+      ".exe",
+      ".dll",
+      ".so",
+      ".dylib",
+      // Other binary formats
+      ".bin",
+      ".dat",
+      ".db",
+      ".sqlite"
+    ];
+    const ext = filePath.toLowerCase().substring(filePath.lastIndexOf("."));
+    return binaryExtensions.includes(ext);
+  }
+  /**
+   * Convert ArrayBuffer to base64 string
+   */
+  arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  }
+  /**
    * Check if a specific file has a conflict
    */
   async checkFileConflict(localFile, remoteHash, remoteModified) {
     try {
-      const localContent = await this.vault.read(localFile);
+      let localContent;
+      if (this.isBinaryFile(localFile.path)) {
+        const arrayBuffer = await this.vault.readBinary(localFile);
+        localContent = this.arrayBufferToBase64(arrayBuffer);
+      } else {
+        localContent = await this.vault.read(localFile);
+      }
       const localHash = await this.computeHash(localContent);
       if (localHash === remoteHash) {
         return null;
@@ -8916,6 +9021,9 @@ var ConflictService = class {
     const fileHashes = await this.storage.get("fileHashes") || {};
     fileHashes[filePath] = hash;
     await this.storage.set("fileHashes", fileHashes);
+    if (this.fileSyncService) {
+      this.fileSyncService.updateFileHash(filePath, hash);
+    }
     console.debug(`Updated sync state for ${filePath}`);
   }
   /**
@@ -8935,10 +9043,13 @@ var ConflictService = class {
    */
   generateConflictCopyPath(originalPath) {
     const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, -5);
-    const parts2 = originalPath.split(".");
-    const ext = parts2.pop();
-    const base = parts2.join(".");
-    return `${base}.conflict-${timestamp}.${ext}`;
+    const dotIndex = originalPath.lastIndexOf(".");
+    if (dotIndex <= 0 || dotIndex <= originalPath.lastIndexOf("/")) {
+      return `${originalPath}.conflict-${timestamp}`;
+    }
+    const base = originalPath.substring(0, dotIndex);
+    const ext = originalPath.substring(dotIndex);
+    return `${base}.conflict-${timestamp}${ext}`;
   }
 };
 
@@ -9714,6 +9825,15 @@ function parseErrorMessage(error) {
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+function isNonRetryableClientError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const httpStatusMatch = message.match(/HTTP\s+(\d{3})/);
+  if (httpStatusMatch) {
+    const status = parseInt(httpStatusMatch[1], 10);
+    return status >= 400 && status < 500 && status !== 429;
+  }
+  return false;
+}
 async function retryWithBackoff(fn, maxAttempts = 3, baseDelay = 1e3) {
   let lastError;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -9721,6 +9841,9 @@ async function retryWithBackoff(fn, maxAttempts = 3, baseDelay = 1e3) {
       return await fn();
     } catch (error) {
       lastError = error;
+      if (isNonRetryableClientError(error)) {
+        throw error;
+      }
       if (attempt < maxAttempts - 1) {
         const delay = getBackoffDelay(attempt, baseDelay);
         await sleep(delay);
@@ -10207,6 +10330,107 @@ var ConflictListView = class extends import_obsidian9.ItemView {
 
 // src/ui/SearchModal.ts
 var import_obsidian10 = require("obsidian");
+
+// src/utils/logger.ts
+var Logger = class _Logger {
+  constructor(config = {}) {
+    var _a, _b, _c;
+    this.config = {
+      level: (_a = config.level) != null ? _a : 3 /* INFO */,
+      prefix: (_b = config.prefix) != null ? _b : "[VaultConnect]",
+      enableTimestamps: (_c = config.enableTimestamps) != null ? _c : true
+    };
+  }
+  /**
+   * Update logger configuration
+   */
+  setLevel(level) {
+    this.config.level = level;
+  }
+  setPrefix(prefix) {
+    this.config.prefix = prefix;
+  }
+  setEnableTimestamps(enable) {
+    this.config.enableTimestamps = enable;
+  }
+  /**
+   * Format log message with prefix and timestamp
+   */
+  format(level, ...args) {
+    const parts2 = [];
+    if (this.config.enableTimestamps) {
+      const timestamp = (/* @__PURE__ */ new Date()).toISOString().split("T")[1].slice(0, -1);
+      parts2.push(`[${timestamp}]`);
+    }
+    parts2.push(`${this.config.prefix}[${level}]`);
+    parts2.push(...args);
+    return parts2;
+  }
+  /**
+   * Log error messages (always shown unless NONE)
+   */
+  error(...args) {
+    if (this.config.level >= 1 /* ERROR */) {
+      console.error(...this.format("ERROR", ...args));
+    }
+  }
+  /**
+   * Log warning messages
+   */
+  warn(...args) {
+    if (this.config.level >= 2 /* WARN */) {
+      console.warn(...this.format("WARN", ...args));
+    }
+  }
+  /**
+   * Log info messages (default level)
+   */
+  info(...args) {
+    if (this.config.level >= 3 /* INFO */) {
+      console.debug(...this.format("INFO", ...args));
+    }
+  }
+  /**
+   * Log debug messages (verbose)
+   */
+  debug(...args) {
+    if (this.config.level >= 4 /* DEBUG */) {
+      console.debug(...this.format("DEBUG", ...args));
+    }
+  }
+  /**
+   * Log trace messages (very verbose)
+   */
+  trace(...args) {
+    if (this.config.level >= 5 /* TRACE */) {
+      console.debug(...this.format("TRACE", ...args));
+    }
+  }
+  /**
+   * Log HTTP requests (special case for 404s)
+   */
+  http(method, url2, status, ...args) {
+    if (status === 404) {
+      this.debug(`${method} ${url2} ${status}`, ...args);
+    } else if (status >= 400) {
+      this.warn(`${method} ${url2} ${status}`, ...args);
+    } else {
+      this.trace(`${method} ${url2} ${status}`, ...args);
+    }
+  }
+  /**
+   * Create a child logger with a different prefix
+   */
+  child(prefix) {
+    return new _Logger({
+      ...this.config,
+      prefix: `${this.config.prefix}${prefix}`
+    });
+  }
+};
+var logger = new Logger();
+
+// src/ui/SearchModal.ts
 var SearchModal = class extends import_obsidian10.Modal {
   constructor(app, apiClient, vaultService, localVaultId) {
     super(app);
@@ -10554,10 +10778,12 @@ var CopyMoveModal = class extends import_obsidian11.Modal {
 // src/api/APIClient.ts
 var import_obsidian12 = require("obsidian");
 init_constants();
+var DEFAULT_REQUEST_TIMEOUT_MS = 3e4;
 var APIClient = class {
-  constructor(authService, baseURL) {
+  constructor(authService, baseURL, requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
     this.authService = authService;
     this.baseURL = baseURL;
+    this.requestTimeoutMs = requestTimeoutMs;
   }
   /**
    * Set base URL
@@ -10588,7 +10814,10 @@ var APIClient = class {
       body: options.body,
       throw: false
     };
-    const response = await (0, import_obsidian12.requestUrl)(requestParams);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`Request timeout after ${this.requestTimeoutMs}ms: ${method} ${endpoint}`)), this.requestTimeoutMs);
+    });
+    const response = await Promise.race([(0, import_obsidian12.requestUrl)(requestParams), timeoutPromise]);
     logger.http(method, endpoint, response.status);
     if (response.status >= 400) {
       const errorData = response.json || {};
@@ -12466,7 +12695,13 @@ var AuthService = class {
     }
   }
   /**
-   * Store API key
+   * Store API key.
+   *
+   * SECURITY NOTE: The API key is stored in plain text in Obsidian's data.json.
+   * This is a known limitation of the Obsidian plugin API — there is no secure
+   * keychain or encrypted storage mechanism available to plugins. The data.json
+   * file is local to the user's machine and has the same access permissions as
+   * the vault itself.
    */
   async storeApiKey(apiKey, expiresAt) {
     this.apiKey = apiKey;
@@ -14019,7 +14254,6 @@ var VaultSyncPlugin = class extends import_obsidian21.Plugin {
     this.ribbonIconEl = null;
     this.isConnected = false;
     this.isSyncing = false;
-    this.fileChangeDebounce = /* @__PURE__ */ new Map();
     // Notification batching
     this.notificationBatch = /* @__PURE__ */ new Map();
     this.BATCH_DELAY_MS = 3e3;
@@ -14051,8 +14285,9 @@ var VaultSyncPlugin = class extends import_obsidian21.Plugin {
     // Key: file path, Value: timestamp of upload completion
     this.recentUploads = /* @__PURE__ */ new Map();
     this.UPLOAD_ECHO_WINDOW_MS = 1e4;
+    // 10 second window to detect echoes
+    this.recentUploadsCleanupInterval = null;
   }
-  // 10 second window to detect echoes
   async onload() {
     await this.loadSettings();
     logger.setLevel(this.settings.logLevel);
@@ -14100,12 +14335,6 @@ var VaultSyncPlugin = class extends import_obsidian21.Plugin {
       this.eventBus
     );
     this.syncLogService = new SyncLogService(this.eventBus, this.storage);
-    this.conflictService = new ConflictService(
-      this.app.vault,
-      this.apiClient,
-      this.eventBus,
-      this.storage
-    );
     this.largeFileService = new LargeFileService(
       this.apiClient,
       this.eventBus,
@@ -14124,6 +14353,13 @@ var VaultSyncPlugin = class extends import_obsidian21.Plugin {
       this.eventBus,
       this.storage,
       this.largeFileService
+    );
+    this.conflictService = new ConflictService(
+      this.app.vault,
+      this.apiClient,
+      this.eventBus,
+      this.storage,
+      this.fileSyncService
     );
     this.syncService = new SyncService(
       this.app.vault,
@@ -14160,15 +14396,15 @@ var VaultSyncPlugin = class extends import_obsidian21.Plugin {
     this.eventBus.on(EVENTS.SYNC_COMPLETED, (result) => {
       if ((result == null ? void 0 : result.path) && (result == null ? void 0 : result.operation) === "upload") {
         this.recentUploads.set(result.path, Date.now());
-        if (this.recentUploads.size > 100) {
-          const cutoff = Date.now() - this.UPLOAD_ECHO_WINDOW_MS;
-          for (const [path, time] of this.recentUploads) {
-            if (time < cutoff)
-              this.recentUploads.delete(path);
-          }
-        }
       }
     });
+    this.recentUploadsCleanupInterval = setInterval(() => {
+      const cutoff = Date.now() - this.UPLOAD_ECHO_WINDOW_MS;
+      for (const [path, time] of this.recentUploads) {
+        if (time < cutoff)
+          this.recentUploads.delete(path);
+      }
+    }, 3e4);
     logger.debug("Services initialized");
   }
   /**
@@ -14375,6 +14611,18 @@ ${data.error}`, 1e4);
   }
   onunload() {
     this.disconnect();
+    for (const [, batch] of this.notificationBatch) {
+      clearTimeout(batch.timeout);
+    }
+    this.notificationBatch.clear();
+    if (this.recentUploadsCleanupInterval) {
+      clearInterval(this.recentUploadsCleanupInterval);
+      this.recentUploadsCleanupInterval = null;
+    }
+    this.recentUploads.clear();
+    if (this.eventBus) {
+      this.eventBus.clear();
+    }
     logger.info("VaultConnect plugin unloaded");
   }
   async loadSettings() {
@@ -14503,96 +14751,6 @@ ${data.error}`, 1e4);
         }
       }
     }
-  }
-  shouldSyncFile(file) {
-    const path = file.path;
-    for (const folder of this.settings.excludedFolders) {
-      if (path.startsWith(folder + "/") || path === folder) {
-        return false;
-      }
-    }
-    if (this.settings.includedFolders.length > 0) {
-      for (const folder of this.settings.includedFolders) {
-        if (path.startsWith(folder + "/") || path === folder) {
-          return true;
-        }
-      }
-      return false;
-    }
-    return true;
-  }
-  handleFileChange(file, action) {
-    if (!this.isConnected || !this.settings.autoSync) {
-      return;
-    }
-    const existingTimeout = this.fileChangeDebounce.get(file.path);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
-    const timeout = setTimeout(() => {
-      void (async () => {
-        this.fileChangeDebounce.delete(file.path);
-        await this.syncFile(file, action);
-      })();
-    }, 1e3);
-    this.fileChangeDebounce.set(file.path, timeout);
-  }
-  handleFileRename(file, oldPath) {
-    if (!this.isConnected || !this.settings.autoSync) {
-      return;
-    }
-    void this.syncFileRename(oldPath, file.path);
-  }
-  async syncFile(file, action) {
-    try {
-      this.isSyncing = true;
-      this.updateStatusBar("syncing");
-      let content = "";
-      let hash = "";
-      if (action !== "delete") {
-        content = await this.app.vault.read(file);
-        hash = await this.computeHash(content);
-      }
-      if (this.socket && this.socket.connected) {
-        this.socket.emit("file_update", {
-          vault_id: this.settings.vaultId,
-          file_path: file.path,
-          content,
-          hash,
-          action,
-          timestamp: Date.now()
-        });
-      }
-      this.isSyncing = false;
-      this.updateStatusBar("connected");
-    } catch (error) {
-      logger.error("Error syncing file:", error);
-      new import_obsidian21.Notice(`Failed to sync ${file.path}: ${error.message}`);
-      this.isSyncing = false;
-      this.updateStatusBar("error");
-    }
-  }
-  syncFileRename(oldPath, newPath) {
-    try {
-      if (this.socket && this.socket.connected) {
-        this.socket.emit("file_rename", {
-          vault_id: this.settings.vaultId,
-          old_path: oldPath,
-          new_path: newPath,
-          timestamp: Date.now()
-        });
-      }
-    } catch (error) {
-      logger.error("Error syncing file rename:", error);
-      new import_obsidian21.Notice(`Failed to sync rename: ${error.message}`);
-    }
-  }
-  async computeHash(content) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(content);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   }
   /**
    * Show initial sync wizard for first-time connection
@@ -14775,7 +14933,7 @@ ${data.error}`, 1e4);
       this.socket = null;
     }
     if (this.syncService) {
-      this.syncService.stop();
+      this.syncService.destroy();
     }
     this.isConnected = false;
     this.updateStatusBar("disconnected");
@@ -14938,22 +15096,6 @@ ${data.error}`, 1e4);
   handleConflict(data) {
     const { file_path } = data;
     new import_obsidian21.Notice(`Conflict detected in ${file_path}. Please resolve manually.`, 1e4);
-  }
-  async forceSyncAll() {
-    if (!this.isConnected) {
-      new import_obsidian21.Notice("Not connected to vault connect");
-      return;
-    }
-    new import_obsidian21.Notice("Starting full sync...");
-    const files = this.app.vault.getFiles();
-    let synced = 0;
-    for (const file of files) {
-      if (this.shouldSyncFile(file)) {
-        await this.syncFile(file, "modify");
-        synced++;
-      }
-    }
-    new import_obsidian21.Notice(`Synced ${synced} files`);
   }
   /**
    * Perform Smart Sync

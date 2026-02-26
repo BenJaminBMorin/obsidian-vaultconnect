@@ -491,9 +491,12 @@ export class FileSyncService {
       }
 
       } finally {
-        // Unignore path in file watcher after vault write completes
+        // Unignore path after a short delay — Obsidian's file-change events fire
+        // asynchronously after modifyBinary/modify resolves, so an immediate
+        // unignore lets the event slip through and trigger a spurious re-upload.
         if (this.unignorePathFn) {
-          this.unignorePathFn(filePath);
+          const unignore = this.unignorePathFn;
+          setTimeout(() => unignore(filePath), 500);
         }
       }
 
