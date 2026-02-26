@@ -161,14 +161,6 @@ export default class VaultSyncPlugin extends Plugin {
 		// Initialize sync log service
 		this.syncLogService = new SyncLogService(this.eventBus, this.storage);
 
-		// Initialize conflict service
-		this.conflictService = new ConflictService(
-			this.app.vault,
-			this.apiClient,
-			this.eventBus,
-			this.storage
-		);
-
 		// Initialize large file service for chunked uploads
 		this.largeFileService = new LargeFileService(
 			this.apiClient,
@@ -189,6 +181,15 @@ export default class VaultSyncPlugin extends Plugin {
 			this.eventBus,
 			this.storage,
 			this.largeFileService
+		);
+
+		// Initialize conflict service (shares FileSyncService to keep in-memory state in sync)
+		this.conflictService = new ConflictService(
+			this.app.vault,
+			this.apiClient,
+			this.eventBus,
+			this.storage,
+			this.fileSyncService
 		);
 
 		// Initialize sync service — share the FileSyncService instance

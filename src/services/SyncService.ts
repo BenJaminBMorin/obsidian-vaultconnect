@@ -66,6 +66,7 @@ export class SyncService {
   private config: SyncConfig;
   private vaultId: string | null = null;
   private isRunning: boolean = false;
+  private isSyncing: boolean = false;
   private periodicSyncInterval: number | null = null;
   private lastSyncCheck: number = 0;
   private lastSyncTimestamp: Date | null = null; // Track last successful sync for incremental checks
@@ -126,6 +127,12 @@ export class SyncService {
     );
 
     this.conflictService = conflictService || null;
+
+    // Wire up ignore path callbacks so downloads don't trigger re-upload sync loops
+    this.fileSync.setIgnorePathCallbacks(
+      (path: string) => this.fileWatcher.ignorePath(path),
+      (path: string) => this.fileWatcher.unignorePath(path)
+    );
 
     this.setupEventHandlers();
   }
@@ -382,6 +389,21 @@ export class SyncService {
    * Smart Sync: Bidirectional sync with conflict detection
    */
   async smartSync(): Promise<SyncResult> {
+    // Prevent concurrent smartSync runs (periodic timer, manual trigger, drift detection)
+    if (this.isSyncing) {
+      console.debug('[VaultSync] smartSync already in progress, skipping');
+      return {
+        success: true,
+        filesProcessed: 0,
+        filesUploaded: 0,
+        filesDownloaded: 0,
+        filesDeleted: 0,
+        errors: [],
+        duration: 0
+      };
+    }
+
+    this.isSyncing = true;
     const startTime = Date.now();
     const result: SyncResult = {
       success: true,
@@ -394,6 +416,7 @@ export class SyncService {
     };
 
     if (!this.vaultId) {
+      this.isSyncing = false;
       throw new Error('Vault not initialized');
     }
 
@@ -532,9 +555,11 @@ export class SyncService {
       result.success = false;
       result.duration = Date.now() - startTime;
       result.errors.push(error instanceof Error ? error.message : String(error));
-      
+
       this.eventBus.emit(EVENTS.SYNC_ERROR, error);
       return result;
+    } finally {
+      this.isSyncing = false;
     }
   }
 

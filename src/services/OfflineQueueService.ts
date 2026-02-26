@@ -342,11 +342,16 @@ export class OfflineQueueService {
   }
 
   /**
-   * Persist queue to storage
+   * Persist queue to storage — content is stripped to prevent data.json bloat.
+   * File content is re-read from the vault when operations are processed.
    */
   private async persistQueue(): Promise<void> {
     try {
-      await this.storage.set('offlineQueue', this.queue);
+      const stripped = this.queue.map(op => ({
+        ...op,
+        content: undefined
+      }));
+      await this.storage.set('offlineQueue', stripped);
     } catch (error) {
       console.error('OfflineQueueService: Failed to persist queue:', error);
     }

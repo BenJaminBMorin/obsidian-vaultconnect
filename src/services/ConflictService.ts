@@ -3,6 +3,7 @@ import { APIClient } from '../api/APIClient';
 import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
 import { ConflictInfo, ConflictType, ConflictResolution, ResolutionStrategy } from '../types';
+import { FileSyncService } from './FileSyncService';
 
 const MAX_CONFLICTS = 50;
 const STALE_CONFLICT_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -15,6 +16,7 @@ export class ConflictService {
   private apiClient: APIClient;
   private eventBus: EventBus;
   private storage: StorageManager;
+  private fileSyncService: FileSyncService | null = null;
   private vaultId: string | null = null;
 
   // Track conflicts
@@ -28,12 +30,14 @@ export class ConflictService {
     vault: Vault,
     apiClient: APIClient,
     eventBus: EventBus,
-    storage: StorageManager
+    storage: StorageManager,
+    fileSyncService?: FileSyncService
   ) {
     this.vault = vault;
     this.apiClient = apiClient;
     this.eventBus = eventBus;
     this.storage = storage;
+    this.fileSyncService = fileSyncService || null;
   }
 
   /**
@@ -219,6 +223,41 @@ export class ConflictService {
   }
 
   /**
+   * Check if a file is binary based on its extension
+   */
+  private isBinaryFile(filePath: string): boolean {
+    const binaryExtensions = [
+      // Images
+      '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.svg', '.webp', '.tiff', '.tif',
+      // Documents
+      '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+      // Archives
+      '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2',
+      // Audio/Video
+      '.mp3', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.wav', '.ogg',
+      // Executables
+      '.exe', '.dll', '.so', '.dylib',
+      // Other binary formats
+      '.bin', '.dat', '.db', '.sqlite'
+    ];
+
+    const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.'));
+    return binaryExtensions.includes(ext);
+  }
+
+  /**
+   * Convert ArrayBuffer to base64 string
+   */
+  private arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binary);
+  }
+
+  /**
    * Check if a specific file has a conflict
    */
   async checkFileConflict(
@@ -227,8 +266,14 @@ export class ConflictService {
     remoteModified: Date
   ): Promise<ConflictInfo | null> {
     try {
-      // Read local content and compute hash
-      const localContent = await this.vault.read(localFile);
+      // Read local content using the same binary-aware logic as FileSyncService
+      let localContent: string;
+      if (this.isBinaryFile(localFile.path)) {
+        const arrayBuffer = await this.vault.readBinary(localFile);
+        localContent = this.arrayBufferToBase64(arrayBuffer);
+      } else {
+        localContent = await this.vault.read(localFile);
+      }
       const localHash = await this.computeHash(localContent);
 
       // If hashes match, no conflict
@@ -754,6 +799,11 @@ export class ConflictService {
     const fileHashes = await this.storage.get<Record<string, string>>('fileHashes') || {};
     fileHashes[filePath] = hash;
     await this.storage.set('fileHashes', fileHashes);
+
+    // Also update FileSyncService in-memory state to prevent stale reads on next sync cycle
+    if (this.fileSyncService) {
+      this.fileSyncService.updateFileHash(filePath, hash);
+    }
 
     console.debug(`Updated sync state for ${filePath}`);
   }

@@ -68,6 +68,10 @@ export class FileSyncService {
   // Track locally deleted files (to prevent re-downloading them)
   private locallyDeletedFiles: Set<string> = new Set();
   
+  // Callbacks for ignoring paths during downloads (prevents sync loops)
+  private ignorePathFn: ((path: string) => void) | null = null;
+  private unignorePathFn: ((path: string) => void) | null = null;
+
   // Cross-tenant vault info
   private isCrossTenant: boolean = false;
   private vaultPermission: 'read' | 'write' | 'admin' = 'admin';
@@ -84,6 +88,18 @@ export class FileSyncService {
     this.eventBus = eventBus;
     this.storage = storage;
     this.largeFileService = largeFileService || null;
+  }
+
+  /**
+   * Set callbacks for ignoring/unignoring paths during downloads to prevent sync loops.
+   * Typically wired to FileWatcherService.ignorePath/unignorePath.
+   */
+  setIgnorePathCallbacks(
+    ignorePath: (path: string) => void,
+    unignorePath: (path: string) => void
+  ): void {
+    this.ignorePathFn = ignorePath;
+    this.unignorePathFn = unignorePath;
   }
 
   /**
@@ -443,6 +459,13 @@ export class FileSyncService {
       // Determine if file is binary
       const isBinary = this.isBinaryFile(filePath);
 
+      // Ignore path in file watcher to prevent download from triggering re-upload
+      if (this.ignorePathFn) {
+        this.ignorePathFn(filePath);
+      }
+
+      try {
+
       if (localFile instanceof TFile) {
         // Update existing file
         console.debug(`[Download Debug] About to modify ${filePath}`);
@@ -509,6 +532,13 @@ export class FileSyncService {
 
         // Preserve original file timestamps to prevent sync conflicts
         this.preserveFileTimestamps(createdFile, remoteFile.created_at, remoteFile.updated_at);
+      }
+
+      } finally {
+        // Unignore path in file watcher after vault write completes
+        if (this.unignorePathFn) {
+          this.unignorePathFn(filePath);
+        }
       }
 
       // Update sync state

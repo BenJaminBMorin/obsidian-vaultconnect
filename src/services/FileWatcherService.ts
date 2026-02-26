@@ -156,10 +156,18 @@ export class FileWatcherService {
    */
   handleDelete(file: TAbstractFile): void {
     if (!this.isWatching) return;
-    
-    if (file instanceof TFile && this.shouldSyncFile(file)) {
-      // For delete, we don't debounce as the file is already gone
-      this.emitFileChange(file, 'delete');
+
+    if (file instanceof TFile) {
+      // Skip if this file is being written by a download
+      if (this.isPathIgnored(file.path)) {
+        console.debug(`[FileWatcher] Skipping delete event for ignored path: ${file.path}`);
+        return;
+      }
+
+      if (this.shouldSyncFile(file)) {
+        // For delete, we don't debounce as the file is already gone
+        this.emitFileChange(file, 'delete');
+      }
     }
   }
 
