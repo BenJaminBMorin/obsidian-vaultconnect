@@ -38,6 +38,10 @@ export class SyncQueueService {
   private processing: Set<string> = new Set();
   private isProcessing: boolean = false;
 
+  // Event-driven signal: resolved when work is enqueued or processing should wake
+  private wakeSignal: Promise<void> = Promise.resolve();
+  private wakeResolve: (() => void) | null = null;
+
   constructor(
     eventBus: EventBus,
     storage: StorageManager,
@@ -121,6 +125,9 @@ export class SyncQueueService {
     await this.persistQueue();
     this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getQueueStats());
 
+    // Wake the processing loop immediately so it picks up the new work
+    this.wake();
+
     return id;
   }
 
@@ -164,6 +171,8 @@ export class SyncQueueService {
    */
   stopProcessing(): void {
     this.isProcessing = false;
+    // Wake the loop so it exits immediately instead of waiting for timeout
+    this.wake();
     console.debug('SyncQueueService: Stopped processing');
   }
 
@@ -174,13 +183,14 @@ export class SyncQueueService {
     while (this.isProcessing) {
       // Check if we can process more operations
       if (this.processing.size >= this.config.maxConcurrent) {
-        await this.sleep(100);
+        await this.sleepOrWake(1000);
         continue;
       }
 
       const operation = this.getNextOperation();
       if (!operation) {
-        await this.sleep(100);
+        // No work available — wait for wake signal or periodic check
+        await this.sleepOrWake(5000);
         continue;
       }
 
@@ -375,6 +385,7 @@ export class SyncQueueService {
     if (failedOps.length > 0) {
       await this.persistQueue();
       this.eventBus.emit(EVENTS.QUEUE_UPDATED, this.getQueueStats());
+      this.wake();
       console.debug(`Retrying ${failedOps.length} failed operations`);
     }
   }
@@ -387,10 +398,36 @@ export class SyncQueueService {
   }
 
   /**
-   * Sleep helper
+   * Sleep helper with early wake support.
+   * Returns a promise that resolves after `ms` milliseconds OR when wake() is called.
    */
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  private sleepOrWake(ms: number): Promise<void> {
+    // Create a new wake signal that can be resolved externally
+    this.wakeSignal = new Promise<void>(resolve => {
+      this.wakeResolve = resolve;
+    });
+
+    return new Promise<void>(resolve => {
+      const timer = setTimeout(() => {
+        resolve();
+      }, ms);
+
+      // Also resolve if wakeSignal fires (work arrived)
+      this.wakeSignal.then(() => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * Wake the processing loop immediately (called when new work is enqueued)
+   */
+  private wake(): void {
+    if (this.wakeResolve) {
+      this.wakeResolve();
+      this.wakeResolve = null;
+    }
   }
 
   /**

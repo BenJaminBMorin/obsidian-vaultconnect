@@ -657,7 +657,9 @@ export class FileSyncService {
   }
 
   /**
-   * Check if file has changed remotely
+   * Check if file has changed remotely.
+   * Throws on network errors so callers can distinguish "no changes" from "couldn't check".
+   * Returns false only when the file doesn't exist remotely (404) or hashes match.
    */
   async hasRemoteChanges(filePath: string): Promise<boolean> {
     if (!this.vaultId) {
@@ -682,8 +684,8 @@ export class FileSyncService {
       if (error.message && error.message.includes('404')) {
         return false;
       }
-      console.error(`Failed to check remote changes for ${filePath}:`, error);
-      return false;
+      // Propagate network/server errors so callers can handle them
+      throw error;
     }
   }
 
@@ -852,6 +854,49 @@ export class FileSyncService {
     this.syncStatus.clear();
     this.locallyDeletedFiles.clear();
     await this.saveSyncState();
+  }
+
+  /**
+   * Prune stale entries from fileHashes, lastSyncTimestamps, syncStatus,
+   * and locallyDeletedFiles that reference paths no longer present in the vault
+   * or on the remote. Call after each successful sync cycle.
+   *
+   * @param existingPaths - Set of file paths that currently exist (locally or remotely)
+   */
+  pruneDeletedFiles(existingPaths: Set<string>): void {
+    let pruned = 0;
+
+    for (const path of this.fileHashes.keys()) {
+      if (!existingPaths.has(path)) {
+        this.fileHashes.delete(path);
+        this.lastSyncTimestamps.delete(path);
+        this.syncStatus.delete(path);
+        pruned++;
+      }
+    }
+
+    // Also prune lastSyncTimestamps that might exist without a corresponding hash
+    for (const path of this.lastSyncTimestamps.keys()) {
+      if (!existingPaths.has(path)) {
+        this.lastSyncTimestamps.delete(path);
+        pruned++;
+      }
+    }
+
+    // Prune locallyDeletedFiles: remove entries for files that have been
+    // confirmed deleted on the remote (i.e., no longer in existingPaths)
+    // Keep entries that still exist remotely (deletion not yet propagated)
+    for (const path of this.locallyDeletedFiles) {
+      if (!existingPaths.has(path)) {
+        this.locallyDeletedFiles.delete(path);
+        pruned++;
+      }
+    }
+
+    if (pruned > 0) {
+      console.debug(`Pruned ${pruned} stale sync state entries`);
+      void this.saveSyncState();
+    }
   }
 
   /**

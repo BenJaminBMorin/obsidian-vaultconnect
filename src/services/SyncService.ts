@@ -71,6 +71,9 @@ export class SyncService {
   private lastSyncCheck: number = 0;
   private lastSyncTimestamp: Date | null = null; // Track last successful sync for incremental checks
 
+  // Store unsubscribe functions for event listeners so they can be cleaned up
+  private eventUnsubscribers: Array<() => void> = [];
+
   constructor(
     vault: Vault,
     apiClient: APIClient,
@@ -142,7 +145,7 @@ export class SyncService {
    */
   private setupEventHandlers(): void {
     // Handle file changes from watcher
-    this.eventBus.on(EVENTS.FILE_SYNCED, (event: FileChangeEvent) => {
+    const unsubFileSynced = this.eventBus.on(EVENTS.FILE_SYNCED, (event: FileChangeEvent) => {
       void (async () => {
         // Only auto-sync in smart sync mode with auto-sync enabled
         if (this.config.autoSync && this.config.mode === SyncMode.SMART_SYNC) {
@@ -155,9 +158,10 @@ export class SyncService {
         }
       })();
     });
+    this.eventUnsubscribers.push(unsubFileSynced);
 
     // Handle sync operations from queue
-    this.eventBus.on(EVENTS.SYNC_STARTED, (operation?: QueuedOperation) => {
+    const unsubSyncStarted = this.eventBus.on(EVENTS.SYNC_STARTED, (operation?: QueuedOperation) => {
       void (async () => {
         // Only process if operation is provided (from queue)
         if (operation) {
@@ -165,6 +169,7 @@ export class SyncService {
         }
       })();
     });
+    this.eventUnsubscribers.push(unsubSyncStarted);
   }
 
   /**
@@ -241,6 +246,22 @@ export class SyncService {
 
     this.isRunning = false;
     console.debug('SyncService stopped');
+  }
+
+  /**
+   * Destroy the service, removing all event listeners and stopping all timers.
+   * Call this from the plugin's onunload() to prevent leaked listeners.
+   */
+  destroy(): void {
+    this.stop();
+
+    // Remove all event bus listeners
+    for (const unsub of this.eventUnsubscribers) {
+      unsub();
+    }
+    this.eventUnsubscribers = [];
+
+    console.debug('SyncService destroyed — all listeners removed');
   }
 
   /**
@@ -547,6 +568,12 @@ export class SyncService {
       result.success = result.errors.length === 0;
       result.duration = Date.now() - startTime;
 
+      // Prune stale sync state entries for files that no longer exist
+      const existingPaths = new Set<string>();
+      for (const f of localFiles) existingPaths.add(f.path);
+      for (const f of remoteFiles) existingPaths.add(f.path);
+      this.fileSync.pruneDeletedFiles(existingPaths);
+
       console.debug(`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
 
@@ -580,13 +607,17 @@ export class SyncService {
       // Fallback: store metadata-only conflict (no full content in data.json)
       const conflicts = await this.storage.get<ConflictInfo[]>('conflicts') || [];
 
+      // Compute actual local hash from file content
+      const localContent = await this.vault.read(localFile);
+      const localHash = await this.fileSync.computeHash(localContent);
+
       // Dedup by path
       const deduped = conflicts.filter(c => c.path !== localFile.path);
 
       deduped.push({
         id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: localFile.path,
-        localHash: remoteFile.hash, // best-effort — actual local hash requires read
+        localHash,
         remoteHash: remoteFile.hash,
         localModified: new Date(localFile.stat.mtime),
         remoteModified: remoteFile.updated_at instanceof Date

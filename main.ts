@@ -485,6 +485,21 @@ export default class VaultSyncPlugin extends Plugin {
 
 	onunload() {
 		this.disconnect();
+
+		// Clear notification batch timers
+		for (const [, batch] of this.notificationBatch) {
+			clearTimeout(batch.timeout);
+		}
+		this.notificationBatch.clear();
+
+		// Clear recent uploads tracking
+		this.recentUploads.clear();
+
+		// Clear event bus to remove all remaining listeners
+		if (this.eventBus) {
+			this.eventBus.clear();
+		}
+
 		logger.info('VaultConnect plugin unloaded');
 	}
 
@@ -873,9 +888,9 @@ export default class VaultSyncPlugin extends Plugin {
 			this.socket = null;
 		}
 
-		// Stop sync service
+		// Destroy sync service (stops timers and removes event listeners)
 		if (this.syncService) {
-			this.syncService.stop();
+			this.syncService.destroy();
 		}
 
 		this.isConnected = false;
