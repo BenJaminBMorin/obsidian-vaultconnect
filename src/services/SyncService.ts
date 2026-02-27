@@ -70,6 +70,7 @@ export class SyncService {
   private periodicSyncInterval: number | null = null;
   private lastSyncCheck: number = 0;
   private lastSyncTimestamp: Date | null = null; // Track last successful sync for incremental checks
+  private incrementalCheckCount: number = 0; // Counter for periodic full sync
 
   // Store unsubscribe functions for event listeners so they can be cleaned up
   private eventUnsubscribers: Array<() => void> = [];
@@ -1172,8 +1173,22 @@ export class SyncService {
       // Use incremental sync if we have a last sync timestamp
       // Otherwise, fall back to full check (first time)
       if (this.lastSyncTimestamp) {
-        console.debug(`[SyncCheck] Using incremental check since ${this.lastSyncTimestamp.toISOString()}`);
-        await this.performIncrementalCheck();
+        this.incrementalCheckCount++;
+
+        // Every 15 incremental checks (~30 min), run a full smartSync
+        // to catch anything that slipped through (deletions, edge cases)
+        if (this.incrementalCheckCount >= 15) {
+          console.debug('[SyncCheck] Running periodic full smart sync (every ~30 min)');
+          this.incrementalCheckCount = 0;
+          if (this.config.mode === SyncMode.SMART_SYNC) {
+            await this.smartSync();
+          } else {
+            await this.performFullCheck();
+          }
+        } else {
+          console.debug(`[SyncCheck] Using incremental check since ${this.lastSyncTimestamp.toISOString()} (${this.incrementalCheckCount}/15)`);
+          await this.performIncrementalCheck();
+        }
       } else {
         console.debug('[SyncCheck] No last sync timestamp - performing initial full check');
         await this.performFullCheck();
@@ -1199,18 +1214,45 @@ export class SyncService {
       return;
     }
 
-    // Fetch only files that changed since last sync - much faster!
-    const changedFiles = await this.apiClient.getChangedFiles(this.vaultId, this.lastSyncTimestamp);
+    // Fetch changed files AND deletions in parallel for efficiency
+    const [changedFiles, deletions] = await Promise.all([
+      this.apiClient.getChangedFiles(this.vaultId, this.lastSyncTimestamp),
+      this.apiClient.getDeletedFiles(this.vaultId, this.lastSyncTimestamp).catch(() => [])
+    ]);
 
-    if (changedFiles.length === 0) {
+    // Process server-side deletions immediately
+    let deletedCount = 0;
+    if (deletions.length > 0) {
+      console.debug(`[SyncCheck] 🗑️ ${deletions.length} server-side deletion(s) since last sync`);
+      for (const deletion of deletions) {
+        const localFile = this.vault.getAbstractFileByPath(deletion.file_path);
+        if (localFile instanceof TFile) {
+          try {
+            await this.vault.delete(localFile);
+            this.fileSync.addLocallyDeleted(deletion.file_path);
+            deletedCount++;
+            console.debug(`[SyncCheck] Deleted local file (server-side deletion): ${deletion.file_path}`);
+          } catch (err) {
+            console.error(`[SyncCheck] Failed to delete local file: ${deletion.file_path}`, err);
+          }
+        }
+      }
+      if (deletedCount > 0) {
+        console.debug(`[SyncCheck] 🗑️ Deleted ${deletedCount} local file(s) from server-side deletions`);
+      }
+    }
+
+    if (changedFiles.length === 0 && deletedCount === 0) {
       console.debug('[SyncCheck] ✓ No remote changes detected');
       return;
     }
 
-    console.debug(`[SyncCheck] 📥 Found ${changedFiles.length} changed file(s) on remote`, {
-      files: changedFiles.map(f => f.path).slice(0, 5),
-      ...(changedFiles.length > 5 && { more: `... and ${changedFiles.length - 5} more` })
-    });
+    if (changedFiles.length > 0) {
+      console.debug(`[SyncCheck] 📥 Found ${changedFiles.length} changed file(s) on remote`, {
+        files: changedFiles.map(f => f.path).slice(0, 5),
+        ...(changedFiles.length > 5 && { more: `... and ${changedFiles.length - 5} more` })
+      });
+    }
 
     // Check each changed file against local
     const driftedFiles: string[] = [];
@@ -1244,7 +1286,7 @@ export class SyncService {
         console.debug('[SyncCheck] Auto-triggering smart sync...');
         await this.smartSync();
       }
-    } else {
+    } else if (deletedCount === 0) {
       console.debug('[SyncCheck] ✓ All changed files already in sync');
     }
   }

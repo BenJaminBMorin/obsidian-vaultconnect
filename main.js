@@ -6636,6 +6636,8 @@ var SyncService = class {
     this.lastSyncCheck = 0;
     this.lastSyncTimestamp = null;
     // Track last successful sync for incremental checks
+    this.incrementalCheckCount = 0;
+    // Counter for periodic full sync
     // Store unsubscribe functions for event listeners so they can be cleaned up
     this.eventUnsubscribers = [];
     this.vault = vault;
@@ -7491,8 +7493,19 @@ var SyncService = class {
     }
     try {
       if (this.lastSyncTimestamp) {
-        console.debug(`[SyncCheck] Using incremental check since ${this.lastSyncTimestamp.toISOString()}`);
-        await this.performIncrementalCheck();
+        this.incrementalCheckCount++;
+        if (this.incrementalCheckCount >= 15) {
+          console.debug("[SyncCheck] Running periodic full smart sync (every ~30 min)");
+          this.incrementalCheckCount = 0;
+          if (this.config.mode === "smart_sync" /* SMART_SYNC */) {
+            await this.smartSync();
+          } else {
+            await this.performFullCheck();
+          }
+        } else {
+          console.debug(`[SyncCheck] Using incremental check since ${this.lastSyncTimestamp.toISOString()} (${this.incrementalCheckCount}/15)`);
+          await this.performIncrementalCheck();
+        }
       } else {
         console.debug("[SyncCheck] No last sync timestamp - performing initial full check");
         await this.performFullCheck();
@@ -7511,15 +7524,40 @@ var SyncService = class {
     if (!this.vaultId || !this.lastSyncTimestamp) {
       return;
     }
-    const changedFiles = await this.apiClient.getChangedFiles(this.vaultId, this.lastSyncTimestamp);
-    if (changedFiles.length === 0) {
+    const [changedFiles, deletions] = await Promise.all([
+      this.apiClient.getChangedFiles(this.vaultId, this.lastSyncTimestamp),
+      this.apiClient.getDeletedFiles(this.vaultId, this.lastSyncTimestamp).catch(() => [])
+    ]);
+    let deletedCount = 0;
+    if (deletions.length > 0) {
+      console.debug(`[SyncCheck] \u{1F5D1}\uFE0F ${deletions.length} server-side deletion(s) since last sync`);
+      for (const deletion of deletions) {
+        const localFile = this.vault.getAbstractFileByPath(deletion.file_path);
+        if (localFile instanceof import_obsidian3.TFile) {
+          try {
+            await this.vault.delete(localFile);
+            this.fileSync.addLocallyDeleted(deletion.file_path);
+            deletedCount++;
+            console.debug(`[SyncCheck] Deleted local file (server-side deletion): ${deletion.file_path}`);
+          } catch (err) {
+            console.error(`[SyncCheck] Failed to delete local file: ${deletion.file_path}`, err);
+          }
+        }
+      }
+      if (deletedCount > 0) {
+        console.debug(`[SyncCheck] \u{1F5D1}\uFE0F Deleted ${deletedCount} local file(s) from server-side deletions`);
+      }
+    }
+    if (changedFiles.length === 0 && deletedCount === 0) {
       console.debug("[SyncCheck] \u2713 No remote changes detected");
       return;
     }
-    console.debug(`[SyncCheck] \u{1F4E5} Found ${changedFiles.length} changed file(s) on remote`, {
-      files: changedFiles.map((f) => f.path).slice(0, 5),
-      ...changedFiles.length > 5 && { more: `... and ${changedFiles.length - 5} more` }
-    });
+    if (changedFiles.length > 0) {
+      console.debug(`[SyncCheck] \u{1F4E5} Found ${changedFiles.length} changed file(s) on remote`, {
+        files: changedFiles.map((f) => f.path).slice(0, 5),
+        ...changedFiles.length > 5 && { more: `... and ${changedFiles.length - 5} more` }
+      });
+    }
     const driftedFiles = [];
     for (const remoteFile of changedFiles) {
       const localFile = this.vault.getAbstractFileByPath(remoteFile.path);
@@ -7544,7 +7582,7 @@ var SyncService = class {
         console.debug("[SyncCheck] Auto-triggering smart sync...");
         await this.smartSync();
       }
-    } else {
+    } else if (deletedCount === 0) {
       console.debug("[SyncCheck] \u2713 All changed files already in sync");
     }
   }

@@ -5,16 +5,30 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.22] - 2026-02-27
 
-### Planned Features
-- End-to-end encryption
-- Advanced conflict resolution with AI assistance
-- Enhanced mobile app optimization
-- Plugin API for extensions
-- Collaboration chat
-- Activity timeline view
-- Advanced version history UI
+### Fixed
+- **Incremental sync now checks for server-side deletions** — previously, files deleted on the server were only detected during a full smart sync (manual trigger). Now every 2-minute incremental check also queries the `/deletions` endpoint, so server-side deletions propagate to all devices within minutes.
+- **Periodic full sync every ~30 minutes** — every 15th incremental check triggers a full smart sync to catch edge cases (network hiccups, missed deletion events, etc.).
+
+## [1.1.21] - 2026-02-26
+
+### Fixed
+- Server-side deletion tracking — `smartSync()` now fetches tombstone records from the server and deletes local copies of files that were removed remotely, preventing re-upload of deleted files.
+- False conflicts for previously untracked binary files (images, PDFs, etc.) on first sync.
+- Binary files re-downloaded every sync cycle due to hash mismatch.
+
+## [1.1.20] - 2026-02-25
+
+### Fixed
+- Sync reliability — added mutex to prevent concurrent sync runs, fixed download retry loop, resolved binary file conflict detection, added offline operation queue.
+- Binary file hash mismatch in `hasLocalChanges` causing unnecessary uploads.
+- API endpoint mismatches with current backend after backend refactoring.
+- Immediate auth detection when returning from browser (OAuth flow).
+- Medium severity items — sync reliability, resource cleanup, error handling.
+
+### Changed
+- Removed dead code — unused methods, debug logs, example files.
 
 ## [1.0.0] - 2024-10-26
 
