@@ -14855,10 +14855,21 @@ ${data.error}`, 1e4);
     );
     this.registerEvent(
       this.app.vault.on("rename", (file, oldPath) => {
+        if (!this.syncService)
+          return;
         if (file instanceof import_obsidian21.TFile) {
-          if (this.syncService) {
-            this.syncService.handleFileRename(file, oldPath);
+          this.syncService.handleFileRename(file, oldPath);
+        } else {
+          const filePaths = [];
+          this.collectFilesInFolder(file, filePaths);
+          for (const newFilePath of filePaths) {
+            const oldFilePath = oldPath + newFilePath.slice(file.path.length);
+            const childFile = this.app.vault.getAbstractFileByPath(newFilePath);
+            if (childFile instanceof import_obsidian21.TFile) {
+              this.syncService.handleFileRename(childFile, oldFilePath);
+            }
           }
+          logger.debug(`[VaultConnect] Folder renamed: ${oldPath} \u2192 ${file.path} (${filePaths.length} files)`);
         }
       })
     );

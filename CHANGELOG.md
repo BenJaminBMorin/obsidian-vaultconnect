@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.26] - 2026-02-28
+
+### Fixed
+- **Folder renames now sync correctly** — previously, renaming a folder in Obsidian was silently ignored (only `TFile` was handled). Now all child files are enqueued as individual server-side renames, preserving file IDs and version history.
+
 ## [1.1.25] - 2026-02-28
 
 ### Fixed

@@ -563,14 +563,31 @@ export default class VaultSyncPlugin extends Plugin {
 			})
 		);
 
-		// File renamed
+		// File or folder renamed
 		this.registerEvent(
 			this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
+				if (!this.syncService) return;
+
 				if (file instanceof TFile) {
-					// Forward to SyncService which handles selective sync internally
-					if (this.syncService) {
-						this.syncService.handleFileRename(file, oldPath);
+					// Single file rename
+					this.syncService.handleFileRename(file, oldPath);
+				} else {
+					// Folder rename — Obsidian fires one event for the folder,
+					// not per-child. Enqueue a rename for every file inside so
+					// the server-side rename API updates each path atomically.
+					const filePaths: string[] = [];
+					this.collectFilesInFolder(file, filePaths);
+
+					for (const newFilePath of filePaths) {
+						// Compute old path by replacing the new folder prefix with old
+						const oldFilePath = oldPath + newFilePath.slice(file.path.length);
+						const childFile = this.app.vault.getAbstractFileByPath(newFilePath);
+						if (childFile instanceof TFile) {
+							this.syncService.handleFileRename(childFile, oldFilePath);
+						}
 					}
+
+					logger.debug(`[VaultConnect] Folder renamed: ${oldPath} → ${file.path} (${filePaths.length} files)`);
 				}
 			})
 		);
