@@ -5555,8 +5555,15 @@ var SyncQueueService = class {
       (op) => op.path === path && op.status === "pending"
     );
     if (existingIndex !== -1) {
-      this.queue[existingIndex] = queuedOp;
-      console.debug(`Updated existing queue operation for ${path}`);
+      const existing = this.queue[existingIndex];
+      if (existing.operation === "rename" && (operation === "update" || operation === "create")) {
+        existing.content = content;
+        existing.timestamp = Date.now();
+        console.debug(`Merged ${operation} into pending rename for ${path}`);
+      } else {
+        this.queue[existingIndex] = queuedOp;
+        console.debug(`Updated existing queue operation for ${path}`);
+      }
     } else {
       this.queue.push(queuedOp);
       console.debug(`Enqueued ${operation} operation for ${path}`);
@@ -6436,18 +6443,52 @@ var FileSyncService = class {
         return await this.deleteFile(operation.path);
       }
       case "rename": {
-        if (operation.oldPath) {
-          try {
-            await this.deleteFile(operation.oldPath);
-          } catch (error) {
-            const errorMsg = error instanceof Error ? error.message : String(error);
-            console.debug(`[FileSyncService] Could not delete old path during rename: ${errorMsg}`);
+        if (!operation.oldPath) {
+          const file = this.vault.getAbstractFileByPath(operation.path);
+          if (file instanceof import_obsidian2.TFile) {
+            return await this.uploadFile(file);
           }
+          throw new Error(`File not found: ${operation.path}`);
         }
-        const file = this.vault.getAbstractFileByPath(operation.path);
-        if (file instanceof import_obsidian2.TFile) {
-          return await this.uploadFile(file);
-        } else {
+        try {
+          const remoteFile = await this.apiClient.getFileByPath(this.vaultId, operation.oldPath);
+          const file = this.vault.getAbstractFileByPath(operation.path);
+          if (!(file instanceof import_obsidian2.TFile)) {
+            throw new Error(`File not found locally: ${operation.path}`);
+          }
+          const isBinary2 = this.isBinaryFile(operation.path);
+          let content;
+          if (isBinary2) {
+            const buf = await this.vault.readBinary(file);
+            content = this.arrayBufferToBase64(buf);
+          } else {
+            content = await this.vault.read(file);
+          }
+          const hash = await this.computeHash(content);
+          await this.apiClient.updateFile(this.vaultId, remoteFile.file_id, {
+            newPath: operation.path,
+            content
+          });
+          await this.handleFileRename(operation.oldPath, operation.path);
+          this.fileHashes.set(operation.path, hash);
+          this.lastSyncTimestamps.set(operation.path, Date.now());
+          this.updateSyncStatus(operation.path, "synced", hash);
+          await this.saveSyncState();
+          console.debug(`Renamed ${operation.oldPath} \u2192 ${operation.path} (server-side, preserved file_id)`);
+          return {
+            success: true,
+            path: operation.path,
+            operation: "upload",
+            hash,
+            timestamp: Date.now()
+          };
+        } catch (renameErr) {
+          const msg = renameErr instanceof Error ? renameErr.message : String(renameErr);
+          console.debug(`[FileSyncService] Server-side rename failed (${msg}), uploading as new file`);
+          const file = this.vault.getAbstractFileByPath(operation.path);
+          if (file instanceof import_obsidian2.TFile) {
+            return await this.uploadFile(file);
+          }
           throw new Error(`File not found: ${operation.path}`);
         }
       }

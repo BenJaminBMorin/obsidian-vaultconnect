@@ -5,6 +5,12 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.25] - 2026-02-28
+
+### Fixed
+- **File renames now use server-side rename API** — renames use `PUT /files/:fileId` with `newPath` instead of delete + create. This preserves file_id, version history, and all metadata. No tombstone is created, so other clients see a clean rename instead of a delete + re-download cycle.
+- **Queue deduplication no longer swallows renames** — if a user edits a file immediately after renaming, the modify is merged into the pending rename operation instead of replacing it. This prevents orphaning the old file on the server.
+
 ## [1.1.24] - 2026-02-28
 
 ### Fixed

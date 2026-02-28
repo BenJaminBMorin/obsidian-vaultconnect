@@ -20,7 +20,8 @@ export interface CreateFileRequest {
 }
 
 export interface UpdateFileRequest {
-  content: string;
+  content?: string;
+  newPath?: string;
 }
 
 export interface ChunkUploadRequest {

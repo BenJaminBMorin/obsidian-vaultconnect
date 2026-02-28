@@ -802,22 +802,66 @@ export class FileSyncService {
       }
 
       case 'rename': {
-        // Handle rename as delete old + create new
-        if (operation.oldPath) {
-          try {
-            await this.deleteFile(operation.oldPath);
-          } catch (error) {
-            // If delete fails (e.g., file doesn't exist), log but continue
-            const errorMsg = error instanceof Error ? error.message : String(error);
-            console.debug(`[FileSyncService] Could not delete old path during rename: ${errorMsg}`);
-            // Continue with upload of new path
+        if (!operation.oldPath) {
+          // No old path — treat as a new file upload
+          const file = this.vault.getAbstractFileByPath(operation.path);
+          if (file instanceof TFile) {
+            return await this.uploadFile(file);
           }
+          throw new Error(`File not found: ${operation.path}`);
         }
-        
-        const file = this.vault.getAbstractFileByPath(operation.path);
-        if (file instanceof TFile) {
-          return await this.uploadFile(file);
-        } else {
+
+        // Try server-side rename (preserves file_id, versions, metadata)
+        try {
+          const remoteFile = await this.apiClient.getFileByPath(this.vaultId!, operation.oldPath);
+
+          // Read current content to send alongside the path change
+          const file = this.vault.getAbstractFileByPath(operation.path);
+          if (!(file instanceof TFile)) {
+            throw new Error(`File not found locally: ${operation.path}`);
+          }
+
+          const isBinary = this.isBinaryFile(operation.path);
+          let content: string;
+          if (isBinary) {
+            const buf = await this.vault.readBinary(file);
+            content = this.arrayBufferToBase64(buf);
+          } else {
+            content = await this.vault.read(file);
+          }
+
+          const hash = await this.computeHash(content);
+
+          // Atomic rename + content update via PUT
+          await this.apiClient.updateFile(this.vaultId!, remoteFile.file_id, {
+            newPath: operation.path,
+            content
+          });
+
+          // Update local sync state (transfer from old path to new)
+          await this.handleFileRename(operation.oldPath, operation.path);
+          this.fileHashes.set(operation.path, hash);
+          this.lastSyncTimestamps.set(operation.path, Date.now());
+          this.updateSyncStatus(operation.path, 'synced', hash);
+          await this.saveSyncState();
+
+          console.debug(`Renamed ${operation.oldPath} → ${operation.path} (server-side, preserved file_id)`);
+          return {
+            success: true,
+            path: operation.path,
+            operation: 'upload',
+            hash,
+            timestamp: Date.now()
+          };
+        } catch (renameErr) {
+          // Fallback: old file not found on server — just upload at new path
+          const msg = renameErr instanceof Error ? renameErr.message : String(renameErr);
+          console.debug(`[FileSyncService] Server-side rename failed (${msg}), uploading as new file`);
+
+          const file = this.vault.getAbstractFileByPath(operation.path);
+          if (file instanceof TFile) {
+            return await this.uploadFile(file);
+          }
           throw new Error(`File not found: ${operation.path}`);
         }
       }

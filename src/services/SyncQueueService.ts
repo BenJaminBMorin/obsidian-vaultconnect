@@ -104,9 +104,22 @@ export class SyncQueueService {
     );
 
     if (existingIndex !== -1) {
-      // Replace existing operation with newer one
-      this.queue[existingIndex] = queuedOp;
-      console.debug(`Updated existing queue operation for ${path}`);
+      const existing = this.queue[existingIndex];
+
+      // Never let a modify/update replace a pending rename — the rename
+      // carries oldPath which must be processed to avoid orphaning the
+      // old file on the server. Instead, merge: keep the rename but
+      // update its content so the server gets both the path change and
+      // the latest content in a single operation.
+      if (existing.operation === 'rename' && (operation === 'update' || operation === 'create')) {
+        existing.content = content;
+        existing.timestamp = Date.now();
+        console.debug(`Merged ${operation} into pending rename for ${path}`);
+      } else {
+        // Replace existing operation with newer one
+        this.queue[existingIndex] = queuedOp;
+        console.debug(`Updated existing queue operation for ${path}`);
+      }
     } else {
       // Add new operation
       this.queue.push(queuedOp);
