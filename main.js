@@ -6925,14 +6925,19 @@ var SyncService = class {
       console.debug(`[VaultSync] Retrieved ${remoteFiles.length} files from vault ${this.vaultId}`);
       const remoteFileMap = new Map(remoteFiles.map((f) => [f.path, f]));
       const serverDeletedPaths = /* @__PURE__ */ new Set();
+      const serverDeletedFolders = [];
       try {
         const since = this.lastSyncTimestamp || new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3);
         const deletions = await this.apiClient.getDeletedFiles(this.vaultId, since);
         for (const d of deletions) {
-          serverDeletedPaths.add(d.file_path);
+          if (d.is_folder) {
+            serverDeletedFolders.push(d.file_path);
+          } else {
+            serverDeletedPaths.add(d.file_path);
+          }
         }
-        if (serverDeletedPaths.size > 0) {
-          console.debug(`[VaultSync] ${serverDeletedPaths.size} server-side deletions since ${since.toISOString()}`);
+        if (serverDeletedPaths.size > 0 || serverDeletedFolders.length > 0) {
+          console.debug(`[VaultSync] ${serverDeletedPaths.size} file deletion(s), ${serverDeletedFolders.length} folder deletion(s) since ${since.toISOString()}`);
         }
       } catch (e) {
         console.debug("[VaultSync] Could not fetch server deletions (server may not support this yet)");
@@ -6948,8 +6953,10 @@ var SyncService = class {
         try {
           const remoteFile = remoteFileMap.get(localFile.path);
           if (!remoteFile) {
-            if (serverDeletedPaths.has(localFile.path)) {
-              console.debug(`[VaultSync] Deleting local file (server-side deletion): ${localFile.path}`);
+            const isFileDeleted = serverDeletedPaths.has(localFile.path);
+            const isFolderDeleted = serverDeletedFolders.some((folder) => localFile.path.startsWith(folder));
+            if (isFileDeleted || isFolderDeleted) {
+              console.debug(`[VaultSync] Deleting local file (server-side ${isFolderDeleted ? "folder" : "file"} deletion): ${localFile.path}`);
               try {
                 await this.vault.delete(localFile);
                 this.fileSync.addLocallyDeleted(localFile.path);
@@ -7530,19 +7537,34 @@ var SyncService = class {
     ]);
     let deletedCount = 0;
     if (deletions.length > 0) {
-      console.debug(`[SyncCheck] \u{1F5D1}\uFE0F ${deletions.length} server-side deletion(s) since last sync`);
-      for (const deletion of deletions) {
+      const fileDeletions = deletions.filter((d) => !d.is_folder);
+      const folderDeletions = deletions.filter((d) => d.is_folder);
+      console.debug(`[SyncCheck] \u{1F5D1}\uFE0F ${fileDeletions.length} file + ${folderDeletions.length} folder deletion(s) since last sync`);
+      for (const deletion of fileDeletions) {
         const localFile = this.vault.getAbstractFileByPath(deletion.file_path);
         if (localFile instanceof import_obsidian3.TFile) {
           try {
             await this.vault.delete(localFile);
             this.fileSync.addLocallyDeleted(deletion.file_path);
             deletedCount++;
-            console.debug(`[SyncCheck] Deleted local file (server-side deletion): ${deletion.file_path}`);
           } catch (err) {
             console.error(`[SyncCheck] Failed to delete local file: ${deletion.file_path}`, err);
           }
         }
+      }
+      for (const folderDeletion of folderDeletions) {
+        const folderPath = folderDeletion.file_path;
+        const localFiles = this.vault.getFiles().filter((f) => f.path.startsWith(folderPath));
+        for (const localFile of localFiles) {
+          try {
+            await this.vault.delete(localFile);
+            this.fileSync.addLocallyDeleted(localFile.path);
+            deletedCount++;
+          } catch (err) {
+            console.error(`[SyncCheck] Failed to delete local file in folder: ${localFile.path}`, err);
+          }
+        }
+        console.debug(`[SyncCheck] Deleted ${localFiles.length} file(s) from folder deletion: ${folderPath}`);
       }
       if (deletedCount > 0) {
         console.debug(`[SyncCheck] \u{1F5D1}\uFE0F Deleted ${deletedCount} local file(s) from server-side deletions`);

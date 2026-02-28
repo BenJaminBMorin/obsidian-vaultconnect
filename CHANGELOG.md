@@ -5,6 +5,14 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.23] - 2026-02-28
+
+### Added
+- **Folder-level deletion tracking** — when a folder is deleted on the server, one tombstone record covers the entire subtree. The plugin uses prefix matching to delete all local files under that path, plus cleans up the empty folder. Much more efficient than N individual file tombstones.
+
+### Fixed
+- Both `smartSync()` and incremental sync now handle folder tombstones alongside file tombstones, preventing re-upload of files in deleted folders.
+
 ## [1.1.22] - 2026-02-27
 
 ### Fixed

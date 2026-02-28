@@ -455,14 +455,19 @@ export class SyncService {
       // Fetch server-side deletions to prevent re-uploading deleted files.
       // Use lastSyncTimestamp if available, otherwise look back 30 days (covers force sync).
       const serverDeletedPaths = new Set<string>();
+      const serverDeletedFolders: string[] = [];
       try {
         const since = this.lastSyncTimestamp || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const deletions = await this.apiClient.getDeletedFiles(this.vaultId, since);
         for (const d of deletions) {
-          serverDeletedPaths.add(d.file_path);
+          if (d.is_folder) {
+            serverDeletedFolders.push(d.file_path);
+          } else {
+            serverDeletedPaths.add(d.file_path);
+          }
         }
-        if (serverDeletedPaths.size > 0) {
-          console.debug(`[VaultSync] ${serverDeletedPaths.size} server-side deletions since ${since.toISOString()}`);
+        if (serverDeletedPaths.size > 0 || serverDeletedFolders.length > 0) {
+          console.debug(`[VaultSync] ${serverDeletedPaths.size} file deletion(s), ${serverDeletedFolders.length} folder deletion(s) since ${since.toISOString()}`);
         }
       } catch (e) {
         console.debug('[VaultSync] Could not fetch server deletions (server may not support this yet)');
@@ -486,9 +491,13 @@ export class SyncService {
 
           if (!remoteFile) {
             // File only exists locally — check if it was deleted on the server
-            if (serverDeletedPaths.has(localFile.path)) {
-              // Server intentionally deleted this file — delete local copy
-              console.debug(`[VaultSync] Deleting local file (server-side deletion): ${localFile.path}`);
+            // Check both exact file tombstones AND folder tombstones (prefix match)
+            const isFileDeleted = serverDeletedPaths.has(localFile.path);
+            const isFolderDeleted = serverDeletedFolders.some(folder => localFile.path.startsWith(folder));
+
+            if (isFileDeleted || isFolderDeleted) {
+              // Server intentionally deleted this file (or its parent folder) — delete local copy
+              console.debug(`[VaultSync] Deleting local file (server-side ${isFolderDeleted ? 'folder' : 'file'} deletion): ${localFile.path}`);
               try {
                 await this.vault.delete(localFile);
                 this.fileSync.addLocallyDeleted(localFile.path);
@@ -1217,26 +1226,48 @@ export class SyncService {
     // Fetch changed files AND deletions in parallel for efficiency
     const [changedFiles, deletions] = await Promise.all([
       this.apiClient.getChangedFiles(this.vaultId, this.lastSyncTimestamp),
-      this.apiClient.getDeletedFiles(this.vaultId, this.lastSyncTimestamp).catch(() => [])
+      this.apiClient.getDeletedFiles(this.vaultId, this.lastSyncTimestamp).catch((): Array<{ file_path: string; deleted_at: string; deleted_by: string; is_folder?: boolean }> => [])
     ]);
 
     // Process server-side deletions immediately
     let deletedCount = 0;
     if (deletions.length > 0) {
-      console.debug(`[SyncCheck] 🗑️ ${deletions.length} server-side deletion(s) since last sync`);
-      for (const deletion of deletions) {
+      // Separate file and folder deletions
+      const fileDeletions = deletions.filter(d => !d.is_folder);
+      const folderDeletions = deletions.filter(d => d.is_folder);
+
+      console.debug(`[SyncCheck] 🗑️ ${fileDeletions.length} file + ${folderDeletions.length} folder deletion(s) since last sync`);
+
+      // Process individual file deletions
+      for (const deletion of fileDeletions) {
         const localFile = this.vault.getAbstractFileByPath(deletion.file_path);
         if (localFile instanceof TFile) {
           try {
             await this.vault.delete(localFile);
             this.fileSync.addLocallyDeleted(deletion.file_path);
             deletedCount++;
-            console.debug(`[SyncCheck] Deleted local file (server-side deletion): ${deletion.file_path}`);
           } catch (err) {
             console.error(`[SyncCheck] Failed to delete local file: ${deletion.file_path}`, err);
           }
         }
       }
+
+      // Process folder deletions — delete all local files under each deleted folder path
+      for (const folderDeletion of folderDeletions) {
+        const folderPath = folderDeletion.file_path;
+        const localFiles = this.vault.getFiles().filter(f => f.path.startsWith(folderPath));
+        for (const localFile of localFiles) {
+          try {
+            await this.vault.delete(localFile);
+            this.fileSync.addLocallyDeleted(localFile.path);
+            deletedCount++;
+          } catch (err) {
+            console.error(`[SyncCheck] Failed to delete local file in folder: ${localFile.path}`, err);
+          }
+        }
+        console.debug(`[SyncCheck] Deleted ${localFiles.length} file(s) from folder deletion: ${folderPath}`);
+      }
+
       if (deletedCount > 0) {
         console.debug(`[SyncCheck] 🗑️ Deleted ${deletedCount} local file(s) from server-side deletions`);
       }
