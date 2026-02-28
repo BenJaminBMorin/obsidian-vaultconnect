@@ -5,6 +5,13 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.24] - 2026-02-28
+
+### Fixed
+- **Force sync no longer re-uploads deleted files** — `clearAllSyncState()` now preserves the locally-deleted tracking set, so files that were deleted on the server (via tombstones) are not treated as "new local files" and re-uploaded during a force sync.
+- **Force sync uses 30-day tombstone lookback** — `lastSyncTimestamp` is cleared on force sync so `smartSync()` always queries the full 30-day window of server-side deletions, catching all tombstones regardless of how stale the last sync was.
+- **Tombstone fetch errors now logged** — previously, failures to fetch server deletions were silently swallowed. Now logged as warnings for easier debugging.
+
 ## [1.1.23] - 2026-02-28
 
 ### Added

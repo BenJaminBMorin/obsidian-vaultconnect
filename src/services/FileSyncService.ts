@@ -870,13 +870,17 @@ export class FileSyncService {
   }
 
   /**
-   * Clear all sync state
+   * Clear sync state for force re-sync.
+   * Clears hashes and timestamps (forcing re-comparison) but PRESERVES
+   * locallyDeletedFiles so that files deleted on the server aren't re-uploaded.
    */
   async clearAllSyncState(): Promise<void> {
     this.fileHashes.clear();
     this.lastSyncTimestamps.clear();
     this.syncStatus.clear();
-    this.locallyDeletedFiles.clear();
+    // NOTE: locallyDeletedFiles is intentionally NOT cleared.
+    // These represent server-side tombstones we've already processed.
+    // Clearing them would cause force sync to re-upload deleted files.
     await this.saveSyncState();
   }
 

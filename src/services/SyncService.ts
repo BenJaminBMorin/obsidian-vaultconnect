@@ -470,7 +470,8 @@ export class SyncService {
           console.debug(`[VaultSync] ${serverDeletedPaths.size} file deletion(s), ${serverDeletedFolders.length} folder deletion(s) since ${since.toISOString()}`);
         }
       } catch (e) {
-        console.debug('[VaultSync] Could not fetch server deletions (server may not support this yet)');
+        const errMsg = e instanceof Error ? e.message : String(e);
+        console.warn(`[VaultSync] Could not fetch server deletions: ${errMsg}`);
       }
 
       // Get all local files (including binary — getMarkdownFiles() only returns .md)
@@ -881,10 +882,14 @@ export class SyncService {
    */
   async forceSync(): Promise<SyncResult> {
     console.debug('Force sync - clearing sync state and syncing all files');
-    
-    // Clear sync state to force re-sync
+
+    // Clear sync state to force re-sync (preserves locallyDeletedFiles)
     await this.fileSync.clearAllSyncState();
-    
+
+    // Clear lastSyncTimestamp so smartSync uses the 30-day lookback window
+    // for tombstone queries, ensuring ALL recent deletions are honoured.
+    this.lastSyncTimestamp = null;
+
     // Perform sync based on current mode
     switch (this.config.mode) {
       case SyncMode.SMART_SYNC:

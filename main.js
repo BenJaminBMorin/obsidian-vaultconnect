@@ -6488,13 +6488,14 @@ var FileSyncService = class {
     void this.saveSyncState();
   }
   /**
-   * Clear all sync state
+   * Clear sync state for force re-sync.
+   * Clears hashes and timestamps (forcing re-comparison) but PRESERVES
+   * locallyDeletedFiles so that files deleted on the server aren't re-uploaded.
    */
   async clearAllSyncState() {
     this.fileHashes.clear();
     this.lastSyncTimestamps.clear();
     this.syncStatus.clear();
-    this.locallyDeletedFiles.clear();
     await this.saveSyncState();
   }
   /**
@@ -6940,7 +6941,8 @@ var SyncService = class {
           console.debug(`[VaultSync] ${serverDeletedPaths.size} file deletion(s), ${serverDeletedFolders.length} folder deletion(s) since ${since.toISOString()}`);
         }
       } catch (e) {
-        console.debug("[VaultSync] Could not fetch server deletions (server may not support this yet)");
+        const errMsg = e instanceof Error ? e.message : String(e);
+        console.warn(`[VaultSync] Could not fetch server deletions: ${errMsg}`);
       }
       const localFiles = this.vault.getFiles();
       const localFileMap = new Map(localFiles.map((f) => [f.path, f]));
@@ -7255,6 +7257,7 @@ var SyncService = class {
   async forceSync() {
     console.debug("Force sync - clearing sync state and syncing all files");
     await this.fileSync.clearAllSyncState();
+    this.lastSyncTimestamp = null;
     switch (this.config.mode) {
       case "smart_sync" /* SMART_SYNC */:
         return await this.smartSync();
