@@ -359,5 +359,6 @@ export class OfflineManager {
 
     this.offlineDetection.destroy();
     this.offlineQueue.destroy();
+    this.offlineSync.destroy();
   }
 }

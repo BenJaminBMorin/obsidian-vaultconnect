@@ -41,6 +41,7 @@ export class OfflineSyncService {
   private fileSync: FileSyncService;
   private isSyncing: boolean = false;
   private vaultId: string | null = null;
+  private eventCleanups: Array<() => void> = [];
 
   constructor(
     vault: Vault,
@@ -73,7 +74,7 @@ export class OfflineSyncService {
    */
   private setupEventListeners(): void {
     // Listen for offline mode changes
-    this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, (offline: boolean) => {
+    const unsub = this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, (offline: boolean) => {
       void (async () => {
         if (!offline) {
           // Connection restored - sync queued operations
@@ -81,6 +82,17 @@ export class OfflineSyncService {
         }
       })();
     });
+    this.eventCleanups.push(unsub);
+  }
+
+  /**
+   * Cleanup — remove all event listeners.
+   */
+  destroy(): void {
+    for (const unsub of this.eventCleanups) {
+      unsub();
+    }
+    this.eventCleanups = [];
   }
 
   /**

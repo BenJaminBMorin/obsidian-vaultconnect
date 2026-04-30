@@ -39,6 +39,7 @@ export class OfflineQueueService {
   private queue: OfflineOperation[] = [];
   private isOffline: boolean = false;
   private maxQueueSize: number = 1000;
+  private eventCleanups: Array<() => void> = [];
 
   constructor(
     eventBus: EventBus,
@@ -73,10 +74,11 @@ export class OfflineQueueService {
    */
   private setupEventListeners(): void {
     // Listen for offline mode changes
-    this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, (offline: boolean) => {
+    const unsub = this.eventBus.on(EVENTS.OFFLINE_MODE_CHANGED, (offline: boolean) => {
       this.isOffline = offline;
       console.debug(`OfflineQueueService: Offline mode ${offline ? 'enabled' : 'disabled'}`);
     });
+    this.eventCleanups.push(unsub);
   }
 
   /**
@@ -368,6 +370,10 @@ export class OfflineQueueService {
    * Cleanup
    */
   destroy(): void {
+    for (const unsub of this.eventCleanups) {
+      unsub();
+    }
+    this.eventCleanups = [];
     this.queue = [];
   }
 }
