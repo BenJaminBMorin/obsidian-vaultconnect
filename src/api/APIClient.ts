@@ -583,7 +583,10 @@ export class APIClient {
     for (const [key, value] of textParts) {
       headerStr += `--${boundary}\r\nContent-Disposition: form-data; name="${key}"\r\n\r\n${value}\r\n`;
     }
-    headerStr += `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${request.filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`;
+    // Backend expects multipart field name 'chunk' for chunked uploads
+    // (matches packages/web-ui's useChunkedUpload and core-services'
+    // uploadChunkField middleware).
+    headerStr += `--${boundary}\r\nContent-Disposition: form-data; name="chunk"; filename="${request.filename}"\r\nContent-Type: application/octet-stream\r\n\r\n`;
 
     const footerStr = `\r\n--${boundary}--\r\n`;
 

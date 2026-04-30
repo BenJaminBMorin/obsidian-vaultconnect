@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.28] - 2026-04-30
+
+### Fixed
+- **Chunked uploads no longer fail with `MulterError: Unexpected field`** — the plugin was posting each chunk under multipart field name `file`, but the backend's `/v1/vaults/:id/files/upload/chunk` endpoint expects `chunk` (matching the web UI's `useChunkedUpload`). Switched the field name in `APIClient.uploadChunk` so the multer middleware accepts the request. The backend currently accepts both names as a compatibility shim; a future server release will tighten back to `chunk`-only.
+
 ## [1.1.27] - 2026-04-30
 
 ### Fixed
