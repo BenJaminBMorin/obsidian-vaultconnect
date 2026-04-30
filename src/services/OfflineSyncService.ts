@@ -286,11 +286,20 @@ export class OfflineSyncService {
       // Dedup by path — remove any existing conflict for same file
       const deduped = conflicts.filter(c => c.path !== operation.path);
 
+      // Compute the actual local hash via the same binary-aware logic
+      // FileSyncService uses, so the conflict record reflects the real
+      // local state (not a copy of the remote hash).
+      let localHash: string | undefined;
+      const localFile = this.vault.getAbstractFileByPath(operation.path);
+      if (localFile instanceof TFile) {
+        localHash = await this.fileSync.computeLocalHash(localFile);
+      }
+
       deduped.push({
         id: `conflict_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         path: operation.path,
         // Content stripped — will be fetched on-demand by ConflictResolutionModal
-        localHash: remoteFile.hash,
+        localHash,
         remoteHash: remoteFile.hash,
         localModified: new Date(operation.timestamp),
         remoteModified: new Date(remoteFile.updated_at),
