@@ -22,7 +22,8 @@ describe('SelectiveSyncService', () => {
       {
         includedFolders: [],
         excludedFolders: []
-      }
+      },
+      '.obsidian'
     );
   });
 

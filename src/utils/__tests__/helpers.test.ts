@@ -84,7 +84,13 @@ describe('Utility Functions', () => {
   });
 
   describe('debounce', () => {
-    jest.useFakeTimers();
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterAll(() => {
+      jest.useRealTimers();
+    });
 
     it('should debounce function calls', () => {
       const fn = jest.fn();
@@ -116,6 +122,7 @@ describe('Utility Functions', () => {
 
     afterEach(() => {
       jest.clearAllTimers();
+      jest.useRealTimers();
     });
   });
 

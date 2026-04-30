@@ -50,14 +50,15 @@ describe('ConflictService', () => {
     });
 
     it('should load conflicts from storage (content stripped)', async () => {
+      const recent = new Date();
       const storedConflicts = [
         {
           id: 'conflict-1',
           path: 'test.md',
           localContent: 'local',
           remoteContent: 'remote',
-          localModified: new Date('2024-01-01').toISOString(),
-          remoteModified: new Date('2024-01-02').toISOString(),
+          localModified: recent.toISOString(),
+          remoteModified: recent.toISOString(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         }
@@ -309,7 +310,7 @@ describe('ConflictService', () => {
       mockStorage.get.mockResolvedValue(storedConflicts);
       await conflictService.initialize('vault-123');
 
-      const mockFile = { path: 'test.md' } as TFile;
+      const mockFile = new TFile('test.md');
       mockVault.getAbstractFileByPath.mockReturnValue(mockFile);
       mockVault.read.mockResolvedValue('current local content');
       mockApiClient.getFileByPath.mockResolvedValue({
@@ -365,16 +366,16 @@ describe('ConflictService', () => {
         {
           id: 'conflict-1',
           path: 'file1.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         },
         {
           id: 'conflict-2',
           path: 'file2.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         }
@@ -421,8 +422,8 @@ describe('ConflictService', () => {
         {
           id: 'conflict-1',
           path: 'test.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         }
@@ -432,7 +433,7 @@ describe('ConflictService', () => {
     });
 
     it('should keep local version', async () => {
-      const mockFile = { path: 'test.md', stat: { mtime: Date.now() } } as TFile;
+      const mockFile = new TFile('test.md');
       mockVault.getAbstractFileByPath.mockReturnValue(mockFile);
       mockVault.read.mockResolvedValue('local content');
       mockApiClient.fileExists.mockResolvedValue(true);
@@ -460,8 +461,8 @@ describe('ConflictService', () => {
         {
           id: 'conflict-1',
           path: 'test.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         }
@@ -471,7 +472,7 @@ describe('ConflictService', () => {
     });
 
     it('should keep remote version', async () => {
-      const mockFile = { path: 'test.md', stat: { mtime: Date.now() } } as TFile;
+      const mockFile = new TFile('test.md');
       mockVault.getAbstractFileByPath.mockReturnValue(mockFile);
       mockApiClient.getFileByPath.mockResolvedValue({
         file_id: 'file-1',
@@ -497,8 +498,8 @@ describe('ConflictService', () => {
         {
           id: 'conflict-1',
           path: 'test.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         }
@@ -508,10 +509,10 @@ describe('ConflictService', () => {
     });
 
     it('should keep both versions', async () => {
-      const mockFile = { path: 'test.md', stat: { mtime: Date.now() } } as TFile;
+      const mockFile = new TFile('test.md');
       mockVault.getAbstractFileByPath.mockReturnValue(mockFile);
       mockVault.read.mockResolvedValue('local content');
-      mockVault.create.mockResolvedValue({ path: 'test.conflict.md', stat: { mtime: Date.now() } } as TFile);
+      mockVault.create.mockResolvedValue(new TFile('test.conflict.md'));
       mockApiClient.getFileByPath.mockResolvedValue({
         file_id: 'file-1',
         path: 'test.md',
@@ -537,8 +538,8 @@ describe('ConflictService', () => {
         {
           id: 'conflict-1',
           path: 'test.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         }
@@ -548,7 +549,7 @@ describe('ConflictService', () => {
     });
 
     it('should apply manual merge', async () => {
-      const mockFile = { path: 'test.md', stat: { mtime: Date.now() } } as TFile;
+      const mockFile = new TFile('test.md');
       const mergedContent = 'merged content';
 
       mockVault.getAbstractFileByPath.mockReturnValue(mockFile);
@@ -588,8 +589,8 @@ describe('ConflictService', () => {
         {
           id: 'conflict-1',
           path: 'test.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         }
@@ -621,16 +622,16 @@ describe('ConflictService', () => {
         {
           id: 'conflict-1',
           path: 'test1.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         },
         {
           id: 'conflict-2',
           path: 'test2.md',
-          localModified: new Date('2024-01-01'),
-          remoteModified: new Date('2024-01-02'),
+          localModified: new Date(),
+          remoteModified: new Date(),
           conflictType: ConflictType.CONTENT,
           autoResolvable: false
         }
