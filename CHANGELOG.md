@@ -5,6 +5,18 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.27] - 2026-04-30
+
+### Fixed
+- **Offline conflict records now store the actual local hash** — `OfflineSyncService.storeConflict` was copying the remote hash into the `localHash` field, making the two hashes always match in the resulting record. Now reads the local file via the binary-aware path used elsewhere and computes its real hash. (P6)
+- **Offline service event listeners are now cleaned up** — `OfflineQueueService` and `OfflineSyncService` subscribed to `OFFLINE_MODE_CHANGED` without capturing unsubscribe handles. On plugin reload these would have leaked. Both now track and run cleanups in `destroy()`. (P16)
+
+### Changed
+- **Dead code removed** — pruned ~12,400 lines across 34 files unreachable from `main.ts`: the unused native-WebSocket subgraph (presence, reconnection, etc.), Yjs/collaboration scaffolding, the unused offline-mode subgraph, several unwired UI modals, and unused utility modules. No user-facing behavior changes.
+
+### Internal
+- Wired up Jest properly with ts-jest so the test suite actually runs (it had no config and was failing to parse `.ts` imports). Updated stale fixtures. 151 tests pass.
+
 ## [1.1.26] - 2026-02-28
 
 ### Fixed
