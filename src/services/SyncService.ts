@@ -72,6 +72,20 @@ export class SyncService {
   private lastSyncTimestamp: Date | null = null; // Track last successful sync for incremental checks
   private incrementalCheckCount: number = 0; // Counter for periodic full sync
 
+  // Server-side deletion cache. Populated whenever we fetch /deletions; consulted
+  // before any upload to avoid restoring a file that was deleted on another device
+  // while this client was offline. Maps path → tombstone time (ms epoch).
+  private serverFileTombstones: Map<string, number> = new Map();
+  private serverFolderTombstones: Array<{ path: string; deletedAt: number }> = [];
+  private tombstonesRefreshedAt: number = 0;
+
+  // Visibility/resume handling — mobile Obsidian suspends JS in the background, so
+  // setInterval doesn't fire while the app is backgrounded. We listen for
+  // visibilitychange and trigger a sync check on resume so the user doesn't have
+  // to wait up to 2 minutes (or hit force-sync) to see remote changes.
+  private visibilityListener: (() => void) | null = null;
+  private lastVisibilityResumeAt: number = 0;
+
   // Store unsubscribe functions for event listeners so they can be cleaned up
   private eventUnsubscribers: Array<() => void> = [];
 
@@ -224,6 +238,10 @@ export class SyncService {
     // Start periodic sync check (every 5 minutes)
     this.startPeriodicSyncCheck();
 
+    // Listen for app visibility changes so we can catch up immediately on mobile
+    // resume (where setInterval doesn't fire while backgrounded).
+    this.setupVisibilityListener();
+
     console.debug('SyncService started');
     this.eventBus.emit(EVENTS.SYNC_STARTED);
   }
@@ -244,6 +262,8 @@ export class SyncService {
 
     // Stop periodic sync check
     this.stopPeriodicSyncCheck();
+
+    this.teardownVisibilityListener();
 
     this.isRunning = false;
     console.debug('SyncService stopped');
@@ -274,6 +294,25 @@ export class SyncService {
 
       console.debug(`Handling file ${action}: ${path}`);
 
+      // For uploads, consult the server-tombstone cache: if this path was deleted
+      // remotely after the local file's last modification, the local copy is
+      // stale (it pre-dates the deletion) and uploading would resurrect a file
+      // the user already deleted. Drop the local file instead of queueing.
+      if ((action === 'create' || action === 'modify') && file) {
+        await this.refreshTombstones();
+        const tombstoneAt = this.getActiveTombstone(path);
+        if (tombstoneAt !== null && file.stat.mtime <= tombstoneAt) {
+          console.debug(`[SyncService] Suppressing upload of stale local copy (tombstone at ${new Date(tombstoneAt).toISOString()}, mtime ${new Date(file.stat.mtime).toISOString()}): ${path}`);
+          try {
+            await this.vault.delete(file);
+            this.fileSync.addLocallyDeleted(path);
+          } catch (deleteErr) {
+            console.warn(`[SyncService] Failed to delete stale local copy ${path}:`, deleteErr);
+          }
+          return;
+        }
+      }
+
       // Add to sync queue
       let operation: 'create' | 'update' | 'delete' | 'rename';
       let content: string | undefined;
@@ -283,16 +322,16 @@ export class SyncService {
           operation = 'create';
           content = await this.vault.read(file);
           break;
-        
+
         case 'modify':
           operation = 'update';
           content = await this.vault.read(file);
           break;
-        
+
         case 'delete':
           operation = 'delete';
           break;
-        
+
         case 'rename':
           operation = 'rename';
           content = await this.vault.read(file);
@@ -826,6 +865,10 @@ export class SyncService {
       console.debug('Starting push all...');
       this.eventBus.emit(EVENTS.SYNC_STARTED);
 
+      // Refresh server tombstones first so we don't restore files that were
+      // deleted on another device while this one was offline.
+      await this.refreshTombstones(true);
+
       // Get all local files (including binary — getMarkdownFiles() only returns .md)
       const localFiles = this.vault.getFiles();
       const totalFiles = localFiles.length;
@@ -836,9 +879,24 @@ export class SyncService {
         }
 
         try {
+          const tombstoneAt = this.getActiveTombstone(localFile.path);
+          if (tombstoneAt !== null && localFile.stat.mtime <= tombstoneAt) {
+            console.debug(`[VaultSync] Skipping push for stale local copy (server-deleted): ${localFile.path}`);
+            try {
+              await this.vault.delete(localFile);
+              this.fileSync.addLocallyDeleted(localFile.path);
+              result.filesDeleted++;
+            } catch (deleteErr) {
+              const msg = deleteErr instanceof Error ? deleteErr.message : String(deleteErr);
+              result.errors.push(`${localFile.path}: Failed to clear stale local copy: ${msg}`);
+            }
+            result.filesProcessed++;
+            continue;
+          }
+
           // Upload file (will overwrite remote version)
           const syncResult = await this.fileSync.uploadFile(localFile);
-          
+
           if (syncResult.success) {
             result.filesUploaded++;
           } else {
@@ -1125,6 +1183,118 @@ export class SyncService {
    */
   hasPendingChange(path: string): boolean {
     return this.fileWatcher.hasPendingChange(path);
+  }
+
+  /**
+   * Listen for the document becoming visible again. On mobile Obsidian, JS is
+   * suspended while backgrounded, so the periodic sync interval stops firing
+   * and the user sees stale state until the next tick (up to 2 min) or until
+   * they hit force-sync. Reacting to visibilitychange closes that window.
+   *
+   * Rate-limited to once per 30s so quickly toggling apps doesn't hammer the API.
+   */
+  private setupVisibilityListener(): void {
+    if (this.visibilityListener) {
+      return;
+    }
+
+    this.visibilityListener = () => {
+      if (document.visibilityState !== 'visible') {
+        return;
+      }
+      if (!this.isRunning || !this.vaultId) {
+        return;
+      }
+      const now = Date.now();
+      if (now - this.lastVisibilityResumeAt < 30 * 1000) {
+        return;
+      }
+      this.lastVisibilityResumeAt = now;
+
+      console.debug('[SyncService] App resumed — triggering catch-up sync check');
+      void (async () => {
+        try {
+          this.lastSyncCheck = now;
+          await this.performSyncCheck();
+        } catch (err) {
+          console.error('[SyncService] Resume sync check failed:', err);
+        }
+      })();
+    };
+
+    document.addEventListener('visibilitychange', this.visibilityListener);
+  }
+
+  private teardownVisibilityListener(): void {
+    if (this.visibilityListener) {
+      document.removeEventListener('visibilitychange', this.visibilityListener);
+      this.visibilityListener = null;
+    }
+  }
+
+  /**
+   * Refresh the server-tombstone cache by fetching deletions since the last
+   * sync (or 30 days if no last-sync timestamp). Subsequent uploads consult the
+   * cache so we don't restore files that were deleted on another device while
+   * this client was offline.
+   *
+   * Cached for 60s — file-event uploads call this lazily so a burst of file
+   * changes doesn't generate a fetch per file.
+   */
+  private async refreshTombstones(force: boolean = false): Promise<void> {
+    if (!this.vaultId) {
+      return;
+    }
+    const now = Date.now();
+    if (!force && now - this.tombstonesRefreshedAt < 60 * 1000) {
+      return;
+    }
+
+    const since = this.lastSyncTimestamp || new Date(now - 30 * 24 * 60 * 60 * 1000);
+    try {
+      const deletions = await this.apiClient.getDeletedFiles(this.vaultId, since);
+      const fileMap = new Map<string, number>();
+      const folderList: Array<{ path: string; deletedAt: number }> = [];
+      for (const d of deletions) {
+        const deletedAtMs = new Date(d.deleted_at).getTime();
+        if (d.is_folder) {
+          folderList.push({ path: d.file_path, deletedAt: deletedAtMs });
+        } else {
+          fileMap.set(d.file_path, deletedAtMs);
+        }
+      }
+      this.serverFileTombstones = fileMap;
+      this.serverFolderTombstones = folderList;
+      this.tombstonesRefreshedAt = now;
+      if (fileMap.size > 0 || folderList.length > 0) {
+        console.debug(`[VaultSync] Refreshed tombstones: ${fileMap.size} file(s), ${folderList.length} folder(s)`);
+      }
+    } catch (e) {
+      console.warn('[VaultSync] Could not refresh server tombstones:', e instanceof Error ? e.message : e);
+    }
+  }
+
+  /**
+   * Returns the tombstone timestamp (ms) if the path (or any parent folder)
+   * was deleted server-side, otherwise null. Compare against local file mtime
+   * to decide between "stale local copy" (delete locally) and "user re-created
+   * the file after the deletion" (allow upload).
+   */
+  private getActiveTombstone(path: string): number | null {
+    const fileTombstone = this.serverFileTombstones.get(path);
+    if (fileTombstone !== undefined) {
+      return fileTombstone;
+    }
+    let latestFolder: number | null = null;
+    for (const folder of this.serverFolderTombstones) {
+      const prefix = folder.path.endsWith('/') ? folder.path : `${folder.path}/`;
+      if (path.startsWith(prefix)) {
+        if (latestFolder === null || folder.deletedAt > latestFolder) {
+          latestFolder = folder.deletedAt;
+        }
+      }
+    }
+    return latestFolder;
   }
 
   /**

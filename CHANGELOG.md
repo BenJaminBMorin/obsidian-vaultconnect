@@ -5,6 +5,12 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.29] - 2026-05-01
+
+### Fixed
+- **Mobile sync no longer requires a force-sync after foregrounding the app.** Mobile Obsidian suspends JS while backgrounded, so the 2-minute periodic sync timer didn't fire and the user saw stale state until they manually triggered a sync. `SyncService` now listens for `visibilitychange` and runs a catch-up sync check (rate-limited to once per 30s) whenever the document becomes visible again.
+- **Stale local copies are no longer re-uploaded after server-side deletions.** When another device deletes a file via Claude/MCP, this client's pending file-watcher events and `Push All` operations could resurrect that file. Both upload paths now consult a server-tombstone cache (refreshed lazily, with a 60s TTL) before uploading: if the local file's `mtime` predates the tombstone, the local copy is treated as stale and removed locally instead of being uploaded.
+
 ## [1.1.28] - 2026-04-30
 
 ### Fixed

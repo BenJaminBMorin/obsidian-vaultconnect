@@ -6680,6 +6680,18 @@ var SyncService = class {
     // Track last successful sync for incremental checks
     this.incrementalCheckCount = 0;
     // Counter for periodic full sync
+    // Server-side deletion cache. Populated whenever we fetch /deletions; consulted
+    // before any upload to avoid restoring a file that was deleted on another device
+    // while this client was offline. Maps path → tombstone time (ms epoch).
+    this.serverFileTombstones = /* @__PURE__ */ new Map();
+    this.serverFolderTombstones = [];
+    this.tombstonesRefreshedAt = 0;
+    // Visibility/resume handling — mobile Obsidian suspends JS in the background, so
+    // setInterval doesn't fire while the app is backgrounded. We listen for
+    // visibilitychange and trigger a sync check on resume so the user doesn't have
+    // to wait up to 2 minutes (or hit force-sync) to see remote changes.
+    this.visibilityListener = null;
+    this.lastVisibilityResumeAt = 0;
     // Store unsubscribe functions for event listeners so they can be cleaned up
     this.eventUnsubscribers = [];
     this.vault = vault;
@@ -6785,6 +6797,7 @@ var SyncService = class {
     this.fileWatcher.start();
     this.syncQueue.startProcessing();
     this.startPeriodicSyncCheck();
+    this.setupVisibilityListener();
     console.debug("SyncService started");
     this.eventBus.emit(EVENTS.SYNC_STARTED);
   }
@@ -6798,6 +6811,7 @@ var SyncService = class {
     this.fileWatcher.stop();
     this.syncQueue.stopProcessing();
     this.stopPeriodicSyncCheck();
+    this.teardownVisibilityListener();
     this.isRunning = false;
     console.debug("SyncService stopped");
   }
@@ -6820,6 +6834,20 @@ var SyncService = class {
     try {
       const { file, path, action, oldPath } = event;
       console.debug(`Handling file ${action}: ${path}`);
+      if ((action === "create" || action === "modify") && file) {
+        await this.refreshTombstones();
+        const tombstoneAt = this.getActiveTombstone(path);
+        if (tombstoneAt !== null && file.stat.mtime <= tombstoneAt) {
+          console.debug(`[SyncService] Suppressing upload of stale local copy (tombstone at ${new Date(tombstoneAt).toISOString()}, mtime ${new Date(file.stat.mtime).toISOString()}): ${path}`);
+          try {
+            await this.vault.delete(file);
+            this.fileSync.addLocallyDeleted(path);
+          } catch (deleteErr) {
+            console.warn(`[SyncService] Failed to delete stale local copy ${path}:`, deleteErr);
+          }
+          return;
+        }
+      }
       let operation;
       let content;
       switch (action) {
@@ -7254,6 +7282,7 @@ var SyncService = class {
     try {
       console.debug("Starting push all...");
       this.eventBus.emit(EVENTS.SYNC_STARTED);
+      await this.refreshTombstones(true);
       const localFiles = this.vault.getFiles();
       const totalFiles = localFiles.length;
       for (const localFile of localFiles) {
@@ -7261,6 +7290,20 @@ var SyncService = class {
           continue;
         }
         try {
+          const tombstoneAt = this.getActiveTombstone(localFile.path);
+          if (tombstoneAt !== null && localFile.stat.mtime <= tombstoneAt) {
+            console.debug(`[VaultSync] Skipping push for stale local copy (server-deleted): ${localFile.path}`);
+            try {
+              await this.vault.delete(localFile);
+              this.fileSync.addLocallyDeleted(localFile.path);
+              result.filesDeleted++;
+            } catch (deleteErr) {
+              const msg = deleteErr instanceof Error ? deleteErr.message : String(deleteErr);
+              result.errors.push(`${localFile.path}: Failed to clear stale local copy: ${msg}`);
+            }
+            result.filesProcessed++;
+            continue;
+          }
           const syncResult = await this.fileSync.uploadFile(localFile);
           if (syncResult.success) {
             result.filesUploaded++;
@@ -7497,6 +7540,110 @@ var SyncService = class {
    */
   hasPendingChange(path) {
     return this.fileWatcher.hasPendingChange(path);
+  }
+  /**
+   * Listen for the document becoming visible again. On mobile Obsidian, JS is
+   * suspended while backgrounded, so the periodic sync interval stops firing
+   * and the user sees stale state until the next tick (up to 2 min) or until
+   * they hit force-sync. Reacting to visibilitychange closes that window.
+   *
+   * Rate-limited to once per 30s so quickly toggling apps doesn't hammer the API.
+   */
+  setupVisibilityListener() {
+    if (this.visibilityListener) {
+      return;
+    }
+    this.visibilityListener = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+      if (!this.isRunning || !this.vaultId) {
+        return;
+      }
+      const now = Date.now();
+      if (now - this.lastVisibilityResumeAt < 30 * 1e3) {
+        return;
+      }
+      this.lastVisibilityResumeAt = now;
+      console.debug("[SyncService] App resumed \u2014 triggering catch-up sync check");
+      void (async () => {
+        try {
+          this.lastSyncCheck = now;
+          await this.performSyncCheck();
+        } catch (err) {
+          console.error("[SyncService] Resume sync check failed:", err);
+        }
+      })();
+    };
+    document.addEventListener("visibilitychange", this.visibilityListener);
+  }
+  teardownVisibilityListener() {
+    if (this.visibilityListener) {
+      document.removeEventListener("visibilitychange", this.visibilityListener);
+      this.visibilityListener = null;
+    }
+  }
+  /**
+   * Refresh the server-tombstone cache by fetching deletions since the last
+   * sync (or 30 days if no last-sync timestamp). Subsequent uploads consult the
+   * cache so we don't restore files that were deleted on another device while
+   * this client was offline.
+   *
+   * Cached for 60s — file-event uploads call this lazily so a burst of file
+   * changes doesn't generate a fetch per file.
+   */
+  async refreshTombstones(force = false) {
+    if (!this.vaultId) {
+      return;
+    }
+    const now = Date.now();
+    if (!force && now - this.tombstonesRefreshedAt < 60 * 1e3) {
+      return;
+    }
+    const since = this.lastSyncTimestamp || new Date(now - 30 * 24 * 60 * 60 * 1e3);
+    try {
+      const deletions = await this.apiClient.getDeletedFiles(this.vaultId, since);
+      const fileMap = /* @__PURE__ */ new Map();
+      const folderList = [];
+      for (const d of deletions) {
+        const deletedAtMs = new Date(d.deleted_at).getTime();
+        if (d.is_folder) {
+          folderList.push({ path: d.file_path, deletedAt: deletedAtMs });
+        } else {
+          fileMap.set(d.file_path, deletedAtMs);
+        }
+      }
+      this.serverFileTombstones = fileMap;
+      this.serverFolderTombstones = folderList;
+      this.tombstonesRefreshedAt = now;
+      if (fileMap.size > 0 || folderList.length > 0) {
+        console.debug(`[VaultSync] Refreshed tombstones: ${fileMap.size} file(s), ${folderList.length} folder(s)`);
+      }
+    } catch (e) {
+      console.warn("[VaultSync] Could not refresh server tombstones:", e instanceof Error ? e.message : e);
+    }
+  }
+  /**
+   * Returns the tombstone timestamp (ms) if the path (or any parent folder)
+   * was deleted server-side, otherwise null. Compare against local file mtime
+   * to decide between "stale local copy" (delete locally) and "user re-created
+   * the file after the deletion" (allow upload).
+   */
+  getActiveTombstone(path) {
+    const fileTombstone = this.serverFileTombstones.get(path);
+    if (fileTombstone !== void 0) {
+      return fileTombstone;
+    }
+    let latestFolder = null;
+    for (const folder of this.serverFolderTombstones) {
+      const prefix = folder.path.endsWith("/") ? folder.path : `${folder.path}/`;
+      if (path.startsWith(prefix)) {
+        if (latestFolder === null || folder.deletedAt > latestFolder) {
+          latestFolder = folder.deletedAt;
+        }
+      }
+    }
+    return latestFolder;
   }
   /**
    * Start periodic sync check to ensure we stay in sync
@@ -11285,7 +11432,7 @@ ${value2}\r
 `;
     }
     headerStr += `--${boundary}\r
-Content-Disposition: form-data; name="file"; filename="${request.filename}"\r
+Content-Disposition: form-data; name="chunk"; filename="${request.filename}"\r
 Content-Type: application/octet-stream\r
 \r
 `;
