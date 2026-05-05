@@ -436,6 +436,21 @@ export default class VaultSyncPlugin extends Plugin {
 			}
 		});
 
+		// Reconcile from server command — recovery for stuck sync state
+		this.addCommand({
+			id: 'reconcile-from-server',
+			name: 'Reconcile from server',
+			icon: 'cloud-download',
+			callback: async () => {
+				try {
+					await this.performReconcileFromServer();
+				} catch (error) {
+					logger.error('Reconcile from server command failed:', error);
+					new Notice('Reconcile from server failed');
+				}
+			}
+		});
+
 		// View conflicts command
 		this.addCommand({
 			id: 'view-conflicts',
@@ -1312,6 +1327,62 @@ export default class VaultSyncPlugin extends Plugin {
 		} catch (error) {
 			logger.error('Force Sync error:', error);
 			new Notice(`Force sync failed: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Perform Reconcile from Server
+	 *
+	 * Stronger than Force Sync: also clears the locally-deleted set and the
+	 * pending-downloads queue, so any path the server still has lands locally
+	 * even if this client previously recorded it as deleted. Use when sync
+	 * state has gotten stuck (files exist on server but won't sync down).
+	 */
+	async performReconcileFromServer(): Promise<void> {
+		if (!this.isConnected) {
+			new Notice('Not connected to vault connect');
+			return;
+		}
+
+		if (!this.syncService) {
+			new Notice('Sync service not initialized');
+			return;
+		}
+
+		const confirmed = await showConfirmationModal(
+			this.app,
+			'Reconcile from server will:\n\n' +
+			'• Pull every file the server has that is missing locally — including any you previously deleted on this device.\n' +
+			'• Clear the local "deleted" memory and the pending-downloads queue.\n' +
+			'• Keep your local-only files (they will upload as normal).\n\n' +
+			'Use this when sync state is stuck and Force Sync did not bring missing files down. Continue?',
+			{ title: 'Reconcile from server', confirmText: 'Reconcile', confirmClass: 'mod-warning' }
+		);
+
+		if (!confirmed) {
+			return;
+		}
+
+		try {
+			if (this.settings.notifyOnSync) {
+				new Notice('Reconciling from server...');
+			}
+			const result = await this.syncService.reconcileFromServer();
+
+			if (this.settings.notifyOnSync) {
+				if (result.success) {
+					new Notice(
+						`Reconcile completed: ${result.filesDownloaded} downloaded, ${result.filesUploaded} uploaded`
+					);
+				} else {
+					new Notice(
+						`Reconcile completed with ${result.errors.length} error(s). Check sync log for details.`
+					);
+				}
+			}
+		} catch (error) {
+			logger.error('Reconcile from server error:', error);
+			new Notice(`Reconcile failed: ${error.message}`);
 		}
 	}
 

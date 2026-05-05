@@ -1378,15 +1378,97 @@ export class SyncService {
         await this.performFullCheck();
       }
 
-      // Update last sync timestamp on successful check
-      this.lastSyncTimestamp = new Date();
+      // Drain any pending downloads from prior cycles. This persistent queue
+      // is the durability mechanism for drift: anything we observed but
+      // didn't successfully bring local stays here until it does, regardless
+      // of process kills, autoSync toggles, or mode changes.
+      const drainedClean = await this.drainPendingDownloads();
 
-      // Persist timestamp for recovery after restart
-      await this.storage.set(`lastSyncTimestamp:${this.vaultId}`, this.lastSyncTimestamp.toISOString());
+      // Only advance lastSyncTimestamp if the queue is fully drained. If
+      // pending downloads remain, the next check should use the SAME
+      // timestamp so it re-detects them via /files/changed instead of
+      // skipping past their updated_at.
+      if (drainedClean) {
+        this.lastSyncTimestamp = new Date();
+        await this.storage.set(`lastSyncTimestamp:${this.vaultId}`, this.lastSyncTimestamp.toISOString());
+      } else {
+        console.warn(`[SyncCheck] ${this.fileSync.getPendingDownloads().length} pending download(s) remain — keeping lastSyncTimestamp unchanged so next check retries them.`);
+      }
 
     } catch (error) {
       console.error('[SyncCheck] Error during sync check:', error);
     }
+  }
+
+  /**
+   * Drain the persistent pending-downloads queue. Returns true iff every
+   * pending path was either successfully downloaded or determined to be
+   * legitimately gone (404 from server). Returns false if any download
+   * failed or the user chose not to restore a locally-deleted path.
+   */
+  private async drainPendingDownloads(): Promise<boolean> {
+    const pending = this.fileSync.getPendingDownloads();
+    if (pending.length === 0) {
+      return true;
+    }
+
+    console.debug(`[SyncCheck] Draining ${pending.length} pending download(s)`);
+    let allSucceeded = true;
+
+    for (const path of pending) {
+      // Respect explicit local deletes — if the user deleted this path locally
+      // (and we recorded it), don't keep trying to bring it back. They can
+      // run "Reconcile from server" if they actually want it.
+      if (this.fileSync.isLocallyDeleted(path)) {
+        console.debug(`[SyncCheck] Removing pending download for locally-deleted path: ${path}`);
+        this.fileSync.removePendingDownload(path);
+        continue;
+      }
+
+      try {
+        const result = await this.fileSync.downloadFile(path);
+        if (!result.success) {
+          // 404 → file genuinely gone on server, drop from queue
+          if (result.error?.match(/404|not found|Not Found/i)) {
+            console.debug(`[SyncCheck] Pending download path ${path} no longer exists on server, dropping`);
+            this.fileSync.removePendingDownload(path);
+          } else {
+            console.warn(`[SyncCheck] Pending download failed for ${path}: ${result.error}`);
+            allSucceeded = false;
+          }
+        }
+      } catch (err) {
+        console.warn(`[SyncCheck] Pending download threw for ${path}:`, err);
+        allSucceeded = false;
+      }
+    }
+
+    return allSucceeded;
+  }
+
+  /**
+   * Reconcile from server: the nuclear option for users whose local sync
+   * state has accumulated stale entries (via tombstones, partial deletes,
+   * etc.) and is suppressing legitimate downloads. Clears
+   * `locallyDeletedFiles`, the pending-downloads queue, and
+   * `lastSyncTimestamp`, then runs smartSync. After this, the server is
+   * the source of truth: anything present on server lands locally.
+   *
+   * Local-only files are preserved (they'll be uploaded on next sync as
+   * normal), but anything previously deleted locally that still exists on
+   * server WILL be restored. Make sure that's what the user wants before
+   * invoking this.
+   */
+  async reconcileFromServer(): Promise<SyncResult> {
+    console.debug('[SyncService] Reconcile from server — clearing locally-deleted set and pending-downloads queue');
+
+    this.fileSync.clearLocallyDeleted();
+    this.fileSync.clearPendingDownloads();
+    await this.fileSync.clearAllSyncState();
+    this.lastSyncTimestamp = null;
+    await this.storage.set(`lastSyncTimestamp:${this.vaultId}`, null);
+
+    return await this.smartSync();
   }
 
   /**
@@ -1477,6 +1559,15 @@ export class SyncService {
       }
     }
 
+    // Persist drift to the pending-downloads queue immediately. Even if the
+    // user has autoSync off or is in PUSH_ALL mode (so smartSync won't run
+    // here), the queue + drainPendingDownloads in performSyncCheck will
+    // eventually bring these files local — and lastSyncTimestamp won't
+    // advance past them until they do.
+    for (const path of driftedFiles) {
+      this.fileSync.addPendingDownload(path);
+    }
+
     if (driftedFiles.length > 0) {
       console.warn(`[SyncCheck] ⚠️  ${driftedFiles.length} file(s) need sync`, {
         files: driftedFiles.slice(0, 10)
@@ -1487,7 +1578,8 @@ export class SyncService {
         files: driftedFiles
       });
 
-      // Auto-trigger sync
+      // Auto-trigger sync if the user's mode allows it. The pending-downloads
+      // queue is the safety net for the cases this branch doesn't cover.
       if (this.config.mode === SyncMode.SMART_SYNC && this.config.autoSync) {
         console.debug('[SyncCheck] Auto-triggering smart sync...');
         await this.smartSync();

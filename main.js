@@ -5851,6 +5851,12 @@ var FileSyncService = class {
     this.readOnlyFiles = /* @__PURE__ */ new Set();
     // Track locally deleted files (to prevent re-downloading them)
     this.locallyDeletedFiles = /* @__PURE__ */ new Set();
+    // Durable queue of paths that need to be downloaded from server. Anything
+    // observed as drift (remote-only or remote-hash-mismatch) lands here and
+    // stays until the download succeeds — so a missed sync cycle, a process
+    // kill mid-download, or auto-sync being toggled off can't permanently lose
+    // server-side files. Survives restarts via storage.
+    this.pendingDownloads = /* @__PURE__ */ new Set();
     // Callbacks for ignoring paths during downloads (prevents sync loops)
     this.ignorePathFn = null;
     this.unignorePathFn = null;
@@ -5905,7 +5911,11 @@ var FileSyncService = class {
       if (locallyDeletedFiles) {
         this.locallyDeletedFiles = new Set(locallyDeletedFiles);
       }
-      console.debug(`Loaded sync state: ${this.lastSyncTimestamps.size} timestamps, ${this.fileHashes.size} hashes, ${this.readOnlyFiles.size} read-only files, ${this.locallyDeletedFiles.size} locally deleted files`);
+      const pendingDownloads = await this.storage.get("pendingDownloads");
+      if (pendingDownloads) {
+        this.pendingDownloads = new Set(pendingDownloads);
+      }
+      console.debug(`Loaded sync state: ${this.lastSyncTimestamps.size} timestamps, ${this.fileHashes.size} hashes, ${this.readOnlyFiles.size} read-only files, ${this.locallyDeletedFiles.size} locally deleted files, ${this.pendingDownloads.size} pending downloads`);
     } catch (error) {
       console.error("Failed to load sync state:", error);
     }
@@ -5932,8 +5942,50 @@ var FileSyncService = class {
         "locallyDeletedFiles",
         Array.from(this.locallyDeletedFiles)
       );
+      await this.storage.set(
+        "pendingDownloads",
+        Array.from(this.pendingDownloads)
+      );
     } catch (error) {
       console.error("Failed to save sync state:", error);
+    }
+  }
+  /**
+   * Mark a path as needing a download from the server. The orchestrating
+   * service drains this queue on every sync cycle until each path is
+   * successfully downloaded. Survives restarts.
+   */
+  addPendingDownload(path) {
+    if (!this.pendingDownloads.has(path)) {
+      this.pendingDownloads.add(path);
+      void this.saveSyncState();
+    }
+  }
+  removePendingDownload(path) {
+    if (this.pendingDownloads.delete(path)) {
+      void this.saveSyncState();
+    }
+  }
+  getPendingDownloads() {
+    return Array.from(this.pendingDownloads);
+  }
+  hasPendingDownloads() {
+    return this.pendingDownloads.size > 0;
+  }
+  clearPendingDownloads() {
+    if (this.pendingDownloads.size > 0) {
+      this.pendingDownloads.clear();
+      void this.saveSyncState();
+    }
+  }
+  /**
+   * Reset the locally-deleted set entirely. Used by Reconcile-from-server,
+   * which is an explicit user action that says "trust the server's view".
+   */
+  clearLocallyDeleted() {
+    if (this.locallyDeletedFiles.size > 0) {
+      this.locallyDeletedFiles.clear();
+      void this.saveSyncState();
     }
   }
   /**
@@ -6069,6 +6121,7 @@ var FileSyncService = class {
       this.lastSyncTimestamps.set(file.path, Date.now());
       this.updateSyncStatus(file.path, "synced", hash);
       this.locallyDeletedFiles.delete(file.path);
+      this.pendingDownloads.delete(file.path);
       if (!skipSaveState) {
         await this.saveSyncState();
       }
@@ -6207,6 +6260,7 @@ var FileSyncService = class {
       }
       this.fileHashes.set(filePath, remoteFile.hash);
       this.lastSyncTimestamps.set(filePath, Date.now());
+      this.pendingDownloads.delete(filePath);
       this.updateSyncStatus(filePath, "synced", remoteFile.hash);
       if (this.isCrossTenant && this.vaultPermission === "read") {
         this.readOnlyFiles.add(filePath);
@@ -7708,11 +7762,76 @@ var SyncService = class {
         console.debug("[SyncCheck] No last sync timestamp - performing initial full check");
         await this.performFullCheck();
       }
-      this.lastSyncTimestamp = /* @__PURE__ */ new Date();
-      await this.storage.set(`lastSyncTimestamp:${this.vaultId}`, this.lastSyncTimestamp.toISOString());
+      const drainedClean = await this.drainPendingDownloads();
+      if (drainedClean) {
+        this.lastSyncTimestamp = /* @__PURE__ */ new Date();
+        await this.storage.set(`lastSyncTimestamp:${this.vaultId}`, this.lastSyncTimestamp.toISOString());
+      } else {
+        console.warn(`[SyncCheck] ${this.fileSync.getPendingDownloads().length} pending download(s) remain \u2014 keeping lastSyncTimestamp unchanged so next check retries them.`);
+      }
     } catch (error) {
       console.error("[SyncCheck] Error during sync check:", error);
     }
+  }
+  /**
+   * Drain the persistent pending-downloads queue. Returns true iff every
+   * pending path was either successfully downloaded or determined to be
+   * legitimately gone (404 from server). Returns false if any download
+   * failed or the user chose not to restore a locally-deleted path.
+   */
+  async drainPendingDownloads() {
+    var _a;
+    const pending = this.fileSync.getPendingDownloads();
+    if (pending.length === 0) {
+      return true;
+    }
+    console.debug(`[SyncCheck] Draining ${pending.length} pending download(s)`);
+    let allSucceeded = true;
+    for (const path of pending) {
+      if (this.fileSync.isLocallyDeleted(path)) {
+        console.debug(`[SyncCheck] Removing pending download for locally-deleted path: ${path}`);
+        this.fileSync.removePendingDownload(path);
+        continue;
+      }
+      try {
+        const result = await this.fileSync.downloadFile(path);
+        if (!result.success) {
+          if ((_a = result.error) == null ? void 0 : _a.match(/404|not found|Not Found/i)) {
+            console.debug(`[SyncCheck] Pending download path ${path} no longer exists on server, dropping`);
+            this.fileSync.removePendingDownload(path);
+          } else {
+            console.warn(`[SyncCheck] Pending download failed for ${path}: ${result.error}`);
+            allSucceeded = false;
+          }
+        }
+      } catch (err) {
+        console.warn(`[SyncCheck] Pending download threw for ${path}:`, err);
+        allSucceeded = false;
+      }
+    }
+    return allSucceeded;
+  }
+  /**
+   * Reconcile from server: the nuclear option for users whose local sync
+   * state has accumulated stale entries (via tombstones, partial deletes,
+   * etc.) and is suppressing legitimate downloads. Clears
+   * `locallyDeletedFiles`, the pending-downloads queue, and
+   * `lastSyncTimestamp`, then runs smartSync. After this, the server is
+   * the source of truth: anything present on server lands locally.
+   *
+   * Local-only files are preserved (they'll be uploaded on next sync as
+   * normal), but anything previously deleted locally that still exists on
+   * server WILL be restored. Make sure that's what the user wants before
+   * invoking this.
+   */
+  async reconcileFromServer() {
+    console.debug("[SyncService] Reconcile from server \u2014 clearing locally-deleted set and pending-downloads queue");
+    this.fileSync.clearLocallyDeleted();
+    this.fileSync.clearPendingDownloads();
+    await this.fileSync.clearAllSyncState();
+    this.lastSyncTimestamp = null;
+    await this.storage.set(`lastSyncTimestamp:${this.vaultId}`, null);
+    return await this.smartSync();
   }
   /**
    * Perform incremental check - only checks files changed since last sync
@@ -7782,6 +7901,9 @@ var SyncService = class {
           driftedFiles.push(remoteFile.path);
         }
       }
+    }
+    for (const path of driftedFiles) {
+      this.fileSync.addPendingDownload(path);
     }
     if (driftedFiles.length > 0) {
       console.warn(`[SyncCheck] \u26A0\uFE0F  ${driftedFiles.length} file(s) need sync`, {
@@ -14002,6 +14124,19 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
           button.setDisabled(false);
         }
       });
+    }).addButton((button) => {
+      button.setButtonText("Reconcile from server").setTooltip("Pull every file the server has \u2014 including ones this device previously deleted. Use when files exist on server but Force Sync will not bring them down.").onClick(async () => {
+        button.setButtonText("Reconciling...");
+        button.setDisabled(true);
+        this.plugin.syncPaused = false;
+        try {
+          await this.plugin.performReconcileFromServer();
+        } finally {
+          this.plugin.syncPaused = true;
+          button.setButtonText("Reconcile from server");
+          button.setDisabled(false);
+        }
+      });
     });
   }
   // Full settings sections (shown in COMPLETE stage)
@@ -14905,6 +15040,19 @@ ${data.error}`, 1e4);
       }
     });
     this.addCommand({
+      id: "reconcile-from-server",
+      name: "Reconcile from server",
+      icon: "cloud-download",
+      callback: async () => {
+        try {
+          await this.performReconcileFromServer();
+        } catch (error) {
+          logger.error("Reconcile from server command failed:", error);
+          new import_obsidian21.Notice("Reconcile from server failed");
+        }
+      }
+    });
+    this.addCommand({
       id: "view-conflicts",
       name: "View conflicts",
       icon: "alert-triangle",
@@ -15589,6 +15737,52 @@ ${data.error}`, 1e4);
     } catch (error) {
       logger.error("Force Sync error:", error);
       new import_obsidian21.Notice(`Force sync failed: ${error.message}`);
+    }
+  }
+  /**
+   * Perform Reconcile from Server
+   *
+   * Stronger than Force Sync: also clears the locally-deleted set and the
+   * pending-downloads queue, so any path the server still has lands locally
+   * even if this client previously recorded it as deleted. Use when sync
+   * state has gotten stuck (files exist on server but won't sync down).
+   */
+  async performReconcileFromServer() {
+    if (!this.isConnected) {
+      new import_obsidian21.Notice("Not connected to vault connect");
+      return;
+    }
+    if (!this.syncService) {
+      new import_obsidian21.Notice("Sync service not initialized");
+      return;
+    }
+    const confirmed = await showConfirmationModal(
+      this.app,
+      'Reconcile from server will:\n\n\u2022 Pull every file the server has that is missing locally \u2014 including any you previously deleted on this device.\n\u2022 Clear the local "deleted" memory and the pending-downloads queue.\n\u2022 Keep your local-only files (they will upload as normal).\n\nUse this when sync state is stuck and Force Sync did not bring missing files down. Continue?',
+      { title: "Reconcile from server", confirmText: "Reconcile", confirmClass: "mod-warning" }
+    );
+    if (!confirmed) {
+      return;
+    }
+    try {
+      if (this.settings.notifyOnSync) {
+        new import_obsidian21.Notice("Reconciling from server...");
+      }
+      const result = await this.syncService.reconcileFromServer();
+      if (this.settings.notifyOnSync) {
+        if (result.success) {
+          new import_obsidian21.Notice(
+            `Reconcile completed: ${result.filesDownloaded} downloaded, ${result.filesUploaded} uploaded`
+          );
+        } else {
+          new import_obsidian21.Notice(
+            `Reconcile completed with ${result.errors.length} error(s). Check sync log for details.`
+          );
+        }
+      }
+    } catch (error) {
+      logger.error("Reconcile from server error:", error);
+      new import_obsidian21.Notice(`Reconcile failed: ${error.message}`);
     }
   }
   /**

@@ -5,6 +5,14 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.30] - 2026-05-05
+
+### Fixed
+- **Drift no longer gets permanently masked.** Previously, when an incremental sync detected files on the server that were missing locally but the active mode/auto-sync settings prevented an immediate download, the plugin still advanced its `lastSyncTimestamp` past those files — silently losing them until the user noticed and ran Force Sync. Drift is now persisted to a durable `pendingDownloads` queue (survives restarts, mode changes, and process kills mid-download), the queue is drained on every sync cycle until empty, and `lastSyncTimestamp` is held back until the queue is empty so any failure becomes an automatic retry rather than a permanent loss.
+
+### Added
+- **"Reconcile from server" command and settings button.** Stronger than Force Sync: clears the locally-deleted set and the pending-downloads queue in addition to file hashes/timestamps, then runs a full smart sync. Use this when files exist on the server but won't sync down even with Force Sync — typically caused by stale entries in the locally-deleted set from older sync cycles.
+
 ## [1.1.29] - 2026-05-01
 
 ### Fixed

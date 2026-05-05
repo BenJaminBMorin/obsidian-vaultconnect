@@ -695,6 +695,23 @@ export class VaultSyncSettingTab extends PluginSettingTab {
               button.setDisabled(false);
             }
           });
+      })
+      .addButton(button => {
+        button
+          .setButtonText('Reconcile from server')
+          .setTooltip('Pull every file the server has — including ones this device previously deleted. Use when files exist on server but Force Sync will not bring them down.')
+          .onClick(async () => {
+            button.setButtonText('Reconciling...');
+            button.setDisabled(true);
+            this.plugin.syncPaused = false;
+            try {
+              await this.plugin.performReconcileFromServer();
+            } finally {
+              this.plugin.syncPaused = true;
+              button.setButtonText('Reconcile from server');
+              button.setDisabled(false);
+            }
+          });
       });
   }
 

@@ -66,6 +66,13 @@ export class FileSyncService {
   
   // Track locally deleted files (to prevent re-downloading them)
   private locallyDeletedFiles: Set<string> = new Set();
+
+  // Durable queue of paths that need to be downloaded from server. Anything
+  // observed as drift (remote-only or remote-hash-mismatch) lands here and
+  // stays until the download succeeds — so a missed sync cycle, a process
+  // kill mid-download, or auto-sync being toggled off can't permanently lose
+  // server-side files. Survives restarts via storage.
+  private pendingDownloads: Set<string> = new Set();
   
   // Callbacks for ignoring paths during downloads (prevents sync loops)
   private ignorePathFn: ((path: string) => void) | null = null;
@@ -147,7 +154,12 @@ export class FileSyncService {
         this.locallyDeletedFiles = new Set(locallyDeletedFiles);
       }
 
-      console.debug(`Loaded sync state: ${this.lastSyncTimestamps.size} timestamps, ${this.fileHashes.size} hashes, ${this.readOnlyFiles.size} read-only files, ${this.locallyDeletedFiles.size} locally deleted files`);
+      const pendingDownloads = await this.storage.get<string[]>('pendingDownloads');
+      if (pendingDownloads) {
+        this.pendingDownloads = new Set(pendingDownloads);
+      }
+
+      console.debug(`Loaded sync state: ${this.lastSyncTimestamps.size} timestamps, ${this.fileHashes.size} hashes, ${this.readOnlyFiles.size} read-only files, ${this.locallyDeletedFiles.size} locally deleted files, ${this.pendingDownloads.size} pending downloads`);
     } catch (error) {
       console.error('Failed to load sync state:', error);
     }
@@ -178,8 +190,57 @@ export class FileSyncService {
         'locallyDeletedFiles',
         Array.from(this.locallyDeletedFiles)
       );
+
+      await this.storage.set(
+        'pendingDownloads',
+        Array.from(this.pendingDownloads)
+      );
     } catch (error) {
       console.error('Failed to save sync state:', error);
+    }
+  }
+
+  /**
+   * Mark a path as needing a download from the server. The orchestrating
+   * service drains this queue on every sync cycle until each path is
+   * successfully downloaded. Survives restarts.
+   */
+  addPendingDownload(path: string): void {
+    if (!this.pendingDownloads.has(path)) {
+      this.pendingDownloads.add(path);
+      void this.saveSyncState();
+    }
+  }
+
+  removePendingDownload(path: string): void {
+    if (this.pendingDownloads.delete(path)) {
+      void this.saveSyncState();
+    }
+  }
+
+  getPendingDownloads(): string[] {
+    return Array.from(this.pendingDownloads);
+  }
+
+  hasPendingDownloads(): boolean {
+    return this.pendingDownloads.size > 0;
+  }
+
+  clearPendingDownloads(): void {
+    if (this.pendingDownloads.size > 0) {
+      this.pendingDownloads.clear();
+      void this.saveSyncState();
+    }
+  }
+
+  /**
+   * Reset the locally-deleted set entirely. Used by Reconcile-from-server,
+   * which is an explicit user action that says "trust the server's view".
+   */
+  clearLocallyDeleted(): void {
+    if (this.locallyDeletedFiles.size > 0) {
+      this.locallyDeletedFiles.clear();
+      void this.saveSyncState();
     }
   }
 
@@ -356,8 +417,10 @@ export class FileSyncService {
       this.lastSyncTimestamps.set(file.path, Date.now());
       this.updateSyncStatus(file.path, 'synced', hash);
       
-      // Clear local deletion flag if file was previously deleted
+      // Clear local deletion flag if file was previously deleted, and any
+      // pending download — uploading current local content means we have it.
       this.locallyDeletedFiles.delete(file.path);
+      this.pendingDownloads.delete(file.path);
       
       if (!skipSaveState) {
         await this.saveSyncState();
@@ -503,6 +566,7 @@ export class FileSyncService {
       // Update sync state
       this.fileHashes.set(filePath, remoteFile.hash);
       this.lastSyncTimestamps.set(filePath, Date.now());
+      this.pendingDownloads.delete(filePath);
       this.updateSyncStatus(filePath, 'synced', remoteFile.hash);
       
       // Mark as read-only if cross-tenant with read permission
