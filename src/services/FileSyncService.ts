@@ -542,13 +542,46 @@ export class FileSyncService {
         }
 
         let createdFile: TFile;
-        if (isBinary) {
-          // Binary files: decode base64 and use createBinary
-          const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
-          createdFile = await this.vault.createBinary(filePath, arrayBuffer);
-        } else {
-          // Text files: use create directly
-          createdFile = await this.vault.create(filePath, remoteFile.content);
+        try {
+          if (isBinary) {
+            // Binary files: decode base64 and use createBinary
+            const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
+            createdFile = await this.vault.createBinary(filePath, arrayBuffer);
+          } else {
+            // Text files: use create directly
+            createdFile = await this.vault.create(filePath, remoteFile.content);
+          }
+        } catch (createErr) {
+          const createMsg = createErr instanceof Error ? createErr.message : String(createErr);
+          // iOS Obsidian quirk: vault.create can throw "File already exists" even
+          // when getAbstractFileByPath returned null moments earlier — the
+          // adapter's index disagrees with itself. Look for the file via the
+          // canonical getFiles() enumeration; if it's actually there, switch
+          // to modify (which is what we should have done if the index were
+          // consistent). If getFiles() ALSO doesn't list it, this is a real
+          // adapter inconsistency we can't paper over — surface as an error
+          // so the user sees the failure instead of looping silently.
+          if (createMsg.includes('already exists') || createMsg.includes('File exists')) {
+            const found = this.vault.getFiles().find(f => f.path === filePath);
+            if (found) {
+              console.warn(`[downloadFile] vault index inconsistency for ${filePath}: getAbstractFileByPath returned null but the file is enumerable via getFiles(). Falling back to modify.`);
+              if (isBinary) {
+                const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
+                await this.vault.modifyBinary(found, arrayBuffer);
+              } else {
+                await this.vault.modify(found, remoteFile.content);
+              }
+              createdFile = found;
+            } else {
+              throw new Error(
+                `Vault adapter inconsistency: cannot write ${filePath} — vault.create reports it exists, ` +
+                `but neither getAbstractFileByPath nor getFiles() can find it. ` +
+                `Try restarting Obsidian or running "Reconcile from server" again.`
+              );
+            }
+          } else {
+            throw createErr;
+          }
         }
 
       }
@@ -591,18 +624,8 @@ export class FileSyncService {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
-      // If file already exists, treat as success but log it
-      if (errorMessage.includes('File already exists')) {
-        console.debug(`File already exists locally: ${filePath}, skipping download`);
-        return {
-          success: true,
-          path: filePath,
-          operation: 'download',
-          timestamp: Date.now()
-        };
-      }
-      
+      const errorStack = error instanceof Error ? error.stack : undefined;
+
       // Path conflicts are expected in some cases - log as warning but don't fail sync
       if (errorMessage.includes('Path conflict')) {
         console.warn(`Path conflict detected: ${errorMessage}`);
@@ -616,10 +639,13 @@ export class FileSyncService {
         };
       }
       
-      console.error(`Failed to download ${filePath}:`, error);
-      
+      // Surface the full error including stack so users investigating mobile
+      // sync issues can see what's actually failing instead of having to read
+      // backend logs.
+      console.error(`[FileSyncService] Failed to download ${filePath}:`, errorMessage, errorStack);
+
       this.updateSyncStatus(filePath, 'error', null, errorMessage);
-      
+
       return {
         success: false,
         path: filePath,

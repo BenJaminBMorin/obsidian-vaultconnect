@@ -1,4 +1,4 @@
-import { TFile, Vault } from 'obsidian';
+import { Notice, TFile, Vault } from 'obsidian';
 import { APIClient } from '../api/APIClient';
 import { EventBus, EVENTS } from '../core/EventBus';
 import { StorageManager } from '../core/StorageManager';
@@ -85,6 +85,11 @@ export class SyncService {
   // to wait up to 2 minutes (or hit force-sync) to see remote changes.
   private visibilityListener: (() => void) | null = null;
   private lastVisibilityResumeAt: number = 0;
+
+  // Per-path download-failure counters used by drainPendingDownloads to decide
+  // when to notify the user that a path is stuck. Reset to 0 on success.
+  private downloadFailureCounts: Map<string, number> = new Map();
+  private notifiedStuckPaths: Set<string> = new Set();
 
   // Store unsubscribe functions for event listeners so they can be cleaned up
   private eventUnsubscribers: Array<() => void> = [];
@@ -1427,23 +1432,52 @@ export class SyncService {
 
       try {
         const result = await this.fileSync.downloadFile(path);
-        if (!result.success) {
+        if (result.success) {
+          // Reset failure tracking — clean state for any future stuck cycles.
+          this.downloadFailureCounts.delete(path);
+          this.notifiedStuckPaths.delete(path);
+        } else {
           // 404 → file genuinely gone on server, drop from queue
           if (result.error?.match(/404|not found|Not Found/i)) {
             console.debug(`[SyncCheck] Pending download path ${path} no longer exists on server, dropping`);
             this.fileSync.removePendingDownload(path);
+            this.downloadFailureCounts.delete(path);
+            this.notifiedStuckPaths.delete(path);
           } else {
             console.warn(`[SyncCheck] Pending download failed for ${path}: ${result.error}`);
+            this.recordDownloadFailure(path, result.error || 'unknown error');
             allSucceeded = false;
           }
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.warn(`[SyncCheck] Pending download threw for ${path}:`, err);
+        this.recordDownloadFailure(path, msg);
         allSucceeded = false;
       }
     }
 
     return allSucceeded;
+  }
+
+  /**
+   * Track per-path download failure counts. After 3 consecutive failures on
+   * the same path, surface a Notice once so the user sees the stuck file
+   * without having to read logs. The notification is one-shot per path until
+   * a successful download resets the counter — we don't want to spam.
+   */
+  private recordDownloadFailure(path: string, errorMessage: string): void {
+    const count = (this.downloadFailureCounts.get(path) || 0) + 1;
+    this.downloadFailureCounts.set(path, count);
+
+    if (count >= 3 && !this.notifiedStuckPaths.has(path)) {
+      this.notifiedStuckPaths.add(path);
+      const shortPath = path.length > 60 ? `…${path.slice(-57)}` : path;
+      new Notice(
+        `VaultConnect: stuck downloading "${shortPath}". Last error: ${errorMessage.slice(0, 200)}`,
+        10000
+      );
+    }
   }
 
   /**

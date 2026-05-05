@@ -6245,11 +6245,34 @@ var FileSyncService = class {
             }
           }
           let createdFile;
-          if (isBinary2) {
-            const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
-            createdFile = await this.vault.createBinary(filePath, arrayBuffer);
-          } else {
-            createdFile = await this.vault.create(filePath, remoteFile.content);
+          try {
+            if (isBinary2) {
+              const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
+              createdFile = await this.vault.createBinary(filePath, arrayBuffer);
+            } else {
+              createdFile = await this.vault.create(filePath, remoteFile.content);
+            }
+          } catch (createErr) {
+            const createMsg = createErr instanceof Error ? createErr.message : String(createErr);
+            if (createMsg.includes("already exists") || createMsg.includes("File exists")) {
+              const found = this.vault.getFiles().find((f) => f.path === filePath);
+              if (found) {
+                console.warn(`[downloadFile] vault index inconsistency for ${filePath}: getAbstractFileByPath returned null but the file is enumerable via getFiles(). Falling back to modify.`);
+                if (isBinary2) {
+                  const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
+                  await this.vault.modifyBinary(found, arrayBuffer);
+                } else {
+                  await this.vault.modify(found, remoteFile.content);
+                }
+                createdFile = found;
+              } else {
+                throw new Error(
+                  `Vault adapter inconsistency: cannot write ${filePath} \u2014 vault.create reports it exists, but neither getAbstractFileByPath nor getFiles() can find it. Try restarting Obsidian or running "Reconcile from server" again.`
+                );
+              }
+            } else {
+              throw createErr;
+            }
           }
         }
       } finally {
@@ -6279,15 +6302,7 @@ var FileSyncService = class {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("File already exists")) {
-        console.debug(`File already exists locally: ${filePath}, skipping download`);
-        return {
-          success: true,
-          path: filePath,
-          operation: "download",
-          timestamp: Date.now()
-        };
-      }
+      const errorStack = error instanceof Error ? error.stack : void 0;
       if (errorMessage.includes("Path conflict")) {
         console.warn(`Path conflict detected: ${errorMessage}`);
         this.updateSyncStatus(filePath, "conflict", null, errorMessage);
@@ -6299,7 +6314,7 @@ var FileSyncService = class {
           timestamp: Date.now()
         };
       }
-      console.error(`Failed to download ${filePath}:`, error);
+      console.error(`[FileSyncService] Failed to download ${filePath}:`, errorMessage, errorStack);
       this.updateSyncStatus(filePath, "error", null, errorMessage);
       return {
         success: false,
@@ -6746,6 +6761,10 @@ var SyncService = class {
     // to wait up to 2 minutes (or hit force-sync) to see remote changes.
     this.visibilityListener = null;
     this.lastVisibilityResumeAt = 0;
+    // Per-path download-failure counters used by drainPendingDownloads to decide
+    // when to notify the user that a path is stuck. Reset to 0 on success.
+    this.downloadFailureCounts = /* @__PURE__ */ new Map();
+    this.notifiedStuckPaths = /* @__PURE__ */ new Set();
     // Store unsubscribe functions for event listeners so they can be cleaned up
     this.eventUnsubscribers = [];
     this.vault = vault;
@@ -7795,21 +7814,47 @@ var SyncService = class {
       }
       try {
         const result = await this.fileSync.downloadFile(path);
-        if (!result.success) {
+        if (result.success) {
+          this.downloadFailureCounts.delete(path);
+          this.notifiedStuckPaths.delete(path);
+        } else {
           if ((_a = result.error) == null ? void 0 : _a.match(/404|not found|Not Found/i)) {
             console.debug(`[SyncCheck] Pending download path ${path} no longer exists on server, dropping`);
             this.fileSync.removePendingDownload(path);
+            this.downloadFailureCounts.delete(path);
+            this.notifiedStuckPaths.delete(path);
           } else {
             console.warn(`[SyncCheck] Pending download failed for ${path}: ${result.error}`);
+            this.recordDownloadFailure(path, result.error || "unknown error");
             allSucceeded = false;
           }
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.warn(`[SyncCheck] Pending download threw for ${path}:`, err);
+        this.recordDownloadFailure(path, msg);
         allSucceeded = false;
       }
     }
     return allSucceeded;
+  }
+  /**
+   * Track per-path download failure counts. After 3 consecutive failures on
+   * the same path, surface a Notice once so the user sees the stuck file
+   * without having to read logs. The notification is one-shot per path until
+   * a successful download resets the counter — we don't want to spam.
+   */
+  recordDownloadFailure(path, errorMessage) {
+    const count = (this.downloadFailureCounts.get(path) || 0) + 1;
+    this.downloadFailureCounts.set(path, count);
+    if (count >= 3 && !this.notifiedStuckPaths.has(path)) {
+      this.notifiedStuckPaths.add(path);
+      const shortPath = path.length > 60 ? `\u2026${path.slice(-57)}` : path;
+      new import_obsidian3.Notice(
+        `VaultConnect: stuck downloading "${shortPath}". Last error: ${errorMessage.slice(0, 200)}`,
+        1e4
+      );
+    }
   }
   /**
    * Reconcile from server: the nuclear option for users whose local sync

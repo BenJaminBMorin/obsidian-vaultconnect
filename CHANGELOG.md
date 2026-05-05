@@ -5,6 +5,14 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.31] - 2026-05-05
+
+### Fixed
+- **Silent download-failure loop on iOS resolved.** `vault.create` was throwing `"File already exists"` for paths that `getAbstractFileByPath` had reported as empty moments earlier — an iOS-specific vault-adapter index inconsistency. The previous catch handler treated this as success, which left the file unwritten *and* with no sync-state update, so the next sync cycle re-discovered the same drift and re-downloaded the same files indefinitely (visible only as repeated `getFileByPath` traffic on the server). The download path now (a) checks `vault.getFiles()` (the canonical enumerable list) when `vault.create` reports a phantom existence and switches to `vault.modify` on the existing reference, and (b) surfaces a real error if neither lookup finds the file — instead of returning success.
+
+### Added
+- **Stuck-path notifications.** `drainPendingDownloads` now tracks consecutive failures per path. After 3 retries on the same path, the user sees a one-shot `Notice` with the path and last error message, so failures are visible on the device without having to read the dev console. The counter resets on the first successful download.
+
 ## [1.1.30] - 2026-05-05
 
 ### Fixed
