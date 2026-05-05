@@ -696,12 +696,27 @@ export class SyncService {
 
       // Send our local inventory to the server. Server returns the delta
       // (files we're missing or have at the wrong hash); we add those to
-      // the pendingDownloads queue so the next drain pass brings them
-      // local. This is the per-device delivery-ack mechanism that closes
-      // the loop on "files exist on server, never made it here" bugs.
+      // the pendingDownloads queue. This is the per-device delivery-ack
+      // mechanism that closes the loop on "files exist on server, never
+      // made it here" bugs.
       await this.reconcileWithServer().catch(err => {
         console.warn('[SyncService] inventory reconcile failed (non-fatal):', err);
       });
+
+      // Drain whatever is in the pending-downloads queue NOW. Without this,
+      // Force Sync (which calls smartSync directly) populates the queue but
+      // never drains it — drainPendingDownloads only ran from
+      // performSyncCheck on the periodic timer, so the user would have to
+      // wait up to 2 minutes (or app foreground) to actually see files. The
+      // drain is idempotent and short-circuits when the queue is empty.
+      try {
+        const drainedClean = await this.drainPendingDownloads();
+        if (!drainedClean) {
+          console.warn(`[SyncService] smartSync drain incomplete — ${this.fileSync.getPendingDownloads().length} item(s) still pending; next sync cycle will retry.`);
+        }
+      } catch (err) {
+        console.warn('[SyncService] smartSync drain threw (non-fatal):', err);
+      }
 
       console.debug(`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
@@ -1460,9 +1475,9 @@ export class SyncService {
         `[SyncService] Server reports ${delta.out_of_date.length} file(s) out of date for this device — queueing for download`,
         { sample: delta.out_of_date.slice(0, 5).map(f => f.path) }
       );
-      for (const entry of delta.out_of_date) {
-        this.fileSync.addPendingDownload(entry.path);
-      }
+      // Bulk add — single saveSyncState write instead of N (each save is a
+      // round-trip to plugin storage which is slow on iOS).
+      this.fileSync.addPendingDownloads(delta.out_of_date.map(e => e.path));
     }
 
     if (delta.unknown_to_server.length > 0) {

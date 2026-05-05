@@ -212,6 +212,25 @@ export class FileSyncService {
     }
   }
 
+  /**
+   * Bulk variant of addPendingDownload. Avoids the per-add saveSyncState
+   * call so that adding hundreds of paths at once (e.g. after a server-driven
+   * inventory reconcile) does a single state write instead of N — important
+   * on mobile where each storage write has measurable latency.
+   */
+  addPendingDownloads(paths: Iterable<string>): void {
+    let added = false;
+    for (const path of paths) {
+      if (!this.pendingDownloads.has(path)) {
+        this.pendingDownloads.add(path);
+        added = true;
+      }
+    }
+    if (added) {
+      void this.saveSyncState();
+    }
+  }
+
   removePendingDownload(path: string): void {
     if (this.pendingDownloads.delete(path)) {
       void this.saveSyncState();

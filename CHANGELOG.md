@@ -5,6 +5,12 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.34] - 2026-05-05
+
+### Fixed
+- **Force Sync now actually downloads files the server reports as missing.** v1.1.33's per-device inventory ack populated the `pendingDownloads` queue with files this device was missing, but `drainPendingDownloads` only ran from the periodic `performSyncCheck` — not from `smartSync` directly. Force Sync (which calls smartSync) would queue 600+ files and then return without downloading any of them, leaving the user staring at an empty file browser until either the next 2-minute periodic check fired or they reopened Obsidian. `smartSync` now drains the queue at the end of every run, so Force Sync brings everything local in one pass.
+- **Bulk-add to `pendingDownloads` no longer triggers N separate state-saves.** Adding 600 paths previously meant 600 sequential `saveSyncState` writes, which is slow on iOS storage. New `addPendingDownloads` (plural) takes an iterable and saves once. The inventory-reconcile path now uses it.
+
 ## [1.1.33] - 2026-05-05
 
 ### Added

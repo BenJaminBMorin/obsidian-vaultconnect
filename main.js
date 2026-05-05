@@ -5965,6 +5965,24 @@ var FileSyncService = class {
       void this.saveSyncState();
     }
   }
+  /**
+   * Bulk variant of addPendingDownload. Avoids the per-add saveSyncState
+   * call so that adding hundreds of paths at once (e.g. after a server-driven
+   * inventory reconcile) does a single state write instead of N — important
+   * on mobile where each storage write has measurable latency.
+   */
+  addPendingDownloads(paths) {
+    let added = false;
+    for (const path of paths) {
+      if (!this.pendingDownloads.has(path)) {
+        this.pendingDownloads.add(path);
+        added = true;
+      }
+    }
+    if (added) {
+      void this.saveSyncState();
+    }
+  }
   removePendingDownload(path) {
     if (this.pendingDownloads.delete(path)) {
       void this.saveSyncState();
@@ -7228,6 +7246,14 @@ var SyncService = class {
       await this.reconcileWithServer().catch((err) => {
         console.warn("[SyncService] inventory reconcile failed (non-fatal):", err);
       });
+      try {
+        const drainedClean = await this.drainPendingDownloads();
+        if (!drainedClean) {
+          console.warn(`[SyncService] smartSync drain incomplete \u2014 ${this.fileSync.getPendingDownloads().length} item(s) still pending; next sync cycle will retry.`);
+        }
+      } catch (err) {
+        console.warn("[SyncService] smartSync drain threw (non-fatal):", err);
+      }
       console.debug(`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
       return result;
@@ -7842,9 +7868,7 @@ var SyncService = class {
         `[SyncService] Server reports ${delta.out_of_date.length} file(s) out of date for this device \u2014 queueing for download`,
         { sample: delta.out_of_date.slice(0, 5).map((f) => f.path) }
       );
-      for (const entry of delta.out_of_date) {
-        this.fileSync.addPendingDownload(entry.path);
-      }
+      this.fileSync.addPendingDownloads(delta.out_of_date.map((e) => e.path));
     }
     if (delta.unknown_to_server.length > 0) {
       console.warn(
