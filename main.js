@@ -11266,17 +11266,63 @@ var CopyMoveModal = class extends import_obsidian11.Modal {
 var import_obsidian12 = require("obsidian");
 init_constants();
 var DEFAULT_REQUEST_TIMEOUT_MS = 3e4;
-var APIClient = class {
+var APIClient = class _APIClient {
   constructor(authService, baseURL, requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
+    this.deviceId = null;
     this.authService = authService;
     this.baseURL = baseURL;
     this.requestTimeoutMs = requestTimeoutMs;
+    this.deviceName = _APIClient.detectDeviceName();
   }
   /**
    * Set base URL
    */
   setBaseURL(url2) {
     this.baseURL = url2;
+  }
+  /**
+   * Set the persistent device ID. Plumbed in by the plugin shortly after
+   * construction so every authenticated request carries an X-Device-Id
+   * header — this is what lets the server tell Mac from iPhone in logs
+   * and in the per-user devices table.
+   */
+  setDeviceId(deviceId) {
+    this.deviceId = deviceId;
+  }
+  /**
+   * Build the device-identification headers added to every authenticated
+   * request. Centralised so the chunked-upload and HEAD paths stay in sync
+   * with the JSON path.
+   */
+  deviceHeaders() {
+    const headers = {};
+    if (this.deviceId) {
+      headers["X-Device-Id"] = this.deviceId;
+    }
+    headers["X-Device-Name"] = this.deviceName;
+    return headers;
+  }
+  /**
+   * Pick a short, human-readable label for this device based on Obsidian's
+   * Platform flags. Used as the X-Device-Name header. Mac/iPhone/Windows/
+   * Android/Linux/iPad/Tablet — falls back to "Unknown".
+   */
+  static detectDeviceName() {
+    if (import_obsidian12.Platform.isIosApp)
+      return "iPhone";
+    if (import_obsidian12.Platform.isAndroidApp)
+      return "Android";
+    if (import_obsidian12.Platform.isMacOS)
+      return "Mac";
+    if (import_obsidian12.Platform.isWin)
+      return "Windows";
+    if (import_obsidian12.Platform.isLinux)
+      return "Linux";
+    if (import_obsidian12.Platform.isMobileApp)
+      return "Mobile";
+    if (import_obsidian12.Platform.isDesktopApp)
+      return "Desktop";
+    return "Unknown";
   }
   /**
    * Make authenticated request
@@ -11292,6 +11338,7 @@ var APIClient = class {
     const headers = {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
+      ...this.deviceHeaders(),
       ...options.headers || {}
     };
     const requestParams = {
@@ -11559,7 +11606,8 @@ var APIClient = class {
         url: url2,
         method: "HEAD",
         headers: {
-          "Authorization": `Bearer ${apiKey}`
+          "Authorization": `Bearer ${apiKey}`,
+          ...this.deviceHeaders()
         },
         throw: false
       });
@@ -11617,7 +11665,8 @@ Content-Type: application/octet-stream\r
       method: "POST",
       headers: {
         "Content-Type": `multipart/form-data; boundary=${boundary}`,
-        "Authorization": `Bearer ${apiKey}`
+        "Authorization": `Bearer ${apiKey}`,
+        ...this.deviceHeaders()
       },
       body: body.buffer,
       throw: false
@@ -14843,6 +14892,7 @@ var VaultSyncPlugin = class extends import_obsidian21.Plugin {
     this.storage = new StorageManager(this);
     this.authService = new AuthService(this, this.eventBus);
     this.apiClient = new APIClient(this.authService, this.settings.apiBaseURL || this.settings.apiUrl);
+    this.apiClient.setDeviceId(this.settings.deviceId);
     this.vaultService = new VaultService(
       this,
       this.apiClient,

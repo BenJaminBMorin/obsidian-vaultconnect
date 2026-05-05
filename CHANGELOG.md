@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.32] - 2026-05-05
+
+### Added
+- **`X-Device-Id` and `X-Device-Name` headers on every authenticated REST request.** The plugin already kept a stable `deviceId` in settings (used by the WebSocket layer); now it propagates that ID plus a friendly device-type label (`iPhone`, `Mac`, `Windows`, `Android`, `iPad`, etc., derived from Obsidian's `Platform` flags) through the JSON, HEAD, and chunked-upload paths. Server uses these to attribute activity per device in structured logs and the per-tenant `devices` table — so "is this Mac fetching the file or iPhone?" becomes greppable instead of a guessing game during sync debugging.
+
 ## [1.1.31] - 2026-05-05
 
 ### Fixed

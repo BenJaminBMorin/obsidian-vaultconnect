@@ -148,6 +148,10 @@ export default class VaultSyncPlugin extends Plugin {
 		this.authService = new AuthService(this, this.eventBus);
 
 		this.apiClient = new APIClient(this.authService, this.settings.apiBaseURL || this.settings.apiUrl);
+		// Pass the persistent device ID so every authenticated REST request
+		// carries an X-Device-Id header — server uses this to attribute
+		// activity to a specific device in logs and the devices table.
+		this.apiClient.setDeviceId(this.settings.deviceId);
 
 		// Initialize vault service
 		this.vaultService = new VaultService(

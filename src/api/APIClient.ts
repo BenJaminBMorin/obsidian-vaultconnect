@@ -1,4 +1,4 @@
-import { requestUrl, RequestUrlParam } from 'obsidian';
+import { Platform, requestUrl, RequestUrlParam } from 'obsidian';
 import { AuthService } from '../services/AuthService';
 import { VaultInfo, FileInfo, FileContent, ConflictInfo, ConflictType } from '../types';
 import { API_ENDPOINTS } from '../utils/constants';
@@ -178,11 +178,14 @@ export class APIClient {
   private authService: AuthService;
   private baseURL: string;
   private requestTimeoutMs: number;
+  private deviceId: string | null = null;
+  private deviceName: string;
 
   constructor(authService: AuthService, baseURL: string, requestTimeoutMs: number = DEFAULT_REQUEST_TIMEOUT_MS) {
     this.authService = authService;
     this.baseURL = baseURL;
     this.requestTimeoutMs = requestTimeoutMs;
+    this.deviceName = APIClient.detectDeviceName();
   }
 
   /**
@@ -190,6 +193,46 @@ export class APIClient {
    */
   setBaseURL(url: string): void {
     this.baseURL = url;
+  }
+
+  /**
+   * Set the persistent device ID. Plumbed in by the plugin shortly after
+   * construction so every authenticated request carries an X-Device-Id
+   * header — this is what lets the server tell Mac from iPhone in logs
+   * and in the per-user devices table.
+   */
+  setDeviceId(deviceId: string): void {
+    this.deviceId = deviceId;
+  }
+
+  /**
+   * Build the device-identification headers added to every authenticated
+   * request. Centralised so the chunked-upload and HEAD paths stay in sync
+   * with the JSON path.
+   */
+  private deviceHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (this.deviceId) {
+      headers['X-Device-Id'] = this.deviceId;
+    }
+    headers['X-Device-Name'] = this.deviceName;
+    return headers;
+  }
+
+  /**
+   * Pick a short, human-readable label for this device based on Obsidian's
+   * Platform flags. Used as the X-Device-Name header. Mac/iPhone/Windows/
+   * Android/Linux/iPad/Tablet — falls back to "Unknown".
+   */
+  private static detectDeviceName(): string {
+    if (Platform.isIosApp) return 'iPhone';
+    if (Platform.isAndroidApp) return 'Android';
+    if (Platform.isMacOS) return 'Mac';
+    if (Platform.isWin) return 'Windows';
+    if (Platform.isLinux) return 'Linux';
+    if (Platform.isMobileApp) return 'Mobile';
+    if (Platform.isDesktopApp) return 'Desktop';
+    return 'Unknown';
   }
 
   /**
@@ -210,6 +253,7 @@ export class APIClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKey}`,
+      ...this.deviceHeaders(),
       ...(options.headers || {})
     };
 
@@ -534,7 +578,8 @@ export class APIClient {
         url,
         method: 'HEAD',
         headers: {
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${apiKey}`,
+          ...this.deviceHeaders()
         },
         throw: false
       });
@@ -603,7 +648,8 @@ export class APIClient {
       method: 'POST',
       headers: {
         'Content-Type': `multipart/form-data; boundary=${boundary}`,
-        'Authorization': `Bearer ${apiKey}`
+        'Authorization': `Bearer ${apiKey}`,
+        ...this.deviceHeaders()
       },
       body: body.buffer,
       throw: false
