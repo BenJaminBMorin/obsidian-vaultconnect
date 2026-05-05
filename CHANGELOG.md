@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.35] - 2026-05-05
+
+### Fixed
+- **The actual root cause of "files won't sync to iPhone" found.** iOS Obsidian's WebView caches GET responses and sends `If-None-Match` headers on subsequent fetches of the same URL. Express's default ETag generation responded with HTTP 304 + empty body, and the plugin's `getFileByPath` then tried to read `.file_id`/`.hash` off an undefined response object — which threw, got swallowed by smartSync's per-file try/catch, and left the file's hash unrecorded. The result: hundreds of files appeared "processed" but their hashes never made it into local sync state, so the per-device inventory ack stayed effectively empty, and the server thought the iPhone had nothing. Plugin now sends `Cache-Control: no-cache` + `Pragma: no-cache` on every authenticated request; server has been changed in parallel to `app.disable('etag')` so this can't recur even from older plugin builds. The architecture docs and blood work file should now sync down on the next Force Sync.
+
 ## [1.1.34] - 2026-05-05
 
 ### Fixed

@@ -11424,6 +11424,16 @@ var APIClient = class _APIClient {
     const headers = {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${apiKey}`,
+      // iOS Obsidian's WebView caches GETs and sends If-None-Match on
+      // subsequent calls to the same URL. Express's automatic ETag handler
+      // would then return 304 with an empty body, and the response parser
+      // here would throw on undefined .file_id / .hash — silently breaking
+      // smartSync's per-file processing. Disable client-side caching for
+      // every authenticated API call. (Server now also has app.disable('etag')
+      // for defense-in-depth; this header keeps the plugin safe against
+      // older deploys or any other intermediate cache.)
+      "Cache-Control": "no-cache",
+      "Pragma": "no-cache",
       ...this.deviceHeaders(),
       ...options.headers || {}
     };
