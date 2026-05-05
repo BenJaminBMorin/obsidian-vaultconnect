@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.33] - 2026-05-05
+
+### Added
+- **Per-device delivery acknowledgments — sync layer is now self-healing.** After every smart sync, the plugin POSTs its current local file inventory (path + hash for everything on disk) to a new server endpoint. Server compares against truth and returns the delta: which files this device is missing or has at the wrong hash. The plugin queues those into the existing `pendingDownloads` queue, which the next drain pass brings local — closing the loop on the entire class of "file exists on the server, never made it to my device" bugs. Server-side response also flags files the device claims to have but the server doesn't (likely a sync-loop bug worth investigating).
+
 ## [1.1.32] - 2026-05-05
 
 ### Added

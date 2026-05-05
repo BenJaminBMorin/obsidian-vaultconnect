@@ -580,6 +580,10 @@ var init_constants = __esm({
       // Sync
       FILE_HASH: (vaultId, filePath) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}?hash_only=true`,
       FILE_DELETIONS: (vaultId, since) => `/vaults/${vaultId}/files/deletions?since=${encodeURIComponent(since)}`,
+      // Per-device delivery acks. Plugin POSTs current local inventory after each
+      // sync cycle; server returns a delta of files this device is missing.
+      DEVICE_INVENTORY: (vaultId, deviceId) => `/vaults/${vaultId}/devices/${encodeURIComponent(deviceId)}/inventory`,
+      DEVICE_SYNC_STATUS: (vaultId, deviceId) => `/vaults/${vaultId}/devices/${encodeURIComponent(deviceId)}/sync-status`,
       // Conflicts
       CONFLICTS: (vaultId) => `/vaults/${vaultId}/conflicts`,
       CONFLICT_RESOLVE: (conflictId) => `/vaults/conflicts/${conflictId}/resolve`,
@@ -6765,6 +6769,10 @@ var SyncService = class {
     // when to notify the user that a path is stuck. Reset to 0 on success.
     this.downloadFailureCounts = /* @__PURE__ */ new Map();
     this.notifiedStuckPaths = /* @__PURE__ */ new Set();
+    // Persistent device ID (same one APIClient sends as X-Device-Id). Used for
+    // the per-device inventory ack endpoint so the server can tell us what we
+    // claim to have vs what we should have.
+    this.deviceId = null;
     // Store unsubscribe functions for event listeners so they can be cleaned up
     this.eventUnsubscribers = [];
     this.vault = vault;
@@ -6837,6 +6845,13 @@ var SyncService = class {
       })();
     });
     this.eventUnsubscribers.push(unsubSyncStarted);
+  }
+  /**
+   * Set the persistent device ID for inventory acks. Plumbed in by main.ts
+   * when the plugin loads — same value used by APIClient for X-Device-Id.
+   */
+  setDeviceId(deviceId) {
+    this.deviceId = deviceId;
   }
   /**
    * Initialize sync service
@@ -7210,6 +7225,9 @@ var SyncService = class {
       for (const f of remoteFiles)
         existingPaths.add(f.path);
       this.fileSync.pruneDeletedFiles(existingPaths);
+      await this.reconcileWithServer().catch((err) => {
+        console.warn("[SyncService] inventory reconcile failed (non-fatal):", err);
+      });
       console.debug(`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
       return result;
@@ -7791,6 +7809,50 @@ var SyncService = class {
     } catch (error) {
       console.error("[SyncCheck] Error during sync check:", error);
     }
+  }
+  /**
+   * Send our local file inventory to the server and queue anything the
+   * server reports we're missing or have at the wrong hash. Called at the
+   * end of smartSync; the next drainPendingDownloads pass picks up the
+   * delta and brings local in line with truth.
+   *
+   * Best-effort: server-side endpoint is graceful-degrade aware; older
+   * deploys return null and we just skip the reconcile for that cycle.
+   */
+  async reconcileWithServer() {
+    if (!this.vaultId || !this.deviceId)
+      return;
+    const localFiles = this.vault.getFiles();
+    const inventory = [];
+    for (const f of localFiles) {
+      const hash = this.fileSync.getStoredHash(f.path);
+      if (hash) {
+        inventory.push({ path: f.path, hash });
+      }
+    }
+    const delta = await this.apiClient.reconcileDeviceInventory(
+      this.vaultId,
+      this.deviceId,
+      inventory
+    );
+    if (!delta)
+      return;
+    if (delta.out_of_date.length > 0) {
+      console.warn(
+        `[SyncService] Server reports ${delta.out_of_date.length} file(s) out of date for this device \u2014 queueing for download`,
+        { sample: delta.out_of_date.slice(0, 5).map((f) => f.path) }
+      );
+      for (const entry of delta.out_of_date) {
+        this.fileSync.addPendingDownload(entry.path);
+      }
+    }
+    if (delta.unknown_to_server.length > 0) {
+      console.warn(
+        `[SyncService] ${delta.unknown_to_server.length} local file(s) are unknown to the server. Possible sync-loop bug or unsynced local creates.`,
+        { sample: delta.unknown_to_server.slice(0, 5) }
+      );
+    }
+    console.debug("[SyncService] Inventory reconcile complete", delta.counts);
   }
   /**
    * Drain the persistent pending-downloads queue. Returns true iff every
@@ -11493,6 +11555,36 @@ var APIClient = class _APIClient {
     }
   }
   /**
+   * Reconcile this device's local inventory against the server's truth.
+   *
+   * Plugin sends `{ inventory: [{path, hash}, ...] }` reflecting what it
+   * currently has on disk. Server returns the delta:
+   *   - out_of_date: files the device is missing or has at the wrong hash
+   *   - unknown_to_server: files the device has but the server doesn't
+   *
+   * The pendingDownloads queue consumes `out_of_date` so the plugin can't
+   * lose files that arrived on the server while it was offline.
+   *
+   * Graceful degradation: returns null if the server doesn't support the
+   * endpoint yet (older deploys). Caller should treat null as "skip this
+   * cycle".
+   */
+  async reconcileDeviceInventory(vaultId, deviceId, inventory) {
+    try {
+      const response = await this.request(
+        API_ENDPOINTS.DEVICE_INVENTORY(vaultId, deviceId),
+        {
+          method: "POST",
+          body: JSON.stringify({ inventory })
+        }
+      );
+      return response.data;
+    } catch (error) {
+      logger.warn("reconcileDeviceInventory failed (server may be older)", error);
+      return null;
+    }
+  }
+  /**
    * Get file by path
    * Note: Does NOT retry on 404 errors since they're expected when file doesn't exist
    */
@@ -14946,6 +15038,7 @@ var VaultSyncPlugin = class extends import_obsidian21.Plugin {
       this.fileSyncService
       // Share instance so hash maps stay consistent
     );
+    this.syncService.setDeviceId(this.settings.deviceId);
     this.initialSyncService = new InitialSyncService(
       this.app,
       this.apiClient,

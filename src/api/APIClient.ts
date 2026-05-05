@@ -445,6 +445,54 @@ export class APIClient {
   }
 
   /**
+   * Reconcile this device's local inventory against the server's truth.
+   *
+   * Plugin sends `{ inventory: [{path, hash}, ...] }` reflecting what it
+   * currently has on disk. Server returns the delta:
+   *   - out_of_date: files the device is missing or has at the wrong hash
+   *   - unknown_to_server: files the device has but the server doesn't
+   *
+   * The pendingDownloads queue consumes `out_of_date` so the plugin can't
+   * lose files that arrived on the server while it was offline.
+   *
+   * Graceful degradation: returns null if the server doesn't support the
+   * endpoint yet (older deploys). Caller should treat null as "skip this
+   * cycle".
+   */
+  async reconcileDeviceInventory(
+    vaultId: string,
+    deviceId: string,
+    inventory: Array<{ path: string; hash: string }>
+  ): Promise<{
+    out_of_date: Array<{ file_id: string; path: string; hash: string }>;
+    unknown_to_server: string[];
+    counts: { server_files: number; device_files: number; out_of_date: number; unknown_to_server: number };
+  } | null> {
+    try {
+      const response = await this.request<{
+        data: {
+          out_of_date: Array<{ file_id: string; path: string; hash: string }>;
+          unknown_to_server: string[];
+          counts: { server_files: number; device_files: number; out_of_date: number; unknown_to_server: number };
+        };
+      }>(
+        API_ENDPOINTS.DEVICE_INVENTORY(vaultId, deviceId),
+        {
+          method: 'POST',
+          body: JSON.stringify({ inventory }),
+        }
+      );
+      return response.data;
+    } catch (error) {
+      // 404 (older server without device-inventory routes) → null, plugin
+      // continues without delta-driven self-heal. Other errors also return
+      // null so a one-off failure doesn't crash the sync cycle.
+      logger.warn('reconcileDeviceInventory failed (server may be older)', error);
+      return null;
+    }
+  }
+
+  /**
    * Get file by path
    * Note: Does NOT retry on 404 errors since they're expected when file doesn't exist
    */

@@ -217,6 +217,11 @@ export default class VaultSyncPlugin extends Plugin {
 			this.fileSyncService  // Share instance so hash maps stay consistent
 		);
 
+		// Plumb the persistent device ID — SyncService uses it for the
+		// per-device inventory ack endpoint (so the server can tell us
+		// what files we should have).
+		this.syncService.setDeviceId(this.settings.deviceId);
+
 		// Initialize initial sync service
 		this.initialSyncService = new InitialSyncService(
 			this.app,

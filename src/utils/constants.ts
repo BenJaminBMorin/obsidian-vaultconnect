@@ -65,6 +65,13 @@ export const API_ENDPOINTS = {
   FILE_HASH: (vaultId: string, filePath: string) => `/vaults/${vaultId}/files/path/${encodeURIComponent(filePath)}?hash_only=true`,
   FILE_DELETIONS: (vaultId: string, since: string) => `/vaults/${vaultId}/files/deletions?since=${encodeURIComponent(since)}`,
 
+  // Per-device delivery acks. Plugin POSTs current local inventory after each
+  // sync cycle; server returns a delta of files this device is missing.
+  DEVICE_INVENTORY: (vaultId: string, deviceId: string) =>
+    `/vaults/${vaultId}/devices/${encodeURIComponent(deviceId)}/inventory`,
+  DEVICE_SYNC_STATUS: (vaultId: string, deviceId: string) =>
+    `/vaults/${vaultId}/devices/${encodeURIComponent(deviceId)}/sync-status`,
+
   // Conflicts
   CONFLICTS: (vaultId: string) => `/vaults/${vaultId}/conflicts`,
   CONFLICT_RESOLVE: (conflictId: string) => `/vaults/conflicts/${conflictId}/resolve`,
