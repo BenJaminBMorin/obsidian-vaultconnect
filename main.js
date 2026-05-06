@@ -6268,19 +6268,13 @@ var FileSyncService = class {
                   }
                 }
               } else if (existing instanceof import_obsidian2.TFile) {
-                const isLikelyStrandedMarker = existing.stat.size === 0 && !existing.basename.includes(".");
-                if (isLikelyStrandedMarker) {
-                  console.warn(`[downloadFile] Removing stranded folder marker file at "${currentPath}" so we can create the folder for "${filePath}"`);
-                  try {
-                    await this.vault.delete(existing);
-                    await this.vault.createFolder(currentPath);
-                  } catch (recoverErr) {
-                    const rmsg = recoverErr instanceof Error ? recoverErr.message : String(recoverErr);
-                    throw new Error(`Path conflict at "${currentPath}": tried to recover stranded marker but failed: ${rmsg}`);
-                  }
-                } else {
-                  console.error(`Path conflict: Cannot create folder "${currentPath}" because a non-empty file with that name exists`);
-                  throw new Error(`Path conflict: File exists at "${currentPath}" but folder is needed for "${filePath}"`);
+                console.warn(`[downloadFile] Replacing blocking file at "${currentPath}" with a folder so we can write "${filePath}"`);
+                try {
+                  await this.vault.delete(existing);
+                  await this.vault.createFolder(currentPath);
+                } catch (recoverErr) {
+                  const rmsg = recoverErr instanceof Error ? recoverErr.message : String(recoverErr);
+                  throw new Error(`Path conflict at "${currentPath}": tried to convert blocking file to folder but failed: ${rmsg}`);
                 }
               }
             }
@@ -6310,6 +6304,35 @@ var FileSyncService = class {
                 throw new Error(
                   `Vault adapter inconsistency: cannot write ${filePath} \u2014 vault.create reports it exists, but neither getAbstractFileByPath nor getFiles() can find it. Try restarting Obsidian or running "Reconcile from server" again.`
                 );
+              }
+            } else if (createMsg.includes("couldn't be saved in the folder") || createMsg.includes("could not be saved in the folder")) {
+              const folderPath2 = filePath.substring(0, filePath.lastIndexOf("/"));
+              console.warn(`[downloadFile] iOS adapter reported parent folder missing for "${filePath}"; rebuilding folder chain and retrying.`);
+              const folders = folderPath2.split("/");
+              let rebuildPath = "";
+              for (const folder of folders) {
+                rebuildPath = rebuildPath ? `${rebuildPath}/${folder}` : folder;
+                const existing = this.vault.getAbstractFileByPath(rebuildPath);
+                if (existing instanceof import_obsidian2.TFile) {
+                  try {
+                    await this.vault.delete(existing);
+                  } catch (e) {
+                  }
+                }
+                try {
+                  await this.vault.createFolder(rebuildPath);
+                } catch (e) {
+                  const m = e instanceof Error ? e.message : String(e);
+                  if (!m.includes("already exists") && !m.includes("Folder exists")) {
+                    throw e;
+                  }
+                }
+              }
+              if (isBinary2) {
+                const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
+                createdFile = await this.vault.createBinary(filePath, arrayBuffer);
+              } else {
+                createdFile = await this.vault.create(filePath, remoteFile.content);
               }
             } else {
               throw createErr;

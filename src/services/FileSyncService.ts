@@ -564,30 +564,26 @@ export class FileSyncService {
                 }
               }
             } else if (existing instanceof TFile) {
-              // A FILE exists where we need a FOLDER. Most often this is
-              // a stranded server-side folder marker that an older plugin
-              // build downloaded as a regular file: empty content, no
-              // extension, blocking the actual contents from syncing.
-              // Delete the stranded file and create the folder so the
-              // child file we're trying to download can land. Server-side
-              // folder markers are now filtered out at the API layer
-              // (so this path won't be hit on fresh syncs), but existing
-              // installations will recover automatically through this
-              // branch.
-              const isLikelyStrandedMarker =
-                existing.stat.size === 0 && !existing.basename.includes('.');
-              if (isLikelyStrandedMarker) {
-                console.warn(`[downloadFile] Removing stranded folder marker file at "${currentPath}" so we can create the folder for "${filePath}"`);
-                try {
-                  await this.vault.delete(existing);
-                  await this.vault.createFolder(currentPath);
-                } catch (recoverErr) {
-                  const rmsg = recoverErr instanceof Error ? recoverErr.message : String(recoverErr);
-                  throw new Error(`Path conflict at "${currentPath}": tried to recover stranded marker but failed: ${rmsg}`);
-                }
-              } else {
-                console.error(`Path conflict: Cannot create folder "${currentPath}" because a non-empty file with that name exists`);
-                throw new Error(`Path conflict: File exists at "${currentPath}" but folder is needed for "${filePath}"`);
+              // A FILE exists where we need a FOLDER. The vast majority of
+              // the time this is a stranded server-side folder marker that
+              // an older plugin build downloaded as a regular file. We
+              // know `currentPath` MUST be a folder because we're trying
+              // to write a file inside it (filePath = `${currentPath}/...`),
+              // and you can't have a file inside a file. Delete the
+              // blocking entry and create the folder.
+              //
+              // Earlier versions checked `size === 0 && no extension` to
+              // be conservative, but the marker rows are encrypted on the
+              // wire so they land on disk with non-zero size. Trust the
+              // structural signal (file at a path that's a directory
+              // prefix of another file we want to write) instead.
+              console.warn(`[downloadFile] Replacing blocking file at "${currentPath}" with a folder so we can write "${filePath}"`);
+              try {
+                await this.vault.delete(existing);
+                await this.vault.createFolder(currentPath);
+              } catch (recoverErr) {
+                const rmsg = recoverErr instanceof Error ? recoverErr.message : String(recoverErr);
+                throw new Error(`Path conflict at "${currentPath}": tried to convert blocking file to folder but failed: ${rmsg}`);
               }
             }
             // If it's already a folder, continue
@@ -631,6 +627,38 @@ export class FileSyncService {
                 `but neither getAbstractFileByPath nor getFiles() can find it. ` +
                 `Try restarting Obsidian or running "Reconcile from server" again.`
               );
+            }
+          } else if (createMsg.includes("couldn't be saved in the folder") || createMsg.includes('could not be saved in the folder')) {
+            // iOS-specific failure: the file system reports the parent
+            // directory is missing even though our parent-folder check
+            // (above) said it exists. Forcibly recreate the parent folder
+            // chain via createFolder (which is idempotent on a real folder
+            // and creates anew if the FS lied), then retry the create.
+            const folderPath = filePath.substring(0, filePath.lastIndexOf('/'));
+            console.warn(`[downloadFile] iOS adapter reported parent folder missing for "${filePath}"; rebuilding folder chain and retrying.`);
+            const folders = folderPath.split('/');
+            let rebuildPath = '';
+            for (const folder of folders) {
+              rebuildPath = rebuildPath ? `${rebuildPath}/${folder}` : folder;
+              const existing = this.vault.getAbstractFileByPath(rebuildPath);
+              if (existing instanceof TFile) {
+                try { await this.vault.delete(existing); } catch { /* best-effort */ }
+              }
+              try {
+                await this.vault.createFolder(rebuildPath);
+              } catch (e) {
+                const m = e instanceof Error ? e.message : String(e);
+                if (!m.includes('already exists') && !m.includes('Folder exists')) {
+                  throw e;
+                }
+              }
+            }
+            // Retry the file create now that the folder chain is asserted.
+            if (isBinary) {
+              const arrayBuffer = this.base64ToArrayBuffer(remoteFile.content);
+              createdFile = await this.vault.createBinary(filePath, arrayBuffer);
+            } else {
+              createdFile = await this.vault.create(filePath, remoteFile.content);
             }
           } else {
             throw createErr;

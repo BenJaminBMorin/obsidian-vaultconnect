@@ -5,6 +5,12 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.38] - 2026-05-06
+
+### Fixed
+- **Stranded folder-marker files are now removed regardless of size.** v1.1.36's recovery only triggered for empty (0-byte) blocking files — but server-side folder markers are encrypted on the wire and land on disk with non-zero size (~174 bytes after E2E encryption). Detection now relies on the structural signal: if we're trying to write `currentPath/child` and `currentPath` exists locally as a `TFile`, it can't be a real file (you can't have files inside a file), so it's a stranded marker — delete it and create the folder.
+- **iOS "couldn't be saved in the folder" error now triggers a folder-chain rebuild and retry.** When iOS's adapter index claims the parent folder exists but the underlying file system disagrees, `vault.create` throws this error. The plugin now catches it, rebuilds the parent folder chain via `createFolder` (forcibly deleting any TFile blocking the path), and retries the write. Previously this surfaced as `"It Aint Easy Being Seen.md: The file 'It Aint Easy Being Seen.md' couldn't be saved in the folder 'Parody Songs'"` and the file would never sync.
+
 ## [1.1.37] - 2026-05-06
 
 ### Added
