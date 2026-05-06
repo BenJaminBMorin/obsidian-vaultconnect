@@ -6259,10 +6259,29 @@ var FileSyncService = class {
               currentPath = currentPath ? `${currentPath}/${folder}` : folder;
               const existing = this.vault.getAbstractFileByPath(currentPath);
               if (!existing) {
-                await this.vault.createFolder(currentPath);
+                try {
+                  await this.vault.createFolder(currentPath);
+                } catch (folderErr) {
+                  const fmsg = folderErr instanceof Error ? folderErr.message : String(folderErr);
+                  if (!fmsg.includes("already exists") && !fmsg.includes("Folder exists")) {
+                    throw folderErr;
+                  }
+                }
               } else if (existing instanceof import_obsidian2.TFile) {
-                console.error(`Path conflict: Cannot create folder "${currentPath}" because a file with that name exists`);
-                throw new Error(`Path conflict: File exists at "${currentPath}" but folder is needed for "${filePath}"`);
+                const isLikelyStrandedMarker = existing.stat.size === 0 && !existing.basename.includes(".");
+                if (isLikelyStrandedMarker) {
+                  console.warn(`[downloadFile] Removing stranded folder marker file at "${currentPath}" so we can create the folder for "${filePath}"`);
+                  try {
+                    await this.vault.delete(existing);
+                    await this.vault.createFolder(currentPath);
+                  } catch (recoverErr) {
+                    const rmsg = recoverErr instanceof Error ? recoverErr.message : String(recoverErr);
+                    throw new Error(`Path conflict at "${currentPath}": tried to recover stranded marker but failed: ${rmsg}`);
+                  }
+                } else {
+                  console.error(`Path conflict: Cannot create folder "${currentPath}" because a non-empty file with that name exists`);
+                  throw new Error(`Path conflict: File exists at "${currentPath}" but folder is needed for "${filePath}"`);
+                }
               }
             }
           }

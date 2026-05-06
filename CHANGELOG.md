@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.36] - 2026-05-06
+
+### Fixed
+- **Server folder-marker rows no longer break child-file syncs.** The vault-sync server creates a 0-byte "marker" row whenever a folder is created via the upload API (so empty folders are visible in listings). The plugin treated those rows as regular files, called `vault.create(path, "")` on download, which on iOS produces an actual file at that path — and then any real file inside that folder fails to sync because its parent path is occupied by a file, not a folder. The most common symptom: a flurry of "stuck downloading" notifications for files at brand-new paths. The plugin now (a) ignores `Folder already exists` errors from `vault.createFolder` (same iOS index inconsistency pattern v1.1.31 already handled for files) and (b) recovers automatically when a stranded folder-marker file blocks a folder creation — detects it (empty + no extension), deletes it, and creates the folder so the actual file can land. Server-side companion change filters folder-marker rows out of inventory and sync-status responses entirely so this can't recur on fresh syncs.
+
 ## [1.1.35] - 2026-05-05
 
 ### Fixed

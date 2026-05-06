@@ -550,11 +550,45 @@ export class FileSyncService {
             
             if (!existing) {
               // Path doesn't exist, create folder
-              await this.vault.createFolder(currentPath);
+              try {
+                await this.vault.createFolder(currentPath);
+              } catch (folderErr) {
+                const fmsg = folderErr instanceof Error ? folderErr.message : String(folderErr);
+                // iOS adapter index inconsistency — same pattern as files.
+                // If createFolder reports the path exists but
+                // getAbstractFileByPath couldn't see it, the folder
+                // probably does exist; let the next iteration's lookup
+                // re-check.
+                if (!fmsg.includes('already exists') && !fmsg.includes('Folder exists')) {
+                  throw folderErr;
+                }
+              }
             } else if (existing instanceof TFile) {
-              // A FILE exists where we need a FOLDER - this is a path conflict
-              console.error(`Path conflict: Cannot create folder "${currentPath}" because a file with that name exists`);
-              throw new Error(`Path conflict: File exists at "${currentPath}" but folder is needed for "${filePath}"`);
+              // A FILE exists where we need a FOLDER. Most often this is
+              // a stranded server-side folder marker that an older plugin
+              // build downloaded as a regular file: empty content, no
+              // extension, blocking the actual contents from syncing.
+              // Delete the stranded file and create the folder so the
+              // child file we're trying to download can land. Server-side
+              // folder markers are now filtered out at the API layer
+              // (so this path won't be hit on fresh syncs), but existing
+              // installations will recover automatically through this
+              // branch.
+              const isLikelyStrandedMarker =
+                existing.stat.size === 0 && !existing.basename.includes('.');
+              if (isLikelyStrandedMarker) {
+                console.warn(`[downloadFile] Removing stranded folder marker file at "${currentPath}" so we can create the folder for "${filePath}"`);
+                try {
+                  await this.vault.delete(existing);
+                  await this.vault.createFolder(currentPath);
+                } catch (recoverErr) {
+                  const rmsg = recoverErr instanceof Error ? recoverErr.message : String(recoverErr);
+                  throw new Error(`Path conflict at "${currentPath}": tried to recover stranded marker but failed: ${rmsg}`);
+                }
+              } else {
+                console.error(`Path conflict: Cannot create folder "${currentPath}" because a non-empty file with that name exists`);
+                throw new Error(`Path conflict: File exists at "${currentPath}" but folder is needed for "${filePath}"`);
+              }
             }
             // If it's already a folder, continue
           }
