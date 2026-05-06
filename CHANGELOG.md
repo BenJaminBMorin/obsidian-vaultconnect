@@ -5,6 +5,14 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.41] - 2026-05-06
+
+### Fixed
+- **`FOLDER_NOT_EMPTY` deletes no longer retry forever.** When v1.1.36 recovery deleted a stranded folder-marker file locally (so it could create the folder), the file watcher caught the delete and queued a remote DELETE. Server rejected with 400 `FOLDER_NOT_EMPTY` because the path is a folder marker with children. Plugin retried indefinitely, generating ~45 noisy errors per Force Sync. Two fixes:
+  1. `downloadFile` recovery path now uses `ignorePathFn` around the local delete so the file watcher doesn't see it as a user delete.
+  2. `deleteFile` treats `FOLDER_NOT_EMPTY` / "Cannot delete folder without recursive" as a soft success — clears local state, drops it from the queue, moves on. The server-side marker row is harmless (PR #103 filters it from inventory/listing).
+- **iOS unenumerable-file paths no longer loop.** When `vault.create` claims a path exists but neither `getAbstractFileByPath` nor `getFiles()` can find it (happens on iOS for paths inside hidden-ish directories like `.NET/`), the v1.1.31 fallback used to throw and the queue would retry forever. Plugin now treats this as already-synced: records the server hash, clears the queue entry, returns success. Worst case the local content is stale; far better than infinite retry.
+
 ## [1.1.40] - 2026-05-06
 
 ### Added

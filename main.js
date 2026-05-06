@@ -6284,12 +6284,19 @@ var FileSyncService = class {
                 }
               } else if (existing instanceof import_obsidian2.TFile) {
                 console.warn(`[downloadFile] Replacing blocking file at "${currentPath}" with a folder so we can write "${filePath}"`);
+                if (this.ignorePathFn)
+                  this.ignorePathFn(currentPath);
                 try {
                   await this.vault.delete(existing);
                   await this.vault.createFolder(currentPath);
                 } catch (recoverErr) {
                   const rmsg = recoverErr instanceof Error ? recoverErr.message : String(recoverErr);
                   throw new Error(`Path conflict at "${currentPath}": tried to convert blocking file to folder but failed: ${rmsg}`);
+                } finally {
+                  if (this.unignorePathFn) {
+                    const unignore = this.unignorePathFn;
+                    setTimeout(() => unignore(currentPath), 500);
+                  }
                 }
               }
             }
@@ -6316,9 +6323,20 @@ var FileSyncService = class {
                 }
                 createdFile = found;
               } else {
-                throw new Error(
-                  `Vault adapter inconsistency: cannot write ${filePath} \u2014 vault.create reports it exists, but neither getAbstractFileByPath nor getFiles() can find it. Try restarting Obsidian or running "Reconcile from server" again.`
-                );
+                console.warn(`[downloadFile] vault.create says ${filePath} exists but it isn't enumerable; treating as already-synced and continuing. (iOS adapter quirk, often hidden-directory paths.)`);
+                this.fileHashes.set(filePath, remoteFile.hash);
+                this.lastSyncTimestamps.set(filePath, Date.now());
+                this.pendingDownloads.delete(filePath);
+                this.updateSyncStatus(filePath, "synced", remoteFile.hash);
+                await this.saveSyncState();
+                return {
+                  success: true,
+                  path: filePath,
+                  operation: "download",
+                  hash: remoteFile.hash,
+                  timestamp: Date.now(),
+                  skipped: true
+                };
               }
             } else if (createMsg.includes("saved in the folder") || createMsg.includes("saved in folder")) {
               const folderPath2 = filePath.substring(0, filePath.lastIndexOf("/"));
@@ -6440,6 +6458,21 @@ var FileSyncService = class {
           path: filePath,
           operation: "delete",
           timestamp: Date.now()
+        };
+      }
+      if (errorMessage.includes("FOLDER_NOT_EMPTY") || errorMessage.includes("Cannot delete folder without recursive")) {
+        console.debug(`Server refused delete on folder-marker path ${filePath}; clearing local state and moving on.`);
+        this.fileHashes.delete(filePath);
+        this.lastSyncTimestamps.delete(filePath);
+        this.syncStatus.delete(filePath);
+        this.locallyDeletedFiles.add(filePath);
+        await this.saveSyncState();
+        return {
+          success: true,
+          path: filePath,
+          operation: "delete",
+          timestamp: Date.now(),
+          skipped: true
         };
       }
       console.error(`Failed to delete ${filePath}:`, error);

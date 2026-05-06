@@ -602,12 +602,22 @@ export class FileSyncService {
               // structural signal (file at a path that's a directory
               // prefix of another file we want to write) instead.
               console.warn(`[downloadFile] Replacing blocking file at "${currentPath}" with a folder so we can write "${filePath}"`);
+              // Ignore the path in the file watcher around the local delete
+              // so the plugin doesn't immediately queue a server-side DELETE
+              // for a row that's now a folder marker — server rejects those
+              // with FOLDER_NOT_EMPTY and the plugin retries indefinitely.
+              if (this.ignorePathFn) this.ignorePathFn(currentPath);
               try {
                 await this.vault.delete(existing);
                 await this.vault.createFolder(currentPath);
               } catch (recoverErr) {
                 const rmsg = recoverErr instanceof Error ? recoverErr.message : String(recoverErr);
                 throw new Error(`Path conflict at "${currentPath}": tried to convert blocking file to folder but failed: ${rmsg}`);
+              } finally {
+                if (this.unignorePathFn) {
+                  const unignore = this.unignorePathFn;
+                  setTimeout(() => unignore(currentPath), 500);
+                }
               }
             }
             // If it's already a folder, continue
@@ -646,11 +656,30 @@ export class FileSyncService {
               }
               createdFile = found;
             } else {
-              throw new Error(
-                `Vault adapter inconsistency: cannot write ${filePath} — vault.create reports it exists, ` +
-                `but neither getAbstractFileByPath nor getFiles() can find it. ` +
-                `Try restarting Obsidian or running "Reconcile from server" again.`
-              );
+              // vault.create says the path exists but neither
+              // getAbstractFileByPath nor getFiles() can see it. This shows
+              // up on iOS for paths inside hidden-ish directories like
+              // `.NET/`, where the adapter index treats the file as
+              // present-but-unenumerable. Re-throwing here puts the path
+              // in an infinite retry loop. Better to mark it as synced
+              // (record the server hash, clear from pending) and move on
+              // — worst case the local file has stale content, which
+              // future incremental syncs or manual edits will surface
+              // far less painfully than a stuck queue.
+              console.warn(`[downloadFile] vault.create says ${filePath} exists but it isn't enumerable; treating as already-synced and continuing. (iOS adapter quirk, often hidden-directory paths.)`);
+              this.fileHashes.set(filePath, remoteFile.hash);
+              this.lastSyncTimestamps.set(filePath, Date.now());
+              this.pendingDownloads.delete(filePath);
+              this.updateSyncStatus(filePath, 'synced', remoteFile.hash);
+              await this.saveSyncState();
+              return {
+                success: true,
+                path: filePath,
+                operation: 'download',
+                hash: remoteFile.hash,
+                timestamp: Date.now(),
+                skipped: true,
+              };
             }
           } else if (createMsg.includes('saved in the folder') || createMsg.includes('saved in folder')) {
             // iOS error: "The file 'X' couldn't be saved in the folder 'Y'."
@@ -809,10 +838,10 @@ export class FileSyncService {
         this.fileHashes.delete(filePath);
         this.lastSyncTimestamps.delete(filePath);
         this.syncStatus.delete(filePath);
-        
+
         // Track as locally deleted to prevent re-download
         this.locallyDeletedFiles.add(filePath);
-        
+
         await this.saveSyncState();
 
         return {
@@ -820,6 +849,32 @@ export class FileSyncService {
           path: filePath,
           operation: 'delete',
           timestamp: Date.now()
+        };
+      }
+
+      // FOLDER_NOT_EMPTY (HTTP 400): the path is a server-side folder marker
+      // with children. The user's intent here was to remove the local copy
+      // (typically because v1.1.36 recovery deleted a stranded marker file
+      // to convert it back into a folder). The server's row is harmless —
+      // PR #103 filters folder markers out of inventory and listFiles
+      // anyway. Treat as soft success so the queue can drain past it
+      // instead of retrying forever.
+      if (errorMessage.includes('FOLDER_NOT_EMPTY') || errorMessage.includes('Cannot delete folder without recursive')) {
+        console.debug(`Server refused delete on folder-marker path ${filePath}; clearing local state and moving on.`);
+
+        this.fileHashes.delete(filePath);
+        this.lastSyncTimestamps.delete(filePath);
+        this.syncStatus.delete(filePath);
+        this.locallyDeletedFiles.add(filePath);
+
+        await this.saveSyncState();
+
+        return {
+          success: true,
+          path: filePath,
+          operation: 'delete',
+          timestamp: Date.now(),
+          skipped: true,
         };
       }
 
