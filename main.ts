@@ -1432,7 +1432,7 @@ export default class VaultSyncPlugin extends Plugin {
 			return;
 		}
 
-		const modal = new SyncLogModal(this.app, this.syncLogService);
+		const modal = new SyncLogModal(this.app, this.syncLogService, this.manifest.version);
 		modal.open();
 	}
 

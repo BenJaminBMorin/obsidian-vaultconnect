@@ -95,7 +95,7 @@ export class VaultSyncSettingTab extends PluginSettingTab {
     this.displayStepIndicator(containerEl, 1);
 
     new Setting(containerEl)
-      .setName('Welcome to VaultConnect')
+      .setName(`Welcome to VaultConnect — v${this.plugin.manifest.version}`)
       .setDesc('Enter your VaultConnect server URL to get started.')
       .setHeading();
 
@@ -411,7 +411,9 @@ export class VaultSyncSettingTab extends PluginSettingTab {
   }
 
   private displayConnectionHeader(containerEl: HTMLElement): void {
-    new Setting(containerEl).setName('VaultConnect').setHeading();
+    new Setting(containerEl)
+      .setName(`VaultConnect — v${this.plugin.manifest.version}`)
+      .setHeading();
 
     const authState = this.plugin.authService?.getAuthState();
     const isAuthed = authState?.isAuthenticated ?? false;

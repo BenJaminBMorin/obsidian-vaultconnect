@@ -19,10 +19,12 @@ export class SyncLogModal extends Modal {
   private logs: SyncLogEntry[] = [];
   private statsCollapsed: boolean;
   private errorsOnly: boolean = false;
+  private pluginVersion: string;
 
-  constructor(app: App, syncLogService: SyncLogService) {
+  constructor(app: App, syncLogService: SyncLogService, pluginVersion: string = '') {
     super(app);
     this.syncLogService = syncLogService;
+    this.pluginVersion = pluginVersion;
     // Default to collapsed stats on mobile (limited screen real estate)
     this.statsCollapsed = Platform.isMobile;
   }
@@ -37,7 +39,10 @@ export class SyncLogModal extends Modal {
 
     // Header bar with title + quick-action copy buttons
     const header = contentEl.createDiv({ cls: 'sync-log-header' });
-    header.createEl('h2', { text: 'Sync log' });
+    const titleText = this.pluginVersion
+      ? `Sync log — v${this.pluginVersion}`
+      : 'Sync log';
+    header.createEl('h2', { text: titleText });
 
     const headerActions = header.createDiv({ cls: 'sync-log-header-actions' });
     headerActions.createEl('button', {
@@ -279,7 +284,8 @@ export class SyncLogModal extends Modal {
    */
   private formatLogsAsText(logs: SyncLogEntry[]): string {
     const lines: string[] = [];
-    lines.push(`VaultConnect sync log — ${logs.length} entr${logs.length === 1 ? 'y' : 'ies'}`);
+    const versionTag = this.pluginVersion ? ` (plugin v${this.pluginVersion})` : '';
+    lines.push(`VaultConnect sync log${versionTag} — ${logs.length} entr${logs.length === 1 ? 'y' : 'ies'}`);
     lines.push(`Generated: ${new Date().toISOString()}`);
     lines.push('');
     for (const log of logs) {

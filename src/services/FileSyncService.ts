@@ -513,9 +513,33 @@ export class FileSyncService {
 
       // Get file from remote
       const remoteFile = await this.apiClient.getFileByPath(this.vaultId, filePath);
-      
+
       // Check if local file exists
       const localFile = this.vault.getAbstractFileByPath(filePath);
+
+      // If the path exists locally as a folder, this is a server-side folder
+      // marker that landed in our pendingDownloads queue from before the
+      // server filter (PR #103) was deployed. The folder is already in the
+      // right state — there's nothing to write. Clear it from queue tracking
+      // and report success so the queue can drain past it. Without this, the
+      // download path falls through to vault.create which throws "Vault
+      // adapter inconsistency" (the "already exists" recovery only looks
+      // among files, not folders).
+      if (localFile && !(localFile instanceof TFile)) {
+        console.debug(`[downloadFile] ${filePath} exists locally as a folder; treating server entry as a folder marker (no-op).`);
+        this.fileHashes.set(filePath, remoteFile.hash);
+        this.pendingDownloads.delete(filePath);
+        this.updateSyncStatus(filePath, 'synced', remoteFile.hash);
+        await this.saveSyncState();
+        return {
+          success: true,
+          path: filePath,
+          operation: 'download',
+          hash: remoteFile.hash,
+          timestamp: Date.now(),
+          skipped: true,
+        };
+      }
 
       // Determine if file is binary
       const isBinary = this.isBinaryFile(filePath);

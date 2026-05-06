@@ -5,7 +5,13 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.39] - 2026-05-06
+## [1.1.40] - 2026-05-06
+
+### Added
+- **Plugin version visible in settings header and Sync Log title**, plus stamped into the `Copy errors` / `Copy all` clipboard output so pasted logs always show which version produced them. Eliminates the "are you on the latest plugin?" guessing game.
+
+### Fixed
+- **Stuck "Vault adapter inconsistency" errors on folder-marker paths.** Folder-marker rows queued into `pendingDownloads` *before* the server-side filter (PR #103) shipped were still being attempted. When the path exists locally as a folder (because it's, you know, a folder), `vault.create` correctly fails, the v1.1.31 "already exists" recovery looks only among files via `getFiles()`, doesn't find it, and throws "Vault adapter inconsistency". `downloadFile` now detects "remote-file at a path that's a local folder" up front, treats it as a no-op success, and clears the queue entry — letting the drain make progress past these legacy entries.
 
 ### Fixed
 - **The iOS "couldn't be saved" recovery from v1.1.38 didn't actually trigger.** iOS uses a typographic curly apostrophe (U+2019) in `"couldn't"` and our string-includes check was looking for the ASCII apostrophe — it never matched, so the parent-folder rebuild and retry never ran. Match now uses the apostrophe-free `"saved in the folder"` substring, which is unambiguous and quote-agnostic.

@@ -6238,6 +6238,21 @@ var FileSyncService = class {
       this.updateSyncStatus(filePath, "syncing");
       const remoteFile = await this.apiClient.getFileByPath(this.vaultId, filePath);
       const localFile = this.vault.getAbstractFileByPath(filePath);
+      if (localFile && !(localFile instanceof import_obsidian2.TFile)) {
+        console.debug(`[downloadFile] ${filePath} exists locally as a folder; treating server entry as a folder marker (no-op).`);
+        this.fileHashes.set(filePath, remoteFile.hash);
+        this.pendingDownloads.delete(filePath);
+        this.updateSyncStatus(filePath, "synced", remoteFile.hash);
+        await this.saveSyncState();
+        return {
+          success: true,
+          path: filePath,
+          operation: "download",
+          hash: remoteFile.hash,
+          timestamp: Date.now(),
+          skipped: true
+        };
+      }
       const isBinary2 = this.isBinaryFile(filePath);
       if (this.ignorePathFn) {
         this.ignorePathFn(filePath);
@@ -10023,12 +10038,13 @@ async function showConfirmationModal(app, message, options) {
 
 // src/ui/SyncLogModal.ts
 var SyncLogModal = class extends import_obsidian6.Modal {
-  constructor(app, syncLogService) {
+  constructor(app, syncLogService, pluginVersion = "") {
     super(app);
     this.filter = {};
     this.logs = [];
     this.errorsOnly = false;
     this.syncLogService = syncLogService;
+    this.pluginVersion = pluginVersion;
     this.statsCollapsed = import_obsidian6.Platform.isMobile;
   }
   onOpen() {
@@ -10039,7 +10055,8 @@ var SyncLogModal = class extends import_obsidian6.Modal {
       contentEl.addClass("vaultsync-sync-log-modal-mobile");
     }
     const header = contentEl.createDiv({ cls: "sync-log-header" });
-    header.createEl("h2", { text: "Sync log" });
+    const titleText = this.pluginVersion ? `Sync log \u2014 v${this.pluginVersion}` : "Sync log";
+    header.createEl("h2", { text: titleText });
     const headerActions = header.createDiv({ cls: "sync-log-header-actions" });
     headerActions.createEl("button", {
       text: "Copy errors",
@@ -10246,7 +10263,8 @@ var SyncLogModal = class extends import_obsidian6.Modal {
    */
   formatLogsAsText(logs) {
     const lines = [];
-    lines.push(`VaultConnect sync log \u2014 ${logs.length} entr${logs.length === 1 ? "y" : "ies"}`);
+    const versionTag = this.pluginVersion ? ` (plugin v${this.pluginVersion})` : "";
+    lines.push(`VaultConnect sync log${versionTag} \u2014 ${logs.length} entr${logs.length === 1 ? "y" : "ies"}`);
     lines.push(`Generated: ${(/* @__PURE__ */ new Date()).toISOString()}`);
     lines.push("");
     for (const log of logs) {
@@ -14028,7 +14046,7 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
   // ===========================================================================
   displayServerStage(containerEl) {
     this.displayStepIndicator(containerEl, 1);
-    new import_obsidian18.Setting(containerEl).setName("Welcome to VaultConnect").setDesc("Enter your VaultConnect server URL to get started.").setHeading();
+    new import_obsidian18.Setting(containerEl).setName(`Welcome to VaultConnect \u2014 v${this.plugin.manifest.version}`).setDesc("Enter your VaultConnect server URL to get started.").setHeading();
     let serverUrlInput;
     const urlSetting = new import_obsidian18.Setting(containerEl).setName("Server URL").setDesc("Your VaultConnect web or API URL").addText((text) => {
       serverUrlInput = text;
@@ -14232,7 +14250,7 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
   }
   displayConnectionHeader(containerEl) {
     var _a, _b;
-    new import_obsidian18.Setting(containerEl).setName("VaultConnect").setHeading();
+    new import_obsidian18.Setting(containerEl).setName(`VaultConnect \u2014 v${this.plugin.manifest.version}`).setHeading();
     const authState = (_a = this.plugin.authService) == null ? void 0 : _a.getAuthState();
     const isAuthed = (_b = authState == null ? void 0 : authState.isAuthenticated) != null ? _b : false;
     const vaultId = this.plugin.settings.selectedVaultId || this.plugin.settings.vaultId;
@@ -16137,7 +16155,7 @@ ${data.error}`, 1e4);
       new import_obsidian21.Notice("Sync log service not initialized");
       return;
     }
-    const modal = new SyncLogModal(this.app, this.syncLogService);
+    const modal = new SyncLogModal(this.app, this.syncLogService, this.manifest.version);
     modal.open();
   }
   /**
