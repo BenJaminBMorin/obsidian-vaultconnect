@@ -14456,8 +14456,8 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
       new import_obsidian18.Setting(containerEl).setDesc("Connect to the server first to use sync actions.");
       return;
     }
-    new import_obsidian18.Setting(containerEl).setDesc("Sync is paused while settings are open. Use these buttons to sync manually.").addButton((button) => {
-      button.setButtonText("Push all").setCta().onClick(async () => {
+    new import_obsidian18.Setting(containerEl).setName("Sync now").setDesc("Sync is paused while settings are open. Use these buttons to sync manually.").addButton((button) => {
+      button.setButtonText("Push all").setCta().setTooltip("Upload every local file to the server, overwriting remote where they differ.").onClick(async () => {
         button.setButtonText("Pushing...");
         button.setDisabled(true);
         this.plugin.syncPaused = false;
@@ -14470,7 +14470,7 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
         }
       });
     }).addButton((button) => {
-      button.setButtonText("Pull all").onClick(async () => {
+      button.setButtonText("Pull all").setTooltip("Download every server file, overwriting local where they differ.").onClick(async () => {
         button.setButtonText("Pulling...");
         button.setDisabled(true);
         this.plugin.syncPaused = false;
@@ -14482,8 +14482,9 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
           button.setDisabled(false);
         }
       });
-    }).addButton((button) => {
-      button.setButtonText("Force sync").onClick(async () => {
+    });
+    new import_obsidian18.Setting(containerEl).setName("Recovery").setDesc("Use these when normal sync stops working and files are missing or stuck.").addButton((button) => {
+      button.setButtonText("Force sync").setTooltip("Clear local sync state and re-sync everything based on current mode. Preserves local-deletion memory.").onClick(async () => {
         button.setButtonText("Syncing...");
         button.setDisabled(true);
         this.plugin.syncPaused = false;
@@ -14496,7 +14497,7 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
         }
       });
     }).addButton((button) => {
-      button.setButtonText("Reconcile from server").setTooltip("Pull every file the server has \u2014 including ones this device previously deleted. Use when files exist on server but Force Sync will not bring them down.").onClick(async () => {
+      button.setButtonText("Reconcile").setTooltip("Reconcile from server: pull every file the server has, including ones this device previously deleted. Use when files exist on server but Force Sync will not bring them down.").onClick(async () => {
         button.setButtonText("Reconciling...");
         button.setDisabled(true);
         this.plugin.syncPaused = false;
@@ -14504,7 +14505,7 @@ var VaultSyncSettingTab = class extends import_obsidian18.PluginSettingTab {
           await this.plugin.performReconcileFromServer();
         } finally {
           this.plugin.syncPaused = true;
-          button.setButtonText("Reconcile from server");
+          button.setButtonText("Reconcile");
           button.setDisabled(false);
         }
       });

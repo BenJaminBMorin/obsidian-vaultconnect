@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.42] - 2026-05-06
+
+### Changed
+- **Sync action buttons split into two semantic rows so they fit on mobile.** The four-button single row pushed the leftmost button (Push all) off-screen on iPhone. Now grouped as **Sync now** (Push all, Pull all — the routine "I want to sync right now" buttons) and **Recovery** (Force sync, Reconcile — for when normal sync is stuck). "Reconcile from server" shortened to **Reconcile**; the longer description lives in the row's `setDesc` and the per-button tooltip. Each button also got an explanatory tooltip while I was in there.
+
 ## [1.1.41] - 2026-05-06
 
 ### Fixed
