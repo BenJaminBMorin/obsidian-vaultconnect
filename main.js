@@ -6305,7 +6305,7 @@ var FileSyncService = class {
                   `Vault adapter inconsistency: cannot write ${filePath} \u2014 vault.create reports it exists, but neither getAbstractFileByPath nor getFiles() can find it. Try restarting Obsidian or running "Reconcile from server" again.`
                 );
               }
-            } else if (createMsg.includes("couldn't be saved in the folder") || createMsg.includes("could not be saved in the folder")) {
+            } else if (createMsg.includes("saved in the folder") || createMsg.includes("saved in folder")) {
               const folderPath2 = filePath.substring(0, filePath.lastIndexOf("/"));
               console.warn(`[downloadFile] iOS adapter reported parent folder missing for "${filePath}"; rebuilding folder chain and retrying.`);
               const folders = folderPath2.split("/");

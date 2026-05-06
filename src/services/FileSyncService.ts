@@ -628,7 +628,11 @@ export class FileSyncService {
                 `Try restarting Obsidian or running "Reconcile from server" again.`
               );
             }
-          } else if (createMsg.includes("couldn't be saved in the folder") || createMsg.includes('could not be saved in the folder')) {
+          } else if (createMsg.includes('saved in the folder') || createMsg.includes('saved in folder')) {
+            // iOS error: "The file 'X' couldn't be saved in the folder 'Y'."
+            // The apostrophe in "couldn't" is a typographic curly quote
+            // (U+2019), not ASCII — matching on "saved in the folder"
+            // sidesteps the quote-character mismatch entirely.
             // iOS-specific failure: the file system reports the parent
             // directory is missing even though our parent-folder check
             // (above) said it exists. Forcibly recreate the parent folder

@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.39] - 2026-05-06
+
+### Fixed
+- **The iOS "couldn't be saved" recovery from v1.1.38 didn't actually trigger.** iOS uses a typographic curly apostrophe (U+2019) in `"couldn't"` and our string-includes check was looking for the ASCII apostrophe — it never matched, so the parent-folder rebuild and retry never ran. Match now uses the apostrophe-free `"saved in the folder"` substring, which is unambiguous and quote-agnostic.
+
 ## [1.1.38] - 2026-05-06
 
 ### Fixed
