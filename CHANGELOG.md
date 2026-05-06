@@ -5,6 +5,16 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.37] - 2026-05-06
+
+### Added
+- **Mobile-friendly Sync Log viewer with copy-to-clipboard.** The "View sync log" command was barely usable on iPhone — Obsidian's `Setting` rows render side-by-side on desktop but get cramped on mobile, and the only export option used a Blob+anchor download that doesn't work in iOS WebView. Rewritten:
+  - Header bar with prominent **"Copy errors"** and **"Copy all"** buttons (uses `navigator.clipboard.writeText`, with a textarea+execCommand fallback). Copies a plain-text block suitable for pasting into a bug report or chat.
+  - **Errors-only / All** quick-toggle buttons replace the verbose dropdown for the common case. When errors are present and the modal opens, errors-only is the default.
+  - Statistics panel is collapsed by default on mobile (toggle to expand) so errors are above the fold.
+  - Search box and filter rows stack vertically on mobile instead of cramming side-by-side, and the search input takes the full width.
+  - "Export logs (file)" button still works on desktop; on mobile it shows a Notice pointing to the Copy buttons since file download won't work in the WebView.
+
 ## [1.1.36] - 2026-05-06
 
 ### Fixed

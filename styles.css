@@ -271,6 +271,50 @@
   border-bottom: none;
 }
 
+/* Sync log header bar (title + copy actions) */
+.sync-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.sync-log-header h2 {
+  margin: 0;
+}
+.sync-log-header-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sync-log-header-actions button {
+  font-size: 0.85em;
+  padding: 4px 10px;
+}
+
+/* Stats accordion toggle */
+.sync-log-stats-toggle {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 6px 0;
+  user-select: none;
+}
+
+/* Quick filter buttons (Errors only / All) */
+.sync-log-quick-filters {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+.sync-log-quick-filters button {
+  flex: 1 1 auto;
+  min-width: 100px;
+  padding: 6px 12px;
+  font-size: 0.9em;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .vaultsync-sync-log-modal {
@@ -279,6 +323,37 @@
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Mobile-specific: tighten chrome, let log entries dominate */
+  .vaultsync-sync-log-modal-mobile .sync-log-statistics {
+    margin-bottom: 8px;
+  }
+  .vaultsync-sync-log-modal-mobile .sync-log-filters {
+    margin-bottom: 8px;
+  }
+  .vaultsync-sync-log-modal-mobile .sync-log-entry {
+    padding: 8px;
+    margin-bottom: 6px;
+  }
+  .vaultsync-sync-log-modal-mobile .log-entry-message,
+  .vaultsync-sync-log-modal-mobile .log-entry-error,
+  .vaultsync-sync-log-modal-mobile .log-entry-filepath {
+    font-size: 0.85em;
+    word-break: break-word;
+  }
+  /* Setting rows lay out side-by-side on desktop; stack on mobile so the
+     search box has full width */
+  .vaultsync-sync-log-modal-mobile .sync-log-filters .setting-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .vaultsync-sync-log-modal-mobile .sync-log-filters .setting-item-control {
+    width: 100%;
+    margin-top: 4px;
+  }
+  .vaultsync-sync-log-modal-mobile .sync-log-filters .setting-item-control input {
+    width: 100%;
   }
 }
 

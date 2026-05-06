@@ -10004,141 +10004,146 @@ var SyncLogModal = class extends import_obsidian6.Modal {
     super(app);
     this.filter = {};
     this.logs = [];
+    this.errorsOnly = false;
     this.syncLogService = syncLogService;
+    this.statsCollapsed = import_obsidian6.Platform.isMobile;
   }
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
     contentEl.addClass("vaultsync-sync-log-modal");
-    contentEl.createEl("h2", { text: "Sync log" });
+    if (import_obsidian6.Platform.isMobile) {
+      contentEl.addClass("vaultsync-sync-log-modal-mobile");
+    }
+    const header = contentEl.createDiv({ cls: "sync-log-header" });
+    header.createEl("h2", { text: "Sync log" });
+    const headerActions = header.createDiv({ cls: "sync-log-header-actions" });
+    headerActions.createEl("button", {
+      text: "Copy errors",
+      cls: "mod-cta"
+    }).onclick = () => this.copyToClipboard("errors");
+    headerActions.createEl("button", {
+      text: "Copy all"
+    }).onclick = () => this.copyToClipboard("all");
+    const errorCount = this.syncLogService.getFilteredLogs({
+      types: this.errorTypes()
+    }).length;
+    if (errorCount > 0 && !this.errorsOnly) {
+      this.errorsOnly = true;
+    }
     this.renderStatistics(contentEl);
     this.renderFilters(contentEl);
     this.renderLogs(contentEl);
   }
-  /**
-   * Render statistics
-   */
+  errorTypes() {
+    return ["sync_error" /* SYNC_ERROR */, "connection_error" /* CONNECTION_ERROR */];
+  }
   renderStatistics(containerEl) {
     const statsContainer = containerEl.createDiv({ cls: "sync-log-statistics" });
+    const toggleHeader = statsContainer.createDiv({ cls: "sync-log-stats-toggle" });
+    const arrow = this.statsCollapsed ? "\u25B6" : "\u25BC";
+    toggleHeader.setText(`${arrow} Statistics`);
+    toggleHeader.onclick = () => {
+      this.statsCollapsed = !this.statsCollapsed;
+      this.onOpen();
+    };
+    if (this.statsCollapsed)
+      return;
     const stats = this.syncLogService.getStatistics();
-    const statsGrid = statsContainer.createDiv({ cls: "stats-grid" });
-    this.createStatItem(statsGrid, "Total syncs", stats.totalSyncs.toString());
+    const grid = statsContainer.createDiv({ cls: "stats-grid" });
+    this.createStatItem(grid, "Total syncs", stats.totalSyncs.toString());
     const successRate = stats.totalSyncs > 0 ? Math.round(stats.successfulSyncs / stats.totalSyncs * 100) : 0;
-    this.createStatItem(statsGrid, "Success rate", `${successRate}%`);
-    this.createStatItem(statsGrid, "Files uploaded", stats.filesUploaded.toString());
-    this.createStatItem(statsGrid, "Files downloaded", stats.filesDownloaded.toString());
-    this.createStatItem(statsGrid, "Conflicts", stats.conflictsDetected.toString());
+    this.createStatItem(grid, "Success rate", `${successRate}%`);
+    this.createStatItem(grid, "Files uploaded", stats.filesUploaded.toString());
+    this.createStatItem(grid, "Files downloaded", stats.filesDownloaded.toString());
+    this.createStatItem(grid, "Conflicts", stats.conflictsDetected.toString());
     const avgDuration = stats.averageSyncDuration > 0 ? `${(stats.averageSyncDuration / 1e3).toFixed(1)}s` : "N/A";
-    this.createStatItem(statsGrid, "Avg duration", avgDuration);
+    this.createStatItem(grid, "Avg duration", avgDuration);
     const lastSync = stats.lastSyncTime ? this.formatTimestamp(stats.lastSyncTime) : "Never";
-    this.createStatItem(statsGrid, "Last sync", lastSync);
+    this.createStatItem(grid, "Last sync", lastSync);
   }
-  /**
-   * Create stat item
-   */
   createStatItem(container, label, value2) {
     const item = container.createDiv({ cls: "stat-item" });
     item.createDiv({ cls: "stat-label", text: label });
     item.createDiv({ cls: "stat-value", text: value2 });
   }
-  /**
-   * Render filters
-   */
   renderFilters(containerEl) {
     const filterContainer = containerEl.createDiv({ cls: "sync-log-filters" });
-    new import_obsidian6.Setting(filterContainer).setName("Search").setDesc("Search logs by message, file path, or error").addText((text) => {
-      text.setPlaceholder("Search...").setValue(this.filter.searchQuery || "").onChange((value2) => {
+    const quickRow = filterContainer.createDiv({ cls: "sync-log-quick-filters" });
+    const errorsBtn = quickRow.createEl("button", {
+      text: this.errorsOnly ? "\u2713 Errors only" : "Errors only",
+      cls: this.errorsOnly ? "mod-cta" : ""
+    });
+    errorsBtn.onclick = () => {
+      this.errorsOnly = !this.errorsOnly;
+      this.filter.types = this.errorsOnly ? this.errorTypes() : void 0;
+      this.onOpen();
+    };
+    const allBtn = quickRow.createEl("button", {
+      text: !this.errorsOnly && !this.filter.searchQuery ? "\u2713 All" : "All",
+      cls: !this.errorsOnly && !this.filter.searchQuery ? "mod-cta" : ""
+    });
+    allBtn.onclick = () => {
+      this.errorsOnly = false;
+      this.filter = {};
+      this.onOpen();
+    };
+    new import_obsidian6.Setting(filterContainer).setName("Search").addText((text) => {
+      text.setPlaceholder("Filter by message or path\u2026").setValue(this.filter.searchQuery || "").onChange((value2) => {
         this.filter.searchQuery = value2.trim() || void 0;
         this.refreshLogs();
       });
     });
-    new import_obsidian6.Setting(filterContainer).setName("Type").setDesc("Filter by log type").addDropdown((dropdown) => {
-      dropdown.addOption("all", "All types").addOption("sync_started" /* SYNC_STARTED */, "Sync started").addOption("sync_completed" /* SYNC_COMPLETED */, "Sync completed").addOption("sync_error" /* SYNC_ERROR */, "Sync error").addOption("file_uploaded" /* FILE_UPLOADED */, "File uploaded").addOption("file_downloaded" /* FILE_DOWNLOADED */, "File downloaded").addOption("file_deleted" /* FILE_DELETED */, "File deleted").addOption("conflict_detected" /* CONFLICT_DETECTED */, "Conflict detected").addOption("conflict_resolved" /* CONFLICT_RESOLVED */, "Conflict resolved").addOption("connection_changed" /* CONNECTION_CHANGED */, "Connection changed").addOption("connection_error" /* CONNECTION_ERROR */, "Connection error").setValue("all").onChange((value2) => {
-        if (value2 === "all") {
-          this.filter.types = void 0;
-        } else {
-          this.filter.types = [value2];
-        }
-        this.refreshLogs();
-      });
-    });
-    const actionsContainer = filterContainer.createDiv({ cls: "sync-log-actions" });
-    new import_obsidian6.Setting(actionsContainer).addButton((button) => {
-      button.setButtonText("Clear filters").onClick(() => {
-        this.filter = {};
+    const actions = filterContainer.createDiv({ cls: "sync-log-actions" });
+    actions.createEl("button", { text: "Export logs (file)" }).onclick = () => this.exportLogs();
+    const clearBtn = actions.createEl("button", { text: "Clear logs", cls: "mod-warning" });
+    clearBtn.onclick = async () => {
+      const confirmed = await showConfirmationModal(
+        this.app,
+        "Are you sure you want to clear all sync logs?",
+        { title: "Clear logs", confirmText: "Clear", confirmClass: "mod-warning" }
+      );
+      if (confirmed) {
+        await this.syncLogService.clearLogs();
         this.onOpen();
-      });
-    }).addButton((button) => {
-      button.setButtonText("Export logs").onClick(() => {
-        this.exportLogs();
-      });
-    }).addButton((button) => {
-      button.setButtonText("Clear logs").setWarning().onClick(async () => {
-        const confirmed = await showConfirmationModal(
-          this.app,
-          "Are you sure you want to clear all sync logs?",
-          { title: "Clear logs", confirmText: "Clear", confirmClass: "mod-warning" }
-        );
-        if (confirmed) {
-          await this.syncLogService.clearLogs();
-          this.onOpen();
-        }
-      });
-    });
+      }
+    };
   }
-  /**
-   * Render logs
-   */
   renderLogs(containerEl) {
     const logsContainer = containerEl.createDiv({ cls: "sync-log-entries" });
-    this.logs = this.syncLogService.getFilteredLogs(this.filter);
+    const activeFilter = {
+      ...this.filter,
+      types: this.errorsOnly ? this.errorTypes() : this.filter.types
+    };
+    this.logs = this.syncLogService.getFilteredLogs(activeFilter);
     if (this.logs.length === 0) {
       logsContainer.createDiv({
         cls: "sync-log-empty",
-        text: "No log entries found"
+        text: this.errorsOnly ? "No errors recorded." : "No log entries found."
       });
       return;
     }
     logsContainer.createDiv({
       cls: "sync-log-count",
-      text: `Showing ${this.logs.length} log entries`
+      text: `Showing ${this.logs.length} log entr${this.logs.length === 1 ? "y" : "ies"}`
     });
     const logList = logsContainer.createDiv({ cls: "sync-log-list" });
     for (const log of this.logs) {
       this.renderLogEntry(logList, log);
     }
   }
-  /**
-   * Render log entry
-   */
   renderLogEntry(container, log) {
     const entry = container.createDiv({ cls: `sync-log-entry log-type-${log.type}` });
     const header = entry.createDiv({ cls: "log-entry-header" });
-    const icon = this.getLogIcon(log.type);
-    header.createSpan({ cls: "log-entry-icon", text: icon });
-    header.createSpan({
-      cls: "log-entry-timestamp",
-      text: this.formatTimestamp(log.timestamp)
-    });
-    header.createSpan({
-      cls: "log-entry-type",
-      text: this.formatLogType(log.type)
-    });
-    entry.createDiv({
-      cls: "log-entry-message",
-      text: log.message
-    });
+    header.createSpan({ cls: "log-entry-icon", text: this.getLogIcon(log.type) });
+    header.createSpan({ cls: "log-entry-timestamp", text: this.formatTimestamp(log.timestamp) });
+    header.createSpan({ cls: "log-entry-type", text: this.formatLogType(log.type) });
+    entry.createDiv({ cls: "log-entry-message", text: log.message });
     if (log.filePath) {
-      entry.createDiv({
-        cls: "log-entry-filepath",
-        text: `\u{1F4C4} ${log.filePath}`
-      });
+      entry.createDiv({ cls: "log-entry-filepath", text: `\u{1F4C4} ${log.filePath}` });
     }
     if (log.error) {
-      entry.createDiv({
-        cls: "log-entry-error",
-        text: `\u274C ${log.error}`
-      });
+      entry.createDiv({ cls: "log-entry-error", text: `\u274C ${log.error}` });
     }
     if (log.details) {
       const detailsToggle = entry.createDiv("log-entry-details-toggle");
@@ -10159,9 +10164,6 @@ var SyncLogModal = class extends import_obsidian6.Modal {
       };
     }
   }
-  /**
-   * Get log icon
-   */
   getLogIcon(type) {
     switch (type) {
       case "sync_started" /* SYNC_STARTED */:
@@ -10188,15 +10190,9 @@ var SyncLogModal = class extends import_obsidian6.Modal {
         return "\u{1F4DD}";
     }
   }
-  /**
-   * Format log type
-   */
   formatLogType(type) {
     return type.split("_").map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
   }
-  /**
-   * Format timestamp
-   */
   formatTimestamp(date) {
     const now = /* @__PURE__ */ new Date();
     const diff = now.getTime() - date.getTime();
@@ -10204,21 +10200,16 @@ var SyncLogModal = class extends import_obsidian6.Modal {
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    if (seconds < 60) {
+    if (seconds < 60)
       return "just now";
-    } else if (minutes < 60) {
+    if (minutes < 60)
       return `${minutes}m ago`;
-    } else if (hours < 24) {
+    if (hours < 24)
       return `${hours}h ago`;
-    } else if (days < 7) {
+    if (days < 7)
       return `${days}d ago`;
-    } else {
-      return date.toLocaleString();
-    }
+    return date.toLocaleString();
   }
-  /**
-   * Refresh logs
-   */
   refreshLogs() {
     const logsContainer = this.contentEl.querySelector(".sync-log-entries");
     if (logsContainer) {
@@ -10227,9 +10218,76 @@ var SyncLogModal = class extends import_obsidian6.Modal {
     }
   }
   /**
-   * Export logs
+   * Format the active log set as a flat plain-text block suitable for pasting
+   * into a bug report or chat. One entry per block, separated by blank lines.
+   */
+  formatLogsAsText(logs) {
+    const lines = [];
+    lines.push(`VaultConnect sync log \u2014 ${logs.length} entr${logs.length === 1 ? "y" : "ies"}`);
+    lines.push(`Generated: ${(/* @__PURE__ */ new Date()).toISOString()}`);
+    lines.push("");
+    for (const log of logs) {
+      lines.push(`[${log.timestamp.toISOString()}] ${this.formatLogType(log.type)}`);
+      lines.push(`  ${log.message}`);
+      if (log.filePath)
+        lines.push(`  path: ${log.filePath}`);
+      if (log.error)
+        lines.push(`  error: ${log.error}`);
+      if (log.details) {
+        const detail = JSON.stringify(log.details);
+        lines.push(`  details: ${detail.length > 1e3 ? detail.slice(0, 1e3) + "\u2026 (truncated)" : detail}`);
+      }
+      lines.push("");
+    }
+    return lines.join("\n");
+  }
+  /**
+   * Copy the requested log subset (errors-only or all currently-filtered) to
+   * the system clipboard. Uses navigator.clipboard.writeText which works in
+   * the iOS WebView; falls back to a textarea+execCommand path if not.
+   */
+  async copyToClipboard(scope) {
+    const logs = scope === "errors" ? this.syncLogService.getFilteredLogs({ types: this.errorTypes() }) : this.syncLogService.getFilteredLogs(this.filter);
+    if (logs.length === 0) {
+      new import_obsidian6.Notice(scope === "errors" ? "No errors to copy." : "No log entries to copy.");
+      return;
+    }
+    const text = this.formatLogsAsText(logs);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        new import_obsidian6.Notice(`Copied ${logs.length} ${scope === "errors" ? "error" : "log"} entr${logs.length === 1 ? "y" : "ies"} to clipboard.`);
+        return;
+      }
+    } catch (err) {
+      console.warn("navigator.clipboard.writeText failed, falling back to textarea", err);
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    try {
+      document.execCommand("copy");
+      new import_obsidian6.Notice(`Copied ${logs.length} entr${logs.length === 1 ? "y" : "ies"} to clipboard.`);
+    } catch (e) {
+      new import_obsidian6.Notice('Copy failed. Try "Export logs" instead.');
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+  /**
+   * Export logs as a downloadable JSON file. Note: anchor-download doesn't
+   * work on iOS WebView — desktop only. Mobile users should prefer the
+   * "Copy" buttons above.
    */
   exportLogs() {
+    if (import_obsidian6.Platform.isMobile) {
+      new import_obsidian6.Notice('On mobile, use "Copy all" or "Copy errors" instead \u2014 file download is desktop-only.');
+      return;
+    }
     const logs = this.syncLogService.exportLogs();
     const blob = new Blob([logs], { type: "application/json" });
     const url2 = URL.createObjectURL(blob);
