@@ -35,6 +35,11 @@ export interface PluginSettings {
   notifyOnConflict: boolean;
   notifyOnCollaboratorJoin: boolean;
 
+  // Cleanup behaviour
+  // When true, after a file is moved or deleted, any parent folder that
+  // becomes empty as a result is also removed (recursively walking up).
+  autoDeleteEmptyFolders: boolean;
+
   // Performance
   maxConcurrentUploads: number;
   chunkSize: number; // bytes

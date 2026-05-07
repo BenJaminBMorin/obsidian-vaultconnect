@@ -725,6 +725,39 @@ export class VaultSyncSettingTab extends PluginSettingTab {
             }
           });
       });
+
+    // Vault maintenance — empty-folder cleanup. Setting toggle controls
+    // automatic behaviour; button does a one-shot vault-wide pass.
+    new Setting(containerEl)
+      .setName('Auto-delete empty folders')
+      .setDesc('After a file is moved or deleted, remove any parent folder that becomes empty. Walks up the tree until a non-empty folder is reached.')
+      .addToggle(toggle => {
+        toggle
+          .setValue(this.plugin.settings.autoDeleteEmptyFolders)
+          .onChange(async value => {
+            this.plugin.settings.autoDeleteEmptyFolders = value;
+            await this.plugin.saveSettings();
+          });
+      });
+
+    new Setting(containerEl)
+      .setName('Delete all empty folders now')
+      .setDesc('Walk the entire vault bottom-up and delete every folder with no files inside. Confirms before running.')
+      .addButton(button => {
+        button
+          .setButtonText('Delete empty folders')
+          .setWarning()
+          .onClick(async () => {
+            button.setButtonText('Deleting...');
+            button.setDisabled(true);
+            try {
+              await this.plugin.performDeleteAllEmptyFolders();
+            } finally {
+              button.setButtonText('Delete empty folders');
+              button.setDisabled(false);
+            }
+          });
+      });
   }
 
   // Full settings sections (shown in COMPLETE stage)

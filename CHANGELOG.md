@@ -5,6 +5,15 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.43] - 2026-05-07
+
+### Added
+- **Empty-folder cleanup.** After file moves and deletes leave empty folders behind, two new options handle them:
+  - **Settings → "Auto-delete empty folders"** (off by default): when on, after any file is moved or deleted, the plugin walks up from the source path and removes any parent folder that became empty as a result. Stops at the first non-empty ancestor or vault root.
+  - **Settings → "Delete all empty folders now"** + command palette **"Delete all empty folders"**: one-shot vault-wide pass. Bottom-up so a folder that becomes empty after its empty children are removed is also deleted. Confirms before running.
+
+  Both honour the plugin's ignore-path callbacks so folder cleanups don't reflect back to the server as user-driven deletes.
+
 ## [1.1.42] - 2026-05-06
 
 ### Changed

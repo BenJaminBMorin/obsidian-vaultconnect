@@ -32,6 +32,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   notifyOnConflict: true,
   notifyOnCollaboratorJoin: true,
 
+  // Cleanup behaviour — off by default; user opts in via settings
+  autoDeleteEmptyFolders: false,
+
   // Performance
   maxConcurrentUploads: 5,
   chunkSize: 1048576, // 1MB

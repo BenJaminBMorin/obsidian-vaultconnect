@@ -5,6 +5,7 @@ import { FileSyncService } from './src/services/FileSyncService';
 import { LargeFileService, UploadProgress } from './src/services/LargeFileService';
 import { ConflictService } from './src/services/ConflictService';
 import { SyncLogService } from './src/services/SyncLogService';
+import { EmptyFolderService } from './src/services/EmptyFolderService';
 import { SyncLogModal } from './src/ui/SyncLogModal';
 import { UploadProgressModal } from './src/ui/UploadProgressModal';
 import { ConflictListView, CONFLICT_LIST_VIEW_TYPE } from './src/ui/ConflictListView';
@@ -65,6 +66,7 @@ export default class VaultSyncPlugin extends Plugin {
 	vaultService: VaultService | null = null; // Public for settings tab
 	private conflictService: ConflictService | null = null;
 	private syncLogService: SyncLogService | null = null;
+	private emptyFolderService: EmptyFolderService | null = null;
 	initialSyncService: InitialSyncService | null = null; // Public for SettingsTab access
 	authService: AuthService | null = null; // Public for SettingsTab access
 	
@@ -164,6 +166,9 @@ export default class VaultSyncPlugin extends Plugin {
 		// Initialize sync log service
 		this.syncLogService = new SyncLogService(this.eventBus, this.storage);
 
+		// Initialize empty-folder cleanup helper
+		this.emptyFolderService = new EmptyFolderService(this.app.vault);
+
 		// Initialize large file service for chunked uploads
 		this.largeFileService = new LargeFileService(
 			this.apiClient,
@@ -242,6 +247,21 @@ export default class VaultSyncPlugin extends Plugin {
 			if (result?.path && result?.operation === 'upload') {
 				this.recentUploads.set(result.path, Date.now());
 			}
+		});
+
+		// When a file is deleted or renamed (i.e. moved to a new folder), the
+		// source folder may now be empty. If the user opted into auto-cleanup,
+		// walk up from that folder and remove any empty ancestors. Filtered to
+		// delete/rename so we don't fire on every create/modify event.
+		this.eventBus.on(EVENTS.FILE_SYNCED, (event: { path: string; oldPath?: string; action: string }) => {
+			if (!this.settings.autoDeleteEmptyFolders || !this.emptyFolderService) return;
+			if (event.action !== 'delete' && event.action !== 'rename') return;
+			const sourcePath = event.action === 'rename' ? (event.oldPath ?? event.path) : event.path;
+			void this.emptyFolderService.pruneEmptyAncestors(sourcePath).then(removed => {
+				if (removed > 0) {
+					logger.debug(`[EmptyFolders] Auto-cleaned ${removed} empty folder(s) above ${sourcePath}`);
+				}
+			});
 		});
 
 		// Periodic TTL-based cleanup of stale recentUploads entries (every 30s)
@@ -456,6 +476,21 @@ export default class VaultSyncPlugin extends Plugin {
 				} catch (error) {
 					logger.error('Reconcile from server command failed:', error);
 					new Notice('Reconcile from server failed');
+				}
+			}
+		});
+
+		// Delete all empty folders — manual one-shot vault-wide cleanup
+		this.addCommand({
+			id: 'delete-empty-folders',
+			name: 'Delete all empty folders',
+			icon: 'folder-x',
+			callback: async () => {
+				try {
+					await this.performDeleteAllEmptyFolders();
+				} catch (error) {
+					logger.error('Delete all empty folders command failed:', error);
+					new Notice('Delete all empty folders failed');
 				}
 			}
 		});
@@ -1392,6 +1427,41 @@ export default class VaultSyncPlugin extends Plugin {
 		} catch (error) {
 			logger.error('Reconcile from server error:', error);
 			new Notice(`Reconcile failed: ${error.message}`);
+		}
+	}
+
+	/**
+	 * Walk the entire vault bottom-up and delete every empty folder. Confirms
+	 * with the user first because this is destructive (folders that hold no
+	 * notes today might still be intentional placeholders).
+	 */
+	async performDeleteAllEmptyFolders(): Promise<void> {
+		if (!this.emptyFolderService) {
+			new Notice('Empty-folder service not initialized');
+			return;
+		}
+
+		const confirmed = await showConfirmationModal(
+			this.app,
+			'Delete every empty folder in this vault?\n\n' +
+			'• Folders with no notes inside them (recursively) will be removed.\n' +
+			'• Operation runs bottom-up so a folder that becomes empty after its empty children are removed is also deleted.\n' +
+			'• Vault root and folders that contain at least one file are kept.\n\n' +
+			'This is irreversible — empty placeholder folders you wanted to keep will be gone.',
+			{ title: 'Delete all empty folders', confirmText: 'Delete', confirmClass: 'mod-warning' }
+		);
+		if (!confirmed) return;
+
+		try {
+			const removed = await this.emptyFolderService.pruneAllEmptyFolders();
+			new Notice(
+				removed === 0
+					? 'No empty folders found.'
+					: `Deleted ${removed} empty folder${removed === 1 ? '' : 's'}.`
+			);
+		} catch (error) {
+			logger.error('Delete all empty folders error:', error);
+			new Notice(`Delete empty folders failed: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
