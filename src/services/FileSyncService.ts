@@ -573,17 +573,39 @@ export class FileSyncService {
             const existing = this.vault.getAbstractFileByPath(currentPath);
             
             if (!existing) {
-              // Path doesn't exist, create folder
+              // Path doesn't exist according to vault index, create folder
               try {
                 await this.vault.createFolder(currentPath);
               } catch (folderErr) {
                 const fmsg = folderErr instanceof Error ? folderErr.message : String(folderErr);
-                // iOS adapter index inconsistency — same pattern as files.
-                // If createFolder reports the path exists but
-                // getAbstractFileByPath couldn't see it, the folder
-                // probably does exist; let the next iteration's lookup
-                // re-check.
-                if (!fmsg.includes('already exists') && !fmsg.includes('Folder exists')) {
+                if (fmsg.includes('already exists') || fmsg.includes('Folder exists')) {
+                  // On macOS/Desktop, mkdir on a path where a plain FILE already
+                  // exists returns EEXIST ("file already exists"), not ENOTDIR.
+                  // Obsidian swallows the distinction and throws "already exists"
+                  // for both cases. If the vault index can't see the entry
+                  // (extensionless folder-marker files are not indexed), we land
+                  // here with a file silently blocking the folder slot. Check the
+                  // real on-disk type and evict the blocker if needed.
+                  const adapterStat = await this.vault.adapter.stat(currentPath).catch(() => null);
+                  if (adapterStat && adapterStat.type === 'file') {
+                    console.warn(`[downloadFile] Removing unindexed file blocker at "${currentPath}" (EEXIST-masked) to create folder for "${filePath}"`);
+                    if (this.ignorePathFn) this.ignorePathFn(currentPath);
+                    try {
+                      await this.vault.adapter.remove(currentPath);
+                      await this.vault.createFolder(currentPath);
+                    } catch (removeErr) {
+                      const rmsg = removeErr instanceof Error ? removeErr.message : String(removeErr);
+                      throw new Error(`Path conflict at "${currentPath}": tried to remove EEXIST-masked file blocker but failed: ${rmsg}`);
+                    } finally {
+                      if (this.unignorePathFn) {
+                        const unignore = this.unignorePathFn;
+                        setTimeout(() => unignore(currentPath), 500);
+                      }
+                    }
+                  }
+                  // else: path is actually a folder (iOS index inconsistency),
+                  // let the next iteration's lookup re-check.
+                } else {
                   throw folderErr;
                 }
               }

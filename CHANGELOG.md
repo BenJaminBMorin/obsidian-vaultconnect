@@ -5,6 +5,11 @@ All notable changes to VaultConnect will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.44] - 2026-05-27
+
+### Fixed
+- **Folder-marker files not removed on Desktop/macOS.** When an older sync run had downloaded a server-side folder marker (e.g. `Homelab`, `PhotoSync`, `Skylight MCP`) as a plain extensionless file, subsequent force-syncs would fail with `ENOTDIR` on every file inside those folders. The v1.1.38 fix handled the case where Obsidian's vault index could see the blocking file (`existing instanceof TFile`), but extensionless files are not indexed by Obsidian — so `getAbstractFileByPath` returned null and the cleanup code was never reached. On Desktop, `mkdir` on an already-existing file returns `EEXIST` ("file already exists") which the plugin silently swallowed as an iOS quirk, leaving the blocker intact. The plugin now calls `vault.adapter.stat()` after swallowing that error; if the path is actually a file it uses `vault.adapter.remove()` to evict it before retrying `createFolder`.
+
 ## [1.1.43] - 2026-05-07
 
 ### Added

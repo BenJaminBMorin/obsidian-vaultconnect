@@ -6280,7 +6280,26 @@ var FileSyncService = class {
                   await this.vault.createFolder(currentPath);
                 } catch (folderErr) {
                   const fmsg = folderErr instanceof Error ? folderErr.message : String(folderErr);
-                  if (!fmsg.includes("already exists") && !fmsg.includes("Folder exists")) {
+                  if (fmsg.includes("already exists") || fmsg.includes("Folder exists")) {
+                    const adapterStat = await this.vault.adapter.stat(currentPath).catch(() => null);
+                    if (adapterStat && adapterStat.type === "file") {
+                      console.warn(`[downloadFile] Removing unindexed file blocker at "${currentPath}" (EEXIST-masked) to create folder for "${filePath}"`);
+                      if (this.ignorePathFn)
+                        this.ignorePathFn(currentPath);
+                      try {
+                        await this.vault.adapter.remove(currentPath);
+                        await this.vault.createFolder(currentPath);
+                      } catch (removeErr) {
+                        const rmsg = removeErr instanceof Error ? removeErr.message : String(removeErr);
+                        throw new Error(`Path conflict at "${currentPath}": tried to remove EEXIST-masked file blocker but failed: ${rmsg}`);
+                      } finally {
+                        if (this.unignorePathFn) {
+                          const unignore = this.unignorePathFn;
+                          setTimeout(() => unignore(currentPath), 500);
+                        }
+                      }
+                    }
+                  } else {
                     throw folderErr;
                   }
                 }
