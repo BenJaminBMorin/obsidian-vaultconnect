@@ -7360,10 +7360,18 @@ var SyncService = class {
       try {
         const drainedClean = await this.drainPendingDownloads();
         if (!drainedClean) {
-          console.warn(`[SyncService] smartSync drain incomplete \u2014 ${this.fileSync.getPendingDownloads().length} item(s) still pending; next sync cycle will retry.`);
+          const stillPending = this.fileSync.getPendingDownloads();
+          console.warn(`[SyncService] smartSync drain incomplete \u2014 ${stillPending.length} item(s) still pending; next sync cycle will retry.`);
+          for (const p of stillPending) {
+            result.errors.push(`Pending download failed: ${p}`);
+          }
+          result.success = false;
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
         console.warn("[SyncService] smartSync drain threw (non-fatal):", err);
+        result.errors.push(`Download drain error: ${msg}`);
+        result.success = false;
       }
       console.debug(`Smart sync completed: ${result.filesUploaded} uploaded, ${result.filesDownloaded} downloaded, ${result.errors.length} errors`);
       this.eventBus.emit(EVENTS.SYNC_COMPLETED, result);
