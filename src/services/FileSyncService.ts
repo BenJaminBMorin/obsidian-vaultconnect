@@ -564,8 +564,12 @@ export class FileSyncService {
       } else {
         // Create new file - ensure parent folders exist
         const folderPath = filePath.substring(0, filePath.lastIndexOf('/'));
-        if (folderPath && !this.vault.getAbstractFileByPath(folderPath)) {
-          // Create parent folders if they don't exist
+        if (folderPath) {
+          // Create parent folders, and repair any path component that is a
+          // plain file where a folder is required. We always run this loop
+          // (not just when the parent is missing) because the vault index may
+          // return a TFile for an extensionless blocker, which would make
+          // `!getAbstractFileByPath(folderPath)` false and skip the repair.
           const folders = folderPath.split('/');
           let currentPath = '';
           for (const folder of folders) {

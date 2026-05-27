@@ -6269,7 +6269,7 @@ var FileSyncService = class {
           }
         } else {
           const folderPath = filePath.substring(0, filePath.lastIndexOf("/"));
-          if (folderPath && !this.vault.getAbstractFileByPath(folderPath)) {
+          if (folderPath) {
             const folders = folderPath.split("/");
             let currentPath = "";
             for (const folder of folders) {
